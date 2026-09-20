@@ -232,7 +232,10 @@ jobs:
               area_dict["websites"] = json.loads(area_dict["websites"] or "[]")
               result.append(area_dict)
 
-          print("===ES_BATCH_JSON_START===")
-          print(json.dumps(result))
-          print("===ES_BATCH_JSON_END===")
+          payload_b64 = base64.b64encode(json.dumps(result).encode("utf-8")).decode("ascii")
+          CHUNK = 2000
+          print("===ES_BATCH_B64_START===")
+          for i in range(0, len(payload_b64), CHUNK):
+              print(payload_b64[i:i + CHUNK])
+          print("===ES_BATCH_B64_END===")
           PY

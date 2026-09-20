@@ -1,0 +1,63 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [10.9646, 46.9658] },
+      "properties": {
+        "type": "SkiArea",
+        "id": "skiarea-1",
+        "name": "Sample Resort",
+        "activities": ["downhill"],
+        "status": "operating",
+        "runConvention": "europe",
+        "websites": ["https://example.com"],
+        "wikidataID": "Q123456",
+        "places": [
+          {
+            "iso3166_1Alpha2": "AT",
+            "iso3166_2": null,
+            "localized": { "en": { "country": "Austria", "region": "Tyrol", "locality": "Sample Village" } }
+          }
+        ],
+        "statistics": {
+          "minElevation": 1350,
+          "maxElevation": 3340,
+          "runs": {
+            "byActivity": {
+              "downhill": {
+                "byDifficulty": {
+                  "easy": { "count": 10, "lengthInKm": 15.2, "snowmakingLengthInKm": 12.0 },
+                  "intermediate": { "count": 20, "lengthInKm": 40.5, "snowmakingLengthInKm": 30.0 },
+                  "advanced": { "count": 5, "lengthInKm": 8.1 }
+                }
+              }
+            }
+          },
+          "lifts": {
+            "byType": {
+              "gondola": { "count": 3, "lengthInKm": 12.0 },
+              "chair_lift": { "count": 10, "lengthInKm": 25.0 }
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-0.4167, 42.7833] },
+      "properties": {
+        "type": "SkiArea",
+        "id": "skiarea-2",
+        "name": "No Stats Resort",
+        "activities": ["downhill", "nordic"],
+        "status": "operating",
+        "runConvention": "europe",
+        "websites": [],
+        "wikidataID": null,
+        "places": [],
+        "statistics": null
+      }
+    }
+  ]
+}

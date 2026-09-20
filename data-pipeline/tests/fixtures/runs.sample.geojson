@@ -1,0 +1,133 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [10.960, 46.960, 2200],
+          [10.961, 46.961, 2150],
+          [10.962, 46.962, 2100]
+        ]
+      },
+      "properties": {
+        "type": "Run",
+        "uses": ["downhill"],
+        "id": "run-1",
+        "name": "Sample Blue",
+        "ref": null,
+        "status": "operating",
+        "description": null,
+        "difficulty": "easy",
+        "difficultyConvention": "europe",
+        "oneway": true,
+        "lit": false,
+        "gladed": false,
+        "patrolled": true,
+        "snowmaking": true,
+        "snowfarming": false,
+        "tunnel": null,
+        "grooming": "classic",
+        "skiAreas": [
+          {
+            "type": "Feature",
+            "geometry": { "type": "Point", "coordinates": [10.9646, 46.9658] },
+            "properties": {
+              "type": "SkiArea",
+              "id": "skiarea-1",
+              "name": "Sample Resort",
+              "activities": ["downhill"],
+              "status": "operating"
+            }
+          }
+        ],
+        "elevationProfile": null,
+        "sources": [],
+        "websites": [],
+        "wikidataID": null,
+        "places": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [10.970, 46.970, 2900],
+          [10.972, 46.972, 2750],
+          [10.974, 46.974, 2600]
+        ]
+      },
+      "properties": {
+        "type": "Run",
+        "uses": ["downhill"],
+        "id": "run-2",
+        "name": "Sample Black",
+        "ref": "3",
+        "status": "operating",
+        "description": null,
+        "difficulty": "expert",
+        "difficultyConvention": "europe",
+        "oneway": true,
+        "lit": true,
+        "gladed": true,
+        "patrolled": true,
+        "snowmaking": false,
+        "snowfarming": false,
+        "tunnel": null,
+        "grooming": "backcountry",
+        "skiAreas": [
+          {
+            "type": "Feature",
+            "geometry": { "type": "Point", "coordinates": [10.9646, 46.9658] },
+            "properties": {
+              "type": "SkiArea",
+              "id": "skiarea-1",
+              "name": "Sample Resort",
+              "activities": ["downhill"],
+              "status": "operating"
+            }
+          }
+        ],
+        "elevationProfile": null,
+        "sources": [],
+        "websites": [],
+        "wikidataID": null,
+        "places": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[10.98, 46.98], [10.981, 46.98], [10.981, 46.981], [10.98, 46.98]]]
+      },
+      "properties": {
+        "type": "Run",
+        "uses": ["snow_park"],
+        "id": "run-3",
+        "name": "Sample Terrain Park",
+        "ref": null,
+        "status": "operating",
+        "description": null,
+        "difficulty": null,
+        "difficultyConvention": "europe",
+        "oneway": null,
+        "lit": null,
+        "gladed": null,
+        "patrolled": null,
+        "snowmaking": null,
+        "snowfarming": null,
+        "tunnel": null,
+        "grooming": null,
+        "skiAreas": [],
+        "elevationProfile": null,
+        "sources": [],
+        "websites": [],
+        "wikidataID": null,
+        "places": []
+      }
+    }
+  ]
+}

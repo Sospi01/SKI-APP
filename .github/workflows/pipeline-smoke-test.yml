@@ -48,6 +48,23 @@ jobs:
           def rows(sql, params=()):
               return [dict(r) for r in conn.execute(sql, params).fetchall()]
 
+          def simplify_geometry(geometry_json):
+              """[[lon,lat], ...] per part, elevation dropped, 5 decimals (~1m)."""
+              if not geometry_json:
+                  return None
+              geom = json.loads(geometry_json)
+              gtype = geom.get("type")
+              coords = geom.get("coordinates")
+              if gtype == "LineString":
+                  parts = [coords]
+              elif gtype == "MultiLineString":
+                  parts = coords
+              elif gtype == "Polygon":
+                  parts = coords[:1]
+              else:
+                  return None
+              return [[[round(c[0], 5), round(c[1], 5)] for c in part] for part in parts]
+
           areas = conn.execute(
               "SELECT * FROM ski_areas WHERE name LIKE ?", (f"%{query}%",)
           ).fetchall()
@@ -67,8 +84,9 @@ jobs:
                   """
                   SELECT r.id, r.name, r.ref, r.difficulty, r.grooming, r.uses, r.lit, r.gladed,
                          r.patrolled, r.snowmaking, r.snowfarming, r.oneway, r.tunnel,
-                         r.geometry_type, r.length_m, r.ascent_m, r.descent_m, r.vertical_m,
-                         r.min_elevation_m, r.max_elevation_m, r.avg_pitch_percent, r.max_pitch_percent
+                         r.geometry_type, r.geometry_json, r.length_m, r.ascent_m, r.descent_m,
+                         r.vertical_m, r.min_elevation_m, r.max_elevation_m, r.avg_pitch_percent,
+                         r.max_pitch_percent
                   FROM runs r
                   JOIN run_ski_areas rsa ON rsa.run_id = r.id
                   WHERE rsa.ski_area_id = ?
@@ -76,11 +94,14 @@ jobs:
                   """,
                   (area["id"],),
               )
+              for r in area_dict["runs"]:
+                  r["geom"] = simplify_geometry(r.pop("geometry_json"))
+
               area_dict["lifts"] = rows(
                   """
                   SELECT l.id, l.name, l.ref, l.lift_type, l.status, l.access, l.occupancy,
                          l.capacity, l.duration_s, l.detachable, l.bubble, l.heating, l.oneway,
-                         l.tunnel, l.length_m, l.vertical_m
+                         l.tunnel, l.geometry_json, l.length_m, l.vertical_m
                   FROM lifts l
                   JOIN lift_ski_areas lsa ON lsa.lift_id = l.id
                   WHERE lsa.ski_area_id = ?
@@ -88,6 +109,9 @@ jobs:
                   """,
                   (area["id"],),
               )
+              for l in area_dict["lifts"]:
+                  l["geom"] = simplify_geometry(l.pop("geometry_json"))
+
               result.append(area_dict)
 
           print("===STATION_JSON_START===")

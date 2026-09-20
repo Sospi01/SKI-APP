@@ -119,6 +119,130 @@ jobs:
           print("===STATION_JSON_END===")
           PY
 
+      - run: pip install pillow
+
+      - name: Fetch terrain basemap
+        env:
+          SKI_AREA_QUERY: ${{ inputs.ski_area_query || 'Formigal' }}
+        run: |
+          python - <<'PY'
+          import base64
+          import io
+          import json
+          import math
+          import os
+          import sqlite3
+          import time
+
+          import requests
+          from PIL import Image
+
+          query = os.environ["SKI_AREA_QUERY"]
+          conn = sqlite3.connect("data/ski_info.db")
+          conn.row_factory = sqlite3.Row
+
+          area = conn.execute(
+              "SELECT id FROM ski_areas WHERE name LIKE ?", (f"%{query}%",)
+          ).fetchone()
+          if not area:
+              print("No ski area matched, skipping basemap")
+              raise SystemExit(0)
+
+          def all_points(table, link_table, link_col):
+              pts = []
+              for (geometry_json,) in conn.execute(
+                  f"""
+                  SELECT t.geometry_json FROM {table} t
+                  JOIN {link_table} lk ON lk.{link_col} = t.id
+                  WHERE lk.ski_area_id = ? AND t.geometry_json IS NOT NULL
+                  """,
+                  (area["id"],),
+              ):
+                  geom = json.loads(geometry_json)
+                  coords = geom.get("coordinates") or []
+                  gtype = geom.get("type")
+                  if gtype == "LineString":
+                      pts.extend(coords)
+                  elif gtype == "MultiLineString":
+                      for part in coords:
+                          pts.extend(part)
+                  elif gtype == "Polygon" and coords:
+                      pts.extend(coords[0])
+              return pts
+
+          pts = all_points("runs", "run_ski_areas", "run_id") + all_points("lifts", "lift_ski_areas", "lift_id")
+          if not pts:
+              print("No geometry found, skipping basemap")
+              raise SystemExit(0)
+
+          lons = [p[0] for p in pts]
+          lats = [p[1] for p in pts]
+          lon_min, lon_max = min(lons), max(lons)
+          lat_min, lat_max = min(lats), max(lats)
+          lat_mid = (lat_min + lat_max) / 2
+          cos = math.cos(math.radians(lat_mid))
+          proj_w = (lon_max - lon_min) * cos
+          proj_h = lat_max - lat_min
+          pad = max(proj_w, proj_h) * 0.08
+          lon_min_p, lon_max_p = lon_min - pad / cos, lon_max + pad / cos
+          lat_min_p, lat_max_p = lat_min - pad, lat_max + pad
+
+          ZOOM = 14
+          TILE = 256
+
+          def deg2num(lat_deg, lon_deg, zoom):
+              lat_rad = math.radians(lat_deg)
+              n = 2.0 ** zoom
+              x = (lon_deg + 180.0) / 360.0 * n
+              y = (1.0 - math.log(math.tan(lat_rad) + 1.0 / math.cos(lat_rad)) / math.pi) / 2.0 * n
+              return x, y
+
+          def num2deg(xtile, ytile, zoom):
+              n = 2.0 ** zoom
+              lon_deg = xtile / n * 360.0 - 180.0
+              lat_rad = math.atan(math.sinh(math.pi * (1 - 2 * ytile / n)))
+              return math.degrees(lat_rad), lon_deg
+
+          x1, y1 = deg2num(lat_max_p, lon_min_p, ZOOM)
+          x2, y2 = deg2num(lat_min_p, lon_max_p, ZOOM)
+          xt0, xt1 = math.floor(x1), math.floor(x2)
+          yt0, yt1 = math.floor(y1), math.floor(y2)
+
+          cols = xt1 - xt0 + 1
+          rows_ = yt1 - yt0 + 1
+          print(f"Fetching {cols}x{rows_} = {cols * rows_} tiles at zoom {ZOOM}")
+
+          canvas = Image.new("RGB", (cols * TILE, rows_ * TILE))
+          headers = {"User-Agent": "SkiInfoApp-Prototype/0.1 (one-off basemap fetch for a personal project)"}
+          session = requests.Session()
+          for row_i, ty in enumerate(range(yt0, yt1 + 1)):
+              for col_i, tx in enumerate(range(xt0, xt1 + 1)):
+                  url = f"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{ZOOM}/{ty}/{tx}"
+                  resp = session.get(url, headers=headers, timeout=30)
+                  resp.raise_for_status()
+                  tile_img = Image.open(io.BytesIO(resp.content)).convert("RGB")
+                  canvas.paste(tile_img, (col_i * TILE, row_i * TILE))
+                  time.sleep(0.05)
+
+          north, west = num2deg(xt0, yt0, ZOOM)
+          south, east = num2deg(xt1 + 1, yt1 + 1, ZOOM)
+
+          # keep the base64 payload modest
+          canvas.thumbnail((900, 900), Image.LANCZOS)
+          buf = io.BytesIO()
+          canvas.save(buf, format="JPEG", quality=82)
+          b64 = base64.b64encode(buf.getvalue()).decode("ascii")
+
+          print("===BASEMAP_JSON_START===")
+          print(json.dumps({
+              "west": west, "south": south, "east": east, "north": north,
+              "width": canvas.width, "height": canvas.height,
+              "attribution": "Esri, Maxar, Earthstar Geographics",
+              "b64": b64,
+          }))
+          print("===BASEMAP_JSON_END===")
+          PY
+
       - uses: actions/upload-artifact@v4
         with:
           name: ski_info-db

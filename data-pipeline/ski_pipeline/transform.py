@@ -61,7 +61,7 @@ def transform_ski_area(feature: dict[str, Any]) -> dict[str, Any]:
         "id": props["id"],
         "name": props.get("name"),
         "status": props.get("status"),
-        "activities": ",".join(props.get("activities") or []),
+        "activities": ",".join(sorted(props.get("activities") or [])),
         "run_convention": props.get("runConvention"),
         "country_code": place.get("iso3166_1Alpha2"),
         "region": localized.get("region"),

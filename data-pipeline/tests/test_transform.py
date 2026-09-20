@@ -30,6 +30,25 @@ def test_transform_ski_area_flattens_location_and_stats():
     assert row["websites"] == '["https://example.com"]'
 
 
+def test_transform_ski_area_sorts_activities_for_consistent_grouping():
+    # OpenSkiMap doesn't guarantee a stable order for the activities array, so
+    # the same downhill+nordic ski area can arrive as either ordering. Sorting
+    # keeps them grouping/filtering identically instead of splitting into two
+    # distinct "activities" values downstream.
+    feature = {
+        "properties": {
+            "id": "skiarea-x",
+            "name": "X",
+            "activities": ["nordic", "downhill"],
+            "places": [],
+            "websites": [],
+        },
+        "geometry": None,
+    }
+    row = transform.transform_ski_area(feature)
+    assert row["activities"] == "downhill,nordic"
+
+
 def test_transform_ski_area_handles_missing_statistics_and_places():
     features = list(transform.iter_features(FIXTURES / "ski_areas.sample.geojson"))
     row = transform.transform_ski_area(features[1])

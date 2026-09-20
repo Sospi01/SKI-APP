@@ -1,6 +1,11 @@
 name: Fetch Spanish ski stations (batch)
 
 on:
+  push:
+    branches:
+      - claude/ski-stations-database-rhvohj
+    paths:
+      - .github/workflows/fetch-es-stations.yml
   workflow_dispatch:
     inputs:
       offset:

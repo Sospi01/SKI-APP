@@ -1,0 +1,110 @@
+name: Pipeline smoke test
+
+on:
+  workflow_dispatch:
+    inputs:
+      ski_area_query:
+        description: "Ski area name to look up (SQL LIKE match) in the resulting database"
+        required: false
+        default: "Formigal"
+
+jobs:
+  build-and-query:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: data-pipeline
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install -r requirements.txt
+
+      - name: Download OpenSkiMap data and build the database
+        run: python -m ski_pipeline.cli --db data/ski_info.db -v
+
+      - name: Query ski area
+        env:
+          SKI_AREA_QUERY: ${{ inputs.ski_area_query }}
+        run: |
+          python - <<'PY'
+          import os
+          import sqlite3
+
+          query = os.environ["SKI_AREA_QUERY"]
+          conn = sqlite3.connect("data/ski_info.db")
+          conn.row_factory = sqlite3.Row
+
+          areas = conn.execute(
+              "SELECT * FROM ski_areas WHERE name LIKE ?", (f"%{query}%",)
+          ).fetchall()
+
+          if not areas:
+              print(f"No ski area matched '{query}'")
+
+          for area in areas:
+              print("=" * 70)
+              for key in area.keys():
+                  print(f"{key}: {area[key]}")
+
+              print("-- run stats (by activity/difficulty) --")
+              for row in conn.execute(
+                  "SELECT * FROM ski_area_run_stats WHERE ski_area_id = ? ORDER BY activity, difficulty",
+                  (area["id"],),
+              ):
+                  print(dict(row))
+
+              print("-- lift stats (by type) --")
+              for row in conn.execute(
+                  "SELECT * FROM ski_area_lift_stats WHERE ski_area_id = ? ORDER BY lift_type",
+                  (area["id"],),
+              ):
+                  print(dict(row))
+
+              run_segments = conn.execute(
+                  "SELECT COUNT(*) FROM run_ski_areas WHERE ski_area_id = ?", (area["id"],)
+              ).fetchone()[0]
+              lift_segments = conn.execute(
+                  "SELECT COUNT(*) FROM lift_ski_areas WHERE ski_area_id = ?", (area["id"],)
+              ).fetchone()[0]
+              print(f"linked run segments: {run_segments}")
+              print(f"linked lift segments: {lift_segments}")
+
+              print("-- sample run segments --")
+              for row in conn.execute(
+                  """
+                  SELECT r.name, r.difficulty, r.grooming, r.length_m, r.descent_m, r.avg_pitch_percent,
+                         r.lit, r.snowmaking
+                  FROM runs r
+                  JOIN run_ski_areas rsa ON rsa.run_id = r.id
+                  WHERE rsa.ski_area_id = ?
+                  LIMIT 5
+                  """,
+                  (area["id"],),
+              ):
+                  print(dict(row))
+
+              print("-- sample lifts --")
+              for row in conn.execute(
+                  """
+                  SELECT l.name, l.lift_type, l.capacity, l.occupancy, l.duration_s,
+                         l.detachable, l.bubble, l.length_m, l.vertical_m
+                  FROM lifts l
+                  JOIN lift_ski_areas lsa ON lsa.lift_id = l.id
+                  WHERE lsa.ski_area_id = ?
+                  LIMIT 5
+                  """,
+                  (area["id"],),
+              ):
+                  print(dict(row))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ski_info-db
+          path: data-pipeline/data/ski_info.db
+          retention-days: 5

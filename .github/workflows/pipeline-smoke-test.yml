@@ -187,7 +187,7 @@ jobs:
           lon_min_p, lon_max_p = lon_min - pad / cos, lon_max + pad / cos
           lat_min_p, lat_max_p = lat_min - pad, lat_max + pad
 
-          ZOOM = 14
+          ZOOM = 15
           TILE = 256
 
           def deg2num(lat_deg, lon_deg, zoom):
@@ -228,7 +228,7 @@ jobs:
           south, east = num2deg(xt1 + 1, yt1 + 1, ZOOM)
 
           # keep the base64 payload modest
-          canvas.thumbnail((900, 900), Image.LANCZOS)
+          canvas.thumbnail((1400, 1400), Image.LANCZOS)
           buf = io.BytesIO()
           canvas.save(buf, format="JPEG", quality=82)
           b64 = base64.b64encode(buf.getvalue()).decode("ascii")

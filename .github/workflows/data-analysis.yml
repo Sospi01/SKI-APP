@@ -27,7 +27,7 @@ jobs:
       - name: Download OpenSkiMap data and build the database
         run: python -m ski_pipeline.cli --db data/ski_info.db -v
 
-      - name: Descriptive analysis
+      - name: List Spanish ski areas
         run: |
           python - <<'PY'
           import json
@@ -39,111 +39,22 @@ jobs:
           def q(sql, params=()):
               return [dict(r) for r in conn.execute(sql, params).fetchall()]
 
-          def scalar(sql, params=()):
-              return conn.execute(sql, params).fetchone()[0]
-
-          result = {}
-
-          result["coverage"] = {
-              "ski_areas": scalar("SELECT COUNT(*) FROM ski_areas"),
-              "countries": scalar("SELECT COUNT(DISTINCT country_code) FROM ski_areas WHERE country_code IS NOT NULL"),
-              "run_segments": scalar("SELECT COUNT(*) FROM runs"),
-              "lifts": scalar("SELECT COUNT(*) FROM lifts"),
-              "total_piste_km": scalar("SELECT ROUND(SUM(length_km), 1) FROM ski_area_run_stats"),
-              "total_lift_km": scalar("SELECT ROUND(SUM(length_km), 1) FROM ski_area_lift_stats"),
-          }
-
-          result["activities"] = q(
-              "SELECT activities, COUNT(*) AS ski_area_count FROM ski_areas GROUP BY activities ORDER BY ski_area_count DESC"
-          )
-
-          result["status"] = q(
-              "SELECT status, COUNT(*) AS ski_area_count FROM ski_areas GROUP BY status ORDER BY ski_area_count DESC"
-          )
-
-          result["top_countries_by_ski_area_count"] = q(
+          rows = q(
               """
-              SELECT country_code, COUNT(*) AS ski_area_count
-              FROM ski_areas
-              WHERE country_code IS NOT NULL
-              GROUP BY country_code ORDER BY ski_area_count DESC LIMIT 10
+              SELECT sa.id, sa.name, sa.region, sa.status, sa.min_elevation_m, sa.max_elevation_m,
+                     (SELECT COUNT(*) FROM run_ski_areas WHERE ski_area_id = sa.id) AS run_segments,
+                     (SELECT COUNT(*) FROM lift_ski_areas WHERE ski_area_id = sa.id) AS lift_count,
+                     (SELECT ROUND(SUM(length_km), 1) FROM ski_area_run_stats WHERE ski_area_id = sa.id) AS piste_km
+              FROM ski_areas sa
+              WHERE sa.country_code = 'ES' AND sa.activities LIKE '%downhill%'
+              ORDER BY (piste_km IS NULL), piste_km DESC
               """
           )
 
-          result["top_countries_by_piste_km"] = q(
-              """
-              SELECT sa.country_code, ROUND(SUM(s.length_km), 1) AS piste_km
-              FROM ski_area_run_stats s
-              JOIN ski_areas sa ON sa.id = s.ski_area_id
-              WHERE sa.country_code IS NOT NULL
-              GROUP BY sa.country_code ORDER BY piste_km DESC LIMIT 10
-              """
-          )
-
-          result["difficulty_distribution"] = q(
-              """
-              SELECT difficulty, SUM(run_count) AS run_count, ROUND(SUM(length_km), 1) AS length_km
-              FROM ski_area_run_stats GROUP BY difficulty ORDER BY length_km DESC
-              """
-          )
-
-          result["lift_type_distribution"] = q(
-              """
-              SELECT lift_type, SUM(lift_count) AS lift_count, ROUND(SUM(length_km), 1) AS length_km
-              FROM ski_area_lift_stats GROUP BY lift_type ORDER BY length_km DESC
-              """
-          )
-
-          total_runs = scalar("SELECT COUNT(*) FROM runs")
-          total_lifts = scalar("SELECT COUNT(*) FROM lifts")
-          result["run_data_completeness_pct"] = {
-              "difficulty_known": round(100 * scalar("SELECT COUNT(*) FROM runs WHERE difficulty IS NOT NULL") / total_runs, 1),
-              "elevation_known": round(100 * scalar("SELECT COUNT(*) FROM runs WHERE vertical_m IS NOT NULL") / total_runs, 1),
-              "lit_known": round(100 * scalar("SELECT COUNT(*) FROM runs WHERE lit IS NOT NULL") / total_runs, 1),
-              "lit_yes_of_known": round(100 * scalar("SELECT COUNT(*) FROM runs WHERE lit = 1") / max(scalar("SELECT COUNT(*) FROM runs WHERE lit IS NOT NULL"), 1), 1),
-              "snowmaking_known": round(100 * scalar("SELECT COUNT(*) FROM runs WHERE snowmaking IS NOT NULL") / total_runs, 1),
-              "snowmaking_yes_of_known": round(100 * scalar("SELECT COUNT(*) FROM runs WHERE snowmaking = 1") / max(scalar("SELECT COUNT(*) FROM runs WHERE snowmaking IS NOT NULL"), 1), 1),
-              "patrolled_known": round(100 * scalar("SELECT COUNT(*) FROM runs WHERE patrolled IS NOT NULL") / total_runs, 1),
-          }
-
-          result["lift_data_completeness_pct"] = {
-              "capacity_known": round(100 * scalar("SELECT COUNT(*) FROM lifts WHERE capacity IS NOT NULL") / total_lifts, 1),
-              "detachable_known": round(100 * scalar("SELECT COUNT(*) FROM lifts WHERE detachable IS NOT NULL") / total_lifts, 1),
-              "detachable_yes_of_known": round(100 * scalar("SELECT COUNT(*) FROM lifts WHERE detachable = 1") / max(scalar("SELECT COUNT(*) FROM lifts WHERE detachable IS NOT NULL"), 1), 1),
-              "bubble_yes_of_known": round(100 * scalar("SELECT COUNT(*) FROM lifts WHERE bubble = 1") / max(scalar("SELECT COUNT(*) FROM lifts WHERE bubble IS NOT NULL"), 1), 1),
-          }
-
-          result["vertical_distribution_buckets_m"] = q(
-              """
-              SELECT
-                CASE
-                  WHEN v < 200 THEN '0-200'
-                  WHEN v < 500 THEN '200-500'
-                  WHEN v < 1000 THEN '500-1000'
-                  WHEN v < 1500 THEN '1000-1500'
-                  ELSE '1500+'
-                END AS bucket,
-                COUNT(*) AS ski_area_count
-              FROM (
-                SELECT (max_elevation_m - min_elevation_m) AS v
-                FROM ski_areas
-                WHERE min_elevation_m IS NOT NULL AND max_elevation_m IS NOT NULL
-              )
-              GROUP BY bucket
-              """
-          )
-
-          result["top5_vertical"] = q(
-              """
-              SELECT name, country_code, ROUND(max_elevation_m - min_elevation_m, 0) AS vertical_m,
-                     min_elevation_m, max_elevation_m
-              FROM ski_areas
-              WHERE min_elevation_m IS NOT NULL AND max_elevation_m IS NOT NULL
-              ORDER BY vertical_m DESC LIMIT 5
-              """
-          )
-
-          print("===ANALYSIS_JSON_START===")
-          print(json.dumps(result))
-          print("===ANALYSIS_JSON_END===")
+          print("===ES_STATIONS_JSON_START===")
+          print(json.dumps(rows))
+          print("===ES_STATIONS_JSON_END===")
+          print(f"TOTAL: {len(rows)}")
+          operating_with_runs = [r for r in rows if r["status"] == "operating" and (r["run_segments"] or 0) > 0 and (r["lift_count"] or 0) > 0]
+          print(f"OPERATING_WITH_RUNS_AND_LIFTS: {len(operating_with_runs)}")
           PY

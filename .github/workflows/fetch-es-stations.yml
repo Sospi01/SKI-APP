@@ -55,8 +55,10 @@ jobs:
 
           OFFSET = int(os.environ["OFFSET"])
           LIMIT = int(os.environ["LIMIT"])
-          ZOOM = 13
           TILE = 256
+          MAX_TILES = 130
+          MIN_ZOOM, MAX_ZOOM = 12, 17
+          MAX_OUTPUT_PX = 2000
 
           conn = sqlite3.connect("data/ski_info.db")
           conn.row_factory = sqlite3.Row
@@ -96,6 +98,13 @@ jobs:
           session = requests.Session()
           headers = {"User-Agent": "SkiInfoApp-Prototype/0.1 (one-off basemap fetch for a personal project)"}
 
+          def tile_grid(lon_min_p, lon_max_p, lat_min_p, lat_max_p, zoom):
+              x1, y1 = deg2num(lat_max_p, lon_min_p, zoom)
+              x2, y2 = deg2num(lat_min_p, lon_max_p, zoom)
+              xt0, xt1 = math.floor(x1), math.floor(x2)
+              yt0, yt1 = math.floor(y1), math.floor(y2)
+              return xt0, xt1, yt0, yt1
+
           def fetch_basemap(pts):
               lons = [p[0] for p in pts]
               lats = [p[1] for p in pts]
@@ -109,27 +118,36 @@ jobs:
               lon_min_p, lon_max_p = lon_min - pad / cos, lon_max + pad / cos
               lat_min_p, lat_max_p = lat_min - pad, lat_max + pad
 
-              x1, y1 = deg2num(lat_max_p, lon_min_p, ZOOM)
-              x2, y2 = deg2num(lat_min_p, lon_max_p, ZOOM)
-              xt0, xt1 = math.floor(x1), math.floor(x2)
-              yt0, yt1 = math.floor(y1), math.floor(y2)
+              # Pick the highest zoom (most detail) whose tile count stays under MAX_TILES,
+              # so small stations get sharp imagery and only the biggest ones fall back.
+              zoom = MIN_ZOOM
+              for candidate in range(MAX_ZOOM, MIN_ZOOM - 1, -1):
+                  xt0, xt1, yt0, yt1 = tile_grid(lon_min_p, lon_max_p, lat_min_p, lat_max_p, candidate)
+                  cols, rows_ = xt1 - xt0 + 1, yt1 - yt0 + 1
+                  if cols * rows_ <= MAX_TILES:
+                      zoom = candidate
+                      break
+
+              xt0, xt1, yt0, yt1 = tile_grid(lon_min_p, lon_max_p, lat_min_p, lat_max_p, zoom)
               cols, rows_ = xt1 - xt0 + 1, yt1 - yt0 + 1
+              print(f"    zoom={zoom} tiles={cols}x{rows_}={cols * rows_}")
 
               canvas = Image.new("RGB", (cols * TILE, rows_ * TILE))
               for row_i, ty in enumerate(range(yt0, yt1 + 1)):
                   for col_i, tx in enumerate(range(xt0, xt1 + 1)):
-                      url = f"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{ZOOM}/{ty}/{tx}"
+                      url = f"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{zoom}/{ty}/{tx}"
                       resp = session.get(url, headers=headers, timeout=30)
                       resp.raise_for_status()
                       tile_img = Image.open(io.BytesIO(resp.content)).convert("RGB")
                       canvas.paste(tile_img, (col_i * TILE, row_i * TILE))
                       time.sleep(0.03)
 
-              north, west = num2deg(xt0, yt0, ZOOM)
-              south, east = num2deg(xt1 + 1, yt1 + 1, ZOOM)
-              canvas.thumbnail((1100, 1100), Image.LANCZOS)
+              north, west = num2deg(xt0, yt0, zoom)
+              south, east = num2deg(xt1 + 1, yt1 + 1, zoom)
+              if canvas.width > MAX_OUTPUT_PX or canvas.height > MAX_OUTPUT_PX:
+                  canvas.thumbnail((MAX_OUTPUT_PX, MAX_OUTPUT_PX), Image.LANCZOS)
               buf = io.BytesIO()
-              canvas.save(buf, format="JPEG", quality=80)
+              canvas.save(buf, format="JPEG", quality=85)
               b64 = base64.b64encode(buf.getvalue()).decode("ascii")
               return {
                   "west": west, "south": south, "east": east, "north": north,

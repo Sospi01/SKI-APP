@@ -1,6 +1,11 @@
 name: Pipeline smoke test
 
 on:
+  push:
+    branches:
+      - claude/ski-stations-database-rhvohj
+    paths:
+      - .github/workflows/pipeline-smoke-test.yml
   workflow_dispatch:
     inputs:
       ski_area_query:
@@ -29,7 +34,7 @@ jobs:
 
       - name: Query ski area
         env:
-          SKI_AREA_QUERY: ${{ inputs.ski_area_query }}
+          SKI_AREA_QUERY: ${{ inputs.ski_area_query || 'Formigal' }}
         run: |
           python - <<'PY'
           import os

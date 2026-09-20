@@ -37,6 +37,7 @@ jobs:
           SKI_AREA_QUERY: ${{ inputs.ski_area_query || 'Formigal' }}
         run: |
           python - <<'PY'
+          import json
           import os
           import sqlite3
 
@@ -44,68 +45,54 @@ jobs:
           conn = sqlite3.connect("data/ski_info.db")
           conn.row_factory = sqlite3.Row
 
+          def rows(sql, params=()):
+              return [dict(r) for r in conn.execute(sql, params).fetchall()]
+
           areas = conn.execute(
               "SELECT * FROM ski_areas WHERE name LIKE ?", (f"%{query}%",)
           ).fetchall()
 
-          if not areas:
-              print(f"No ski area matched '{query}'")
-
+          result = []
           for area in areas:
-              print("=" * 70)
-              for key in area.keys():
-                  print(f"{key}: {area[key]}")
-
-              print("-- run stats (by activity/difficulty) --")
-              for row in conn.execute(
+              area_dict = dict(area)
+              area_dict["run_stats"] = rows(
                   "SELECT * FROM ski_area_run_stats WHERE ski_area_id = ? ORDER BY activity, difficulty",
                   (area["id"],),
-              ):
-                  print(dict(row))
-
-              print("-- lift stats (by type) --")
-              for row in conn.execute(
+              )
+              area_dict["lift_stats"] = rows(
                   "SELECT * FROM ski_area_lift_stats WHERE ski_area_id = ? ORDER BY lift_type",
                   (area["id"],),
-              ):
-                  print(dict(row))
-
-              run_segments = conn.execute(
-                  "SELECT COUNT(*) FROM run_ski_areas WHERE ski_area_id = ?", (area["id"],)
-              ).fetchone()[0]
-              lift_segments = conn.execute(
-                  "SELECT COUNT(*) FROM lift_ski_areas WHERE ski_area_id = ?", (area["id"],)
-              ).fetchone()[0]
-              print(f"linked run segments: {run_segments}")
-              print(f"linked lift segments: {lift_segments}")
-
-              print("-- sample run segments --")
-              for row in conn.execute(
+              )
+              area_dict["runs"] = rows(
                   """
-                  SELECT r.name, r.difficulty, r.grooming, r.length_m, r.descent_m, r.avg_pitch_percent,
-                         r.lit, r.snowmaking
+                  SELECT r.id, r.name, r.ref, r.difficulty, r.grooming, r.uses, r.lit, r.gladed,
+                         r.patrolled, r.snowmaking, r.snowfarming, r.oneway, r.tunnel,
+                         r.geometry_type, r.length_m, r.ascent_m, r.descent_m, r.vertical_m,
+                         r.min_elevation_m, r.max_elevation_m, r.avg_pitch_percent, r.max_pitch_percent
                   FROM runs r
                   JOIN run_ski_areas rsa ON rsa.run_id = r.id
                   WHERE rsa.ski_area_id = ?
-                  LIMIT 5
+                  ORDER BY r.difficulty, r.length_m DESC
                   """,
                   (area["id"],),
-              ):
-                  print(dict(row))
-
-              print("-- sample lifts --")
-              for row in conn.execute(
+              )
+              area_dict["lifts"] = rows(
                   """
-                  SELECT l.name, l.lift_type, l.capacity, l.occupancy, l.duration_s,
-                         l.detachable, l.bubble, l.length_m, l.vertical_m
+                  SELECT l.id, l.name, l.ref, l.lift_type, l.status, l.access, l.occupancy,
+                         l.capacity, l.duration_s, l.detachable, l.bubble, l.heating, l.oneway,
+                         l.tunnel, l.length_m, l.vertical_m
                   FROM lifts l
                   JOIN lift_ski_areas lsa ON lsa.lift_id = l.id
                   WHERE lsa.ski_area_id = ?
-                  LIMIT 5
+                  ORDER BY l.length_m DESC
                   """,
                   (area["id"],),
-              ):
-                  print(dict(row))
+              )
+              result.append(area_dict)
+
+          print("===STATION_JSON_START===")
+          print(json.dumps(result))
+          print("===STATION_JSON_END===")
           PY
 
       - uses: actions/upload-artifact@v4

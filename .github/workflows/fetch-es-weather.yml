@@ -1,0 +1,87 @@
+name: Fetch Spanish ski station weather
+
+on:
+  push:
+    branches:
+      - claude/ski-stations-database-rhvohj
+    paths:
+      - .github/workflows/fetch-es-weather.yml
+  workflow_dispatch: {}
+
+jobs:
+  fetch-weather:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: data-pipeline
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install -r requirements.txt
+
+      - name: Download OpenSkiMap data and build the database
+        run: python -m ski_pipeline.cli --db data/ski_info.db -v
+
+      - name: Fetch current weather per station
+        run: |
+          python - <<'PY'
+          import json
+          import sqlite3
+          import time
+
+          import requests
+
+          conn = sqlite3.connect("data/ski_info.db")
+          conn.row_factory = sqlite3.Row
+
+          stations = conn.execute(
+              """
+              SELECT sa.id, sa.latitude, sa.longitude
+              FROM ski_areas sa
+              WHERE sa.country_code = 'ES' AND sa.activities LIKE '%downhill%'
+                AND sa.status = 'operating'
+                AND (SELECT COUNT(*) FROM run_ski_areas WHERE ski_area_id = sa.id) > 0
+                AND (SELECT COUNT(*) FROM lift_ski_areas WHERE ski_area_id = sa.id) > 0
+              """
+          ).fetchall()
+
+          session = requests.Session()
+          headers = {"User-Agent": "SkiInfoApp-Prototype/0.1 (one-off weather fetch for a personal project)"}
+          result = {}
+          for s in stations:
+              if s["latitude"] is None or s["longitude"] is None:
+                  continue
+              try:
+                  resp = session.get(
+                      "https://api.open-meteo.com/v1/forecast",
+                      params={
+                          "latitude": s["latitude"],
+                          "longitude": s["longitude"],
+                          "current_weather": "true",
+                          "timezone": "UTC",
+                      },
+                      headers=headers,
+                      timeout=20,
+                  )
+                  resp.raise_for_status()
+                  cw = resp.json()["current_weather"]
+                  result[s["id"]] = {
+                      "temperature_c": cw["temperature"],
+                      "windspeed_kmh": cw["windspeed"],
+                      "weathercode": cw["weathercode"],
+                      "fetched_at": cw["time"] + "Z",
+                  }
+              except Exception as exc:
+                  print(f"weather fetch failed for {s['id']}: {exc}")
+              time.sleep(0.15)
+
+          print(f"Fetched weather for {len(result)}/{len(stations)} stations")
+          print("===WEATHER_JSON_START===")
+          print(json.dumps(result))
+          print("===WEATHER_JSON_END===")
+          PY

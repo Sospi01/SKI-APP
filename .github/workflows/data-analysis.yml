@@ -38,13 +38,13 @@ jobs:
           def q(sql, params=()):
               return [dict(r) for r in conn.execute(sql, params).fetchall()]
 
-          countries = ["DE", "SI", "US", "CA"]
+          countries = ["ES", "FR", "AT", "IT", "CH", "AD", "DE", "SI", "US", "CA"]
           thresholds = [0, 5, 10, 20, 30, 50, 75, 100]
           print("===COUNTRY_COUNTS_START===")
           for cc in countries:
               rows = q(
                   """
-                  SELECT (SELECT ROUND(SUM(length_km), 1) FROM ski_area_run_stats WHERE ski_area_id = sa.id) AS piste_km
+                  SELECT (SELECT ROUND(SUM(length_km), 1) FROM ski_area_run_stats WHERE ski_area_id = sa.id AND activity = 'downhill') AS piste_km
                   FROM ski_areas sa
                   WHERE sa.country_code = ? AND sa.activities LIKE '%downhill%'
                     AND sa.status = 'operating'

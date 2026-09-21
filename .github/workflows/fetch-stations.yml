@@ -83,16 +83,20 @@ jobs:
                   return None
               return [[[round(c[0], 5), round(c[1], 5)] for c in part] for part in parts]
 
+          # total_piste_km counts downhill terrain only -- some ski areas (Nordic-heavy
+          # ones especially) bundle huge cross-country trail networks into the same
+          # run_stats rows, which would otherwise inflate the threshold/ordering with
+          # areas that have little or no actual downhill skiing.
           stations = rows(
               """
               SELECT sa.*,
-                     COALESCE((SELECT SUM(length_km) FROM ski_area_run_stats WHERE ski_area_id = sa.id), 0) AS total_piste_km
+                     COALESCE((SELECT SUM(length_km) FROM ski_area_run_stats WHERE ski_area_id = sa.id AND activity = 'downhill'), 0) AS total_piste_km
               FROM ski_areas sa
               WHERE sa.country_code = ? AND sa.activities LIKE '%downhill%'
                 AND sa.status = 'operating'
                 AND (SELECT COUNT(*) FROM run_ski_areas WHERE ski_area_id = sa.id) > 0
                 AND (SELECT COUNT(*) FROM lift_ski_areas WHERE ski_area_id = sa.id) > 0
-                AND COALESCE((SELECT SUM(length_km) FROM ski_area_run_stats WHERE ski_area_id = sa.id), 0) >= ?
+                AND COALESCE((SELECT SUM(length_km) FROM ski_area_run_stats WHERE ski_area_id = sa.id AND activity = 'downhill'), 0) >= ?
               ORDER BY total_piste_km DESC
               LIMIT ? OFFSET ?
               """,
@@ -123,6 +127,7 @@ jobs:
                   FROM runs r
                   JOIN run_ski_areas rsa ON rsa.run_id = r.id
                   WHERE rsa.ski_area_id = ? AND (r.status IS NULL OR r.status = 'operating')
+                    AND (r.uses IS NULL OR r.uses LIKE '%downhill%')
                   ORDER BY r.difficulty, r.length_m DESC
                   """,
                   (area["id"],),

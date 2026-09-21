@@ -48,3 +48,16 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.activity:activity:1.9.1")
 }
+
+// androidx.activity and androidx.appcompat pull in different, incompatible
+// versions of the Kotlin stdlib split artifacts transitively (this app has
+// no Kotlin code of its own). Forcing one consistent version avoids
+// checkReleaseDuplicateClasses failing on classes that exist in both
+// kotlin-stdlib and the older separate kotlin-stdlib-jdk7/jdk8 jars.
+configurations.all {
+    resolutionStrategy {
+        force("org.jetbrains.kotlin:kotlin-stdlib:1.9.24")
+        force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.24")
+        force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.24")
+    }
+}

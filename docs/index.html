@@ -136,6 +136,8 @@
   .station-card .chevron { color: var(--text-muted); font-size: 20px; flex-shrink: 0; }
   .empty-state { padding: 34px 18px; text-align: center; color: var(--text-muted); font-size: 13.5px; line-height: 1.5; }
   .list-footer { padding: 4px 18px 22px; font-size: 11px; color: var(--text-muted); text-align: center; line-height: 1.6; }
+  .country-card .flag { font-size: 22px; line-height: 1; margin-right: 4px; }
+  .country-card .name { display: flex; align-items: center; gap: 8px; }
 
   /* ---------- dashboard screen ---------- */
   .topbar {
@@ -278,10 +280,23 @@
 
 <div class="app" id="app">
 
-  <div class="screen" id="screen-list">
+  <div class="screen" id="screen-country">
     <div class="list-header">
       <div class="eyebrow">Ski Info</div>
-      <h1>Estaciones de España</h1>
+      <h1>Elige un país</h1>
+      <p class="list-sub">Datos reales de OpenStreetMap / OpenSkiMap: pistas, remontes, mapa con imagen satelital. Elige un país y luego una estación.</p>
+    </div>
+    <div class="station-list" id="country-list"></div>
+    <p class="list-footer">Datos de OpenSkiMap / OpenStreetMap (ODbL) · imágenes Esri, Maxar, Earthstar Geographics</p>
+  </div>
+
+  <div class="screen" id="screen-list" hidden>
+    <div class="topbar">
+      <button type="button" class="back-btn" id="back-to-country-btn"><span class="chev">‹</span> Países</button>
+    </div>
+    <div class="list-header">
+      <div class="eyebrow">Ski Info</div>
+      <h1 id="country-list-title">Estaciones</h1>
       <p class="list-sub">Datos reales de OpenStreetMap / OpenSkiMap: pistas, remontes, mapa con imagen satelital. Elige una estación.</p>
       <div class="search-box">
         <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="14" y1="14" x2="18" y2="18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
@@ -389,7 +404,7 @@
 (function () {
   "use strict";
 
-  var STATIONS = [{"id":"125d02338620dc079d5d635595a099370161bf83","name":"Estació d'Esquí Baqueira-Beret","region":"Lleida","pisteKm":176.5},{"id":"5ee4bbf3ab3be8e91b05b56e05180dd4ee735335","name":"Estación de Esquí y Montaña de Sierra Nevada","region":"Granada","pisteKm":108.9},{"id":"0f46917975b8dab5e541edf6469105c3c091ec22","name":"Formigal","region":"Huesca","pisteKm":104.9},{"id":"1b306639a276ae1103bb8f7f682db30d717d65be","name":"Aramón Cerler","region":"Huesca","pisteKm":62.7},{"id":"03fcc0299c9030bf81bf077f9a94ee0b327040d9","name":"Masella","region":"Barcelona","pisteKm":51.6},{"id":"6eebeff16c8b480fc1335c8bed596286706cb776","name":"La Molina","region":"Barcelona","pisteKm":48.6},{"id":"52c9c35a9f63939f43b957b39196aa77ec0013c7","name":"Boí Taüll","region":"Lleida","pisteKm":34.9},{"id":"7e2b2e2ae39a8764945229ed9d6314ee6d0aae47","name":"Astun","region":"Huesca","pisteKm":34.4},{"id":"304d72fa57c50cd759b4ebeff3e48dbee4789b17","name":"Candanchu","region":"Huesca","pisteKm":32.9},{"id":"5de76e63f17d805e0408c795d97d0eb510223c49","name":"Estació d'esquí Port del Comte","region":"Lleida","pisteKm":26.7},{"id":"8bc747789f707f0342b2f046100b2a3b15b99d9a","name":"Estació d'esquí de Port-Ainé","region":"Lleida","pisteKm":21.9},{"id":"a6792c241300dee70b989ffcf6a12b8225bbd7d9","name":"Estación de esquí de Valdesquí","region":"Madrid","pisteKm":20.5},{"id":"3a7825318074a6cf80651dc5d976e66241982c9a","name":"Espot","region":"Lleida","pisteKm":20.0},{"id":"4061fa811727fdb41a320ed9b89bc1516574fbcd","name":"Estación de Esquí y Montaña Alto Campoo","region":"Cantabria","pisteKm":19.5},{"id":"b11f8a9b8390463caf77e7adc3db6c226cfe088b","name":"Panticosa","region":"Huesca","pisteKm":18.6},{"id":"6e135ea2a7e28e5194c76ef6acba0c49302a02e1","name":"Estació d'esquí i muntanya Vallter 2000","region":"Girona","pisteKm":18.6},{"id":"45d0f9aea9eb43a1fa74bbeb6b57c613b09a8f82","name":"Estación Invernal y de Montaña Valgrande-Pajares","region":"Asturias","pisteKm":16.1},{"id":"b1929238d8b7cb7633b24fa6629b5bbf8ef48911","name":"Estación de esquí de Valdezcaray","region":"La Rioja","pisteKm":15.1},{"id":"92e0b47ebc42bbff72cec9778f288d8bf5124db0","name":"La Covatilla","region":"Avila","pisteKm":14.7},{"id":"faa3b5961985ac8abe14b00d07ca7235b4eef86b","name":"Estación de Esquí de Manzaneda","region":"Ourense","pisteKm":13.2},{"id":"d10f2f21ec726d6ca8de5886b078f40426870c4b","name":"Estación Invernal y de Montaña San Isidro (Sector Cebolledo y Requejines)","region":"Leon","pisteKm":13.1},{"id":"0bc0af67288ed7c592e1f3364a400234763eb023","name":"La Pinilla","region":"Guadalajara","pisteKm":11.7},{"id":"f6faf99488990e64ba15017512e03b1b8634abf8","name":"Valdelinares","region":"Teruel","pisteKm":9.4},{"id":"4bfd6216f4414dd3505228bef1ea6d9e8049c74e","name":"Estación Invernal Fuentes de Invierno","region":"Asturias","pisteKm":9.3},{"id":"f208da1c140e4bdaba348f998b835c51fd028e1c","name":"Javalambre","region":"Teruel","pisteKm":8.4},{"id":"c9a311a41c98d29c1b4f6fc4411d5feb4ed51171","name":"Leitariegos","region":"Asturias","pisteKm":6.6},{"id":"acec7f838b66cfa338b12c9583387745cca11d86","name":"Estació de muntanya Vall de Núria","region":"Girona","pisteKm":6.5},{"id":"e70324e7722d70438a015278587839023291ff32","name":"Rasos de Peguera","region":"Barcelona","pisteKm":5.8},{"id":"9e00e72809ffc15563763518cdab85c73f9eccfa","name":"Estación Invernal y de Montaña San Isidro (Sector Saliencias)","region":"Asturias","pisteKm":5.6},{"id":"b0280114b1356e634938b8466c1f479bade260d5","name":"Estación Invernal y de Montaña San Isidro (Sector Riopinos)","region":"Leon","pisteKm":4.9},{"id":"28ade7297d64ecd6d406c7ea58d7df8eaec8c582","name":"Tavascan","region":"Lleida","pisteKm":4.2},{"id":"a005d05d07127924ceabfd883cef8041c3432356","name":"El Morredero","region":"Leon","pisteKm":4.0},{"id":"37f2df47c64be8ab0767bc65b3118e204e76e88b","name":"Punto de Nieves Santa Ines","region":"Soria","pisteKm":1.0}];
+  var STATIONS = [{"id":"9d84c79afd13915cb14c9e5fc3b63189e4f160fc","name":"Dolomiti Superski","region":"Bolzano/Bozen","pisteKm":1339.0,"country":"IT"},{"id":"13756027a3c85c2f3e1b8742865baa4f2469a277","name":"Corvatsch-Furtschellas","region":"Graubunden","pisteKm":291.3,"country":"CH"},{"id":"3768b8c925737d2bdad4ea978f036485c508a6b3","name":"Drei Zinnen - Tre Cime, Drei Zinnen, Tre Cime","region":"Bolzano/Bozen","pisteKm":280.6,"country":"IT"},{"id":"4ae9b0cba5454d6f0921bf413c33a267f1d63cca","name":"Arosa Lenzerheide","region":"Graubunden","pisteKm":222.7,"country":"CH"},{"id":"10811e37c10a12d51810c68dc7022f23ca4f9970","name":"Zermatt - Breuil-Cervinia, Breuil-Cervinia Ski Paradise","region":"Valais","pisteKm":208.5,"country":"CH"},{"id":"fa9477e20c9caa871737f7a1348b911870394799","name":"4 Vallées – Verbier/La Tzoumaz/Nendaz/Veysonnaz/Thyon","region":"Valais","pisteKm":183.4,"country":"CH"},{"id":"125d02338620dc079d5d635595a099370161bf83","name":"Estació d'Esquí Baqueira-Beret","region":"Lleida","pisteKm":176.5,"country":"ES"},{"id":"403c8d67ddd348bfa3f7d02c6c21163479964926","name":"Parsenn","region":"Graubunden","pisteKm":157.6,"country":"CH"},{"id":"d5ff708ce6a4ab382afaeb81310e7317494b6fbb","name":"Laax","region":"Glarus","pisteKm":152.2,"country":"CH"},{"id":"04d84a3789b94eba19ce3c951fece8117d931c03","name":"Alta Badia","region":"Bolzano/Bozen","pisteKm":143.9,"country":"IT"},{"id":"de4f884c40976fe9d18c23d0bab174c1d6b79218","name":"GrandValira","region":null,"pisteKm":136.6,"country":"AD"},{"id":"02196b1e0dd473176e265318bc9c06e22df53ace","name":"Cortina d'Ampezzo","region":"Belluno","pisteKm":130.7,"country":"IT"},{"id":"4c87ad2b81e6af13513c56907fa5850c59fa5e32","name":"Livigno","region":"Sondrio","pisteKm":115.7,"country":"IT"},{"id":"c4b221a54713b4e084b5bae02668c68dfaf6c1e3","name":"Les Rousses","region":"Vaud","pisteKm":109.3,"country":"CH"},{"id":"5ee4bbf3ab3be8e91b05b56e05180dd4ee735335","name":"Estación de Esquí y Montaña de Sierra Nevada","region":"Granada","pisteKm":108.9,"country":"ES"},{"id":"0f46917975b8dab5e541edf6469105c3c091ec22","name":"Formigal","region":"Huesca","pisteKm":104.9,"country":"ES"},{"id":"eeb2093cd64adef211261520c569179894373a74","name":"Andermatt+Disentis+Sedrun","region":"Uri","pisteKm":102.4,"country":"CH"},{"id":"df4c0541e78ace196a344e169cb23e9464c26224","name":"Obersaxen","region":"Graubunden","pisteKm":91.7,"country":"CH"},{"id":"17756f8437ab9269dabffdd3f26a4fd045a4ae74","name":"Aletsch Arena","region":"Valais","pisteKm":89.5,"country":"CH"},{"id":"1d111e0379650f6a9186eaa3d21dadf973340c88","name":"Grindelwald - Wengen (Kleine Scheidegg - Männlichen)","region":"Bern","pisteKm":88.0,"country":"CH"},{"id":"b63d5d59b7283cde4430ef60dc439bd31b07214d","name":"Villars/Gryon/Les Diablerets","region":"Vaud","pisteKm":85.0,"country":"CH"},{"id":"42e7619de4170fbbc68d4be51114f7cf54fb0d30","name":"Adelboden - Lenk","region":"Bern","pisteKm":83.3,"country":"CH"},{"id":"2e7ded9ef38b3609f561dd89d959e072f9cca157","name":"Champéry – Les Crosets – Champoussin – Morgins","region":"Valais","pisteKm":82.5,"country":"CH"},{"id":"0295b1657f53d93d0eb1fd692993c0d2909d6d73","name":"Kronplatz - Plan de Corones, Kronplatz, Plan de Corones","region":"Bolzano/Bozen","pisteKm":81.8,"country":"IT"},{"id":"1771e68c0cb96ffc4c834d53f8e60f77fe5ed05e","name":"Avoriaz","region":"Valais","pisteKm":81.5,"country":"CH"},{"id":"7764d597cda909bb1bc7fd66a07bbfa6bb8ab695","name":"Crans-Montana","region":"Valais","pisteKm":79.2,"country":"CH"},{"id":"064c258440982ec02bbffeb24ad3acffc7fa5ef0","name":"La Thuile ski","region":"Valle D'Aosta","pisteKm":78.7,"country":"IT"},{"id":"7512fc8f0f012bbc88e7e68cb48fdf60b8053429","name":"Schönried - Saanenmöser - Zweisimmen - St. Stephan","region":"Bern","pisteKm":78.2,"country":"CH"},{"id":"e615b3d384f0063fb20af785b477a97fdce907bc","name":"Val di Fassa","region":"Trento","pisteKm":78.1,"country":"IT"},{"id":"1ea2b390470af9ccc26e19397a2d90e59c198d4b","name":"Sainte-Croix - Les rasses","region":"Vaud","pisteKm":76.6,"country":"CH"},{"id":"5ffd86e2374dc98261a846de36bfc510ab758dfc","name":"Monterosa Ski","region":"Valle D'Aosta","pisteKm":71.5,"country":"IT"},{"id":"7fda1758b582daf60bb505e31bc3b7d5e4ce009b","name":"Zinal / Grimentz","region":"Valais","pisteKm":71.2,"country":"CH"},{"id":"dcb15d6d8592e307e3cf6da3bc1dd4e759d75d90","name":"Seiser Alm - Mont de Sëuc - Alpe di Siusi, Seiser Alm, Alpe di Siusi, Mont de Sëuc","region":"Bolzano/Bozen","pisteKm":69.4,"country":"IT"},{"id":"f9beaf4e37ef88b422b9ee4aa2ae9224f10afd02","name":"Corviglia","region":"Graubunden","pisteKm":67.6,"country":"CH"},{"id":"12680fc9a50678784c430e16dd665faa22a6c47c","name":"Roccaraso - Rivisondoli","region":"L'Aquila","pisteKm":66.5,"country":"IT"},{"id":"6fc2b7bd9404c7cf68e49ca9fd83600e3de149d4","name":"Sörenberg","region":"Obwalden","pisteKm":62.8,"country":"CH"},{"id":"1b306639a276ae1103bb8f7f682db30d717d65be","name":"Aramón Cerler","region":"Huesca","pisteKm":62.7,"country":"ES"},{"id":"c443cc1044843c9e8087e6c40fe118eb8d8fa18b","name":"3 Zinnen Dolomites (Dobbiaco - San Candido - Braies - Sesto - Alta Pusteria)","region":"Bolzano/Bozen","pisteKm":61.7,"country":"IT"},{"id":"fc37a3084eeca48d1ce164dc7a5862723aaf2013","name":"Saas Fee","region":"Valais","pisteKm":61.3,"country":"CH"},{"id":"2cbe407409b5340a8a35266314043918b4f7526f","name":"Savognin","region":"Graubunden","pisteKm":61.3,"country":"CH"},{"id":"d68b7ce7be8a7b5b3a0e020eeb9dce4770f0da6b","name":"Klausberg Skiarena","region":"Bolzano/Bozen","pisteKm":60.4,"country":"IT"},{"id":"f9d49079770850663f3c200a1956a203489c57ac","name":"Flumserberg","region":"Saint Gallen","pisteKm":59.3,"country":"CH"},{"id":"35a6ed0e1f5424feddcbc15b62e84b1b97f07624","name":"Sestriere","region":"Turin","pisteKm":57.5,"country":"IT"},{"id":"a82f34f376325886d7e9645f44a5f0e20084e78f","name":"Sauze D'Oulx","region":"Turin","pisteKm":57.3,"country":"IT"},{"id":"fd830ae87b04dcc7ab252d9b7f21cb21029dd61f","name":"Campiglio Dolomiti di Brenta","region":"Trento","pisteKm":56.7,"country":"IT"},{"id":"bffad13dcc96a8c292c819dc670726b0be3a7f5d","name":"Ponte di Legno - Passo Tonale","region":"Brescia","pisteKm":56.3,"country":"IT"},{"id":"80f1b9fb69d6d58d8c0211a019de956673e86a18","name":"Pila ski","region":"Valle D'Aosta","pisteKm":55.6,"country":"IT"},{"id":"170c8c0d276b50ceeb50658829c7dcd487fcd18c","name":"Saint-Luc - Chandolin","region":"Valais","pisteKm":55.6,"country":"CH"},{"id":"696bb1ffa7c5cbea2123abdb0821791dfaaad100","name":"Chäserrugg-Alt St. Johann","region":"Saint Gallen","pisteKm":53.7,"country":"CH"},{"id":"00e3880c19b3ca1bb412d2274d3c15bf4a2598f9","name":"Ski Civetta","region":"Belluno","pisteKm":53.1,"country":"IT"},{"id":"03fcc0299c9030bf81bf077f9a94ee0b327040d9","name":"Masella","region":"Barcelona","pisteKm":51.6,"country":"ES"},{"id":"73a929fdb6f99344480b7fc4e7f2e457e444b217","name":"Meiringen - Hasliberg","region":"Bern","pisteKm":51.0,"country":"CH"},{"id":"b038c9b06cac9bc5e400f5d1b2c3b42e00dc3728","name":"Ski Area San Pellegrino - Falcade","region":"Belluno","pisteKm":50.8,"country":"IT"},{"id":"6eebeff16c8b480fc1335c8bed596286706cb776","name":"La Molina","region":"Barcelona","pisteKm":48.6,"country":"ES"},{"id":"712f8e147bed9e60894d62fb3dad2619ac81966a","name":"Folgaria, Area sciistica Folgaria","region":"Trento","pisteKm":46.5,"country":"IT"},{"id":"3f859d2857727e7b2db37fcbdc7938f09f8e54bf","name":"Torgnon","region":"Valle D'Aosta","pisteKm":45.8,"country":"IT"},{"id":"f04f5c36668c9ba4e5256ccbd611698f3df75688","name":"Melchsee-Frutt","region":"Bern","pisteKm":45.4,"country":"CH"},{"id":"ab7961704073ef3c88692eee6638c6622112defc","name":"Arabba","region":"Belluno","pisteKm":45.3,"country":"IT"},{"id":"4230b270fcf77bb82c5a46b7324a55983d3d372f","name":"Val Comelico - Padola","region":"Belluno","pisteKm":44.3,"country":"IT"},{"id":"c9f7bd1feef91e49dbdae4831ed347243b5dfa33","name":"Scuol Motta Naluns","region":"Graubunden","pisteKm":43.4,"country":"CH"},{"id":"11b4273361f22eb084db41a3270d66fe1db2e7c1","name":"San Martino di Castrozza - Passo Rolle","region":"Trento","pisteKm":42.6,"country":"IT"},{"id":"c8df10ba59b2c80f2302566b5b0b9958292c8075","name":"Riserva Bianca","region":"Cuneo","pisteKm":42.4,"country":"IT"},{"id":"97e9df8fc8d999cf9e62628866e49af00598fba0","name":"Skipisten Titlis Bergbahnen","region":"Nidwalden","pisteKm":42.3,"country":"CH"},{"id":"748fee00e468b5d11016d8f9dab6e2e214ea78f5","name":"Latemar Dolomites","region":"Bolzano/Bozen","pisteKm":42.0,"country":"IT"},{"id":"f93e740601821a663803ec50529854339b744b27","name":"Courmayeur","region":"Valle D'Aosta","pisteKm":41.7,"country":"IT"},{"id":"29b30f99e12f6399919a7bbd34ab3ad948bf6ede","name":"Folgarida-Marilleva","region":"Trento","pisteKm":41.1,"country":"IT"},{"id":"c75c6ca036981ab96a6547398e30e705a9e30809","name":"Belvedere - Col Rodella - Passo Pordoi","region":"Trento","pisteKm":40.5,"country":"IT"},{"id":"3c30eddac708122c98a1ad904d7a67fc8499b342","name":"Pizol","region":"Saint Gallen","pisteKm":40.4,"country":"CH"},{"id":"e9c0a197353bef2c6ed47d85c268582cae8ad8ea","name":"Belalp","region":"Valais","pisteKm":39.9,"country":"CH"},{"id":"1871bd97633b45248e93e03d11f44d94caae83fc","name":"Grindelwald First","region":"Bern","pisteKm":39.5,"country":"CH"},{"id":"5ecb06388006e4740e7ce8234e26d036ce85edb7","name":"Pal-Arinsal","region":"Massana","pisteKm":39.3,"country":"AD"},{"id":"d9ac8983541d7960d801802ce64751267338b5e4","name":"Mürren/Schilthorn","region":"Bern","pisteKm":39.3,"country":"CH"},{"id":"7563abecd5cc2164f89cd67a02eac49bf45e2365","name":"Cortina Tofane","region":"Belluno","pisteKm":39.2,"country":"IT"},{"id":"715c1aff70ef02d1fa240ac06ba41da891cf93b4","name":"Area Sciistica Abetone","region":"Pistoia","pisteKm":39.0,"country":"IT"},{"id":"6706227f52c321acb67f28aea019d52a65fdbeb0","name":"Gstaad - Saanen - Rougemont","region":"Bern","pisteKm":39.0,"country":"CH"},{"id":"f7dc751e2a702b78afc47b42214106bc336a0f97","name":"Artesina","region":"Cuneo","pisteKm":38.8,"country":"IT"},{"id":"fe93095197fc1a4226c781072a9ce1c877bc18b2","name":"Aprica","region":"Sondrio","pisteKm":38.3,"country":"IT"},{"id":"5715439988a962bab375e89d7fcaa86583215933","name":"Anzère","region":"Valais","pisteKm":38.3,"country":"CH"},{"id":"7ac48fc0dbac27e15b38832f1f0df58bfe60e84e","name":"Tarvisio, Tarvis","region":"Udine","pisteKm":38.0,"country":"IT"},{"id":"0ed67f04f2e5d0f8e1b8be3507c577fcfcb60215","name":"Unterbäch - Eischoll","region":"Valais","pisteKm":37.5,"country":"CH"},{"id":"c880b001fe8a065af66fca1a93ea7ce3d62e546a","name":"Jakobshorn","region":"Graubunden","pisteKm":37.1,"country":"CH"},{"id":"82faebb76e68b9d8589b9cb4f305e739d959c261","name":"Santa Caterina","region":"Sondrio","pisteKm":36.2,"country":"IT"},{"id":"3fe9a6b2c3b2fddc054259af7b561d7d91f7b9f0","name":"Skiarea Valchiavenna Madesimo/Campodolcino","region":"Sondrio","pisteKm":35.4,"country":"IT"},{"id":"c2ef03c6a32c3c95862890abf492cd0f8c4ebfd2","name":"Bardonecchia","region":"Turin","pisteKm":35.4,"country":"IT"},{"id":"bb224ef16ede59ec7a913d61dd9dc6dc2cf43fe6","name":"Cimone, Area sciistica Monte Cimone","region":"Modena","pisteKm":35.0,"country":"IT"},{"id":"52c9c35a9f63939f43b957b39196aa77ec0013c7","name":"Boí Taüll","region":"Lleida","pisteKm":34.9,"country":"ES"},{"id":"a044deedf9fb7f84d9cd7c15b0d503403da71c2e","name":"Wildhaus","region":"Saint Gallen","pisteKm":34.9,"country":"CH"},{"id":"7e2b2e2ae39a8764945229ed9d6314ee6d0aae47","name":"Astun","region":"Huesca","pisteKm":34.4,"country":"ES"},{"id":"64aee63c9ac051c8e37df33f4bc3e5549876880d","name":"Paganella, Area sciistica Andalo Fai della Paganella","region":"Trento","pisteKm":34.4,"country":"IT"},{"id":"bd7b3458f542e69b67d1aadb4d474ffe5f5aa157","name":"Sansicario","region":"Turin","pisteKm":34.2,"country":"IT"},{"id":"7382bc3c80658564db8fc3dc0e2f8d8f7c709fe0","name":"Lagazuoi - 5 Torri","region":"Belluno","pisteKm":34.0,"country":"IT"},{"id":"45625a91e8f6714ebecb456492ca9e39b1bc677b","name":"Sulden","region":"Bolzano/Bozen","pisteKm":33.2,"country":"IT"},{"id":"304d72fa57c50cd759b4ebeff3e48dbee4789b17","name":"Candanchu","region":"Huesca","pisteKm":32.9,"country":"ES"},{"id":"a69a57ca1f64eda684455dfe6c096108b9b5dee7","name":"Schnalstal","region":"Bolzano/Bozen","pisteKm":32.6,"country":"IT"},{"id":"d45b83e0e69c153a4880dd640f9e6c00a53401a7","name":"Bormio Ski","region":"Sondrio","pisteKm":32.3,"country":"IT"},{"id":"a0ff12f1c7e58784375a6532825f9383cdf75715","name":"Les Mosses","region":"Vaud","pisteKm":32.1,"country":"CH"},{"id":"9d79e5920594df28c0b7622a17041a3c9bad89aa","name":"Leysin","region":"Vaud","pisteKm":32.1,"country":"CH"},{"id":"2826e74d5f33a0bd943b7353dcda7e1419c36ace","name":"Brigels-Waltensburg-Andiast, Brigels-Waltenburg-Andiast, Breil-Vuorz-Andiast","region":"Graubunden","pisteKm":31.7,"country":"CH"},{"id":"6ff57b9fc9073c238cb59e44b5b24b6b0aba269d","name":"Gitschberg Jochtal, Rio Pusteria","region":"Bolzano/Bozen","pisteKm":31.3,"country":"IT"},{"id":"65838d5e688d997892ba7e54d6b445d97294458b","name":"Speikboden","region":"Bolzano/Bozen","pisteKm":30.9,"country":"IT"},{"id":"c12308296fd2652bcc77c1e958fa474a49b137a9","name":"Saint George","region":"Vaud","pisteKm":30.6,"country":"CH"},{"id":"4984dcad2a0d405ed69fa07204fa4e4398f3bdaa","name":"Ski Area Alpe Lusia","region":"Trento","pisteKm":30.4,"country":"IT"},{"id":"46148538bc746b16fb6cfe32916026c23e16d738","name":"San Martino di Castrozza","region":"Trento","pisteKm":30.1,"country":"IT"},{"id":"5de76e63f17d805e0408c795d97d0eb510223c49","name":"Estació d'esquí Port del Comte","region":"Lleida","pisteKm":26.7,"country":"ES"},{"id":"8bc747789f707f0342b2f046100b2a3b15b99d9a","name":"Estació d'esquí de Port-Ainé","region":"Lleida","pisteKm":21.9,"country":"ES"},{"id":"a6792c241300dee70b989ffcf6a12b8225bbd7d9","name":"Estación de esquí de Valdesquí","region":"Madrid","pisteKm":20.5,"country":"ES"},{"id":"3a7825318074a6cf80651dc5d976e66241982c9a","name":"Espot","region":"Lleida","pisteKm":20.0,"country":"ES"},{"id":"4061fa811727fdb41a320ed9b89bc1516574fbcd","name":"Estación de Esquí y Montaña Alto Campoo","region":"Cantabria","pisteKm":19.5,"country":"ES"},{"id":"b11f8a9b8390463caf77e7adc3db6c226cfe088b","name":"Panticosa","region":"Huesca","pisteKm":18.6,"country":"ES"},{"id":"6e135ea2a7e28e5194c76ef6acba0c49302a02e1","name":"Estació d'esquí i muntanya Vallter 2000","region":"Girona","pisteKm":18.6,"country":"ES"},{"id":"45d0f9aea9eb43a1fa74bbeb6b57c613b09a8f82","name":"Estación Invernal y de Montaña Valgrande-Pajares","region":"Asturias","pisteKm":16.1,"country":"ES"},{"id":"b1929238d8b7cb7633b24fa6629b5bbf8ef48911","name":"Estación de esquí de Valdezcaray","region":"La Rioja","pisteKm":15.1,"country":"ES"},{"id":"92e0b47ebc42bbff72cec9778f288d8bf5124db0","name":"La Covatilla","region":"Avila","pisteKm":14.7,"country":"ES"},{"id":"faa3b5961985ac8abe14b00d07ca7235b4eef86b","name":"Estación de Esquí de Manzaneda","region":"Ourense","pisteKm":13.2,"country":"ES"},{"id":"d10f2f21ec726d6ca8de5886b078f40426870c4b","name":"Estación Invernal y de Montaña San Isidro (Sector Cebolledo y Requejines)","region":"Leon","pisteKm":13.1,"country":"ES"},{"id":"0bc0af67288ed7c592e1f3364a400234763eb023","name":"La Pinilla","region":"Guadalajara","pisteKm":11.7,"country":"ES"},{"id":"f6faf99488990e64ba15017512e03b1b8634abf8","name":"Valdelinares","region":"Teruel","pisteKm":9.4,"country":"ES"},{"id":"4bfd6216f4414dd3505228bef1ea6d9e8049c74e","name":"Estación Invernal Fuentes de Invierno","region":"Asturias","pisteKm":9.3,"country":"ES"},{"id":"f208da1c140e4bdaba348f998b835c51fd028e1c","name":"Javalambre","region":"Teruel","pisteKm":8.4,"country":"ES"},{"id":"c9a311a41c98d29c1b4f6fc4411d5feb4ed51171","name":"Leitariegos","region":"Asturias","pisteKm":6.6,"country":"ES"},{"id":"acec7f838b66cfa338b12c9583387745cca11d86","name":"Estació de muntanya Vall de Núria","region":"Girona","pisteKm":6.5,"country":"ES"},{"id":"e70324e7722d70438a015278587839023291ff32","name":"Rasos de Peguera","region":"Barcelona","pisteKm":5.8,"country":"ES"},{"id":"9e00e72809ffc15563763518cdab85c73f9eccfa","name":"Estación Invernal y de Montaña San Isidro (Sector Saliencias)","region":"Asturias","pisteKm":5.6,"country":"ES"},{"id":"b0280114b1356e634938b8466c1f479bade260d5","name":"Estación Invernal y de Montaña San Isidro (Sector Riopinos)","region":"Leon","pisteKm":4.9,"country":"ES"},{"id":"28ade7297d64ecd6d406c7ea58d7df8eaec8c582","name":"Tavascan","region":"Lleida","pisteKm":4.2,"country":"ES"},{"id":"a005d05d07127924ceabfd883cef8041c3432356","name":"El Morredero","region":"Leon","pisteKm":4.0,"country":"ES"},{"id":"37f2df47c64be8ab0767bc65b3118e204e76e88b","name":"Punto de Nieves Santa Ines","region":"Soria","pisteKm":1.0,"country":"ES"}];
 
   var DIFF = {
     novice:       { label: "Verde",  color: "var(--diff-novice)" },
@@ -557,12 +572,83 @@
   }
 
   // ============== SCREEN 1: search + list ==============
+  var COUNTRY_META = {
+    ES: { name: 'España', flag: '🇪🇸' },
+    FR: { name: 'Francia', flag: '🇫🇷' },
+    AT: { name: 'Austria', flag: '🇦🇹' },
+    IT: { name: 'Italia', flag: '🇮🇹' },
+    CH: { name: 'Suiza', flag: '🇨🇭' },
+    AD: { name: 'Andorra', flag: '🇦🇩' }
+  };
+  var currentCountry = null;
+
+  var countryListEl = document.getElementById('country-list');
+
+  function renderCountryList() {
+    countryListEl.innerHTML = '';
+    var byCountry = {};
+    STATIONS.forEach(function (s) {
+      var cc = s.country || 'ES';
+      if (!byCountry[cc]) byCountry[cc] = { count: 0, km: 0 };
+      byCountry[cc].count += 1;
+      byCountry[cc].km += s.pisteKm || 0;
+    });
+    var codes = Object.keys(byCountry).sort(function (a, b) { return byCountry[b].km - byCountry[a].km; });
+    codes.forEach(function (cc) {
+      var meta = COUNTRY_META[cc] || { name: cc, flag: '' };
+      var agg = byCountry[cc];
+      var card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'station-card country-card';
+
+      var info = document.createElement('div'); info.className = 'info';
+      var name = document.createElement('div'); name.className = 'name';
+      name.innerHTML = '<span class="flag">' + meta.flag + '</span><span>' + meta.name + '</span>';
+      var region = document.createElement('div'); region.className = 'region';
+      region.textContent = agg.count + (agg.count === 1 ? ' estación' : ' estaciones');
+      info.appendChild(name); info.appendChild(region);
+
+      var stats = document.createElement('div'); stats.className = 'stats';
+      var km = document.createElement('div'); km.className = 'km'; km.textContent = fmt(Math.round(agg.km)) + ' km';
+      var kmLabel = document.createElement('div'); kmLabel.className = 'km-label'; kmLabel.textContent = 'pista total';
+      stats.appendChild(km); stats.appendChild(kmLabel);
+
+      var chevron = document.createElement('span'); chevron.className = 'chevron'; chevron.textContent = '›';
+
+      card.appendChild(info); card.appendChild(stats); card.appendChild(chevron);
+      card.addEventListener('click', function () { selectCountry(cc); });
+      countryListEl.appendChild(card);
+    });
+  }
+
+  var screenCountry = document.getElementById('screen-country');
+
+  function selectCountry(cc) {
+    currentCountry = cc;
+    var meta = COUNTRY_META[cc] || { name: cc };
+    setText('country-list-title', 'Estaciones de ' + meta.name);
+    document.getElementById('search-input').value = '';
+    renderStationList('');
+    screenCountry.hidden = true;
+    screenList.hidden = false;
+    document.getElementById('app').scrollTop = 0;
+    window.scrollTo(0, 0);
+  }
+
+  document.getElementById('back-to-country-btn').addEventListener('click', function () {
+    screenList.hidden = true;
+    screenCountry.hidden = false;
+  });
+
+  renderCountryList();
+
   var listEl = document.getElementById('station-list');
 
   function renderStationList(filter) {
     listEl.innerHTML = '';
     var norm = normalize(filter);
     var matches = STATIONS.filter(function (s) {
+      if ((s.country || 'ES') !== currentCountry) return false;
       return normalize(s.name + ' ' + s.region).indexOf(norm) !== -1;
     });
     if (!matches.length) {
@@ -595,7 +681,6 @@
     });
   }
   document.getElementById('search-input').addEventListener('input', function (e) { renderStationList(e.target.value); });
-  renderStationList('');
 
   // ============== screen switching ==============
   var screenList = document.getElementById('screen-list');

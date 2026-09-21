@@ -145,11 +145,13 @@ jobs:
               area_dict["websites"] = json.loads(area_dict["websites"] or "[]")
               result.append(area_dict)
 
-          import base64
-          payload_b64 = base64.b64encode(json.dumps(result).encode("utf-8")).decode("ascii")
-          CHUNK = 2000
-          print("===BATCH_B64_START===")
-          for i in range(0, len(payload_b64), CHUNK):
-              print(payload_b64[i:i + CHUNK])
-          print("===BATCH_B64_END===")
+          with open("stations-batch.json", "w", encoding="utf-8") as f:
+              json.dump(result, f, ensure_ascii=False)
+          print(f"Wrote {len(result)} stations to stations-batch.json")
           PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stations-batch
+          path: data-pipeline/stations-batch.json
+          retention-days: 3

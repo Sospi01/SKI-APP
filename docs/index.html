@@ -665,7 +665,8 @@
 
       var info = document.createElement('div'); info.className = 'info';
       var name = document.createElement('div'); name.className = 'name'; name.textContent = s.name;
-      var region = document.createElement('div'); region.className = 'region'; region.textContent = s.region || 'España';
+      var region = document.createElement('div'); region.className = 'region';
+      region.textContent = s.region || (COUNTRY_META[s.country] || {}).name || s.country || '';
       info.appendChild(name); info.appendChild(region);
 
       var stats = document.createElement('div'); stats.className = 'stats';
@@ -1026,12 +1027,14 @@
 
   // ============== dashboard: full render ==============
   function renderDashboard(raw) {
+    var countryName = (COUNTRY_META[raw.country_code] || {}).name || raw.country_code || '';
     setText('h-name', raw.name || '–');
-    setText('h-place', [raw.locality, raw.region].filter(Boolean).join(', ') || 'España');
+    setText('h-place', [raw.locality, raw.region].filter(Boolean).join(', ') || countryName);
 
     var badgesEl = document.getElementById('badges');
     (raw.activities || '').split(',').filter(Boolean).map(function (a) { return ACTIVITY[a] || a; })
-      .concat([STATUS[raw.status] || raw.status, 'España'])
+      .concat([STATUS[raw.status] || raw.status, countryName])
+      .filter(Boolean)
       .forEach(function (label) {
         var b = document.createElement('span'); b.className = 'badge'; b.textContent = label;
         badgesEl.appendChild(b);

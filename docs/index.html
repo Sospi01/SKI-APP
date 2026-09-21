@@ -837,14 +837,25 @@
     function dist(a, b) { return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY); }
     function midpoint(a, b) { return [(a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2]; }
 
+    // Touch has no hover state, so a tap needs its own path to the tooltip:
+    // track whether a single-finger touch moved enough to count as a drag,
+    // and if not, treat pointerup as a tap on release.
+    var TAP_MOVE_THRESHOLD = 10;
+    var tapStart = null;
+
     svg.addEventListener('pointerdown', function (e) {
       if (!mapState) return;
       pointers[e.pointerId] = e; svg.setPointerCapture(e.pointerId);
       var ids = Object.keys(pointers);
-      if (ids.length === 1) { dragLast = [e.clientX, e.clientY]; svg.classList.add('dragging'); }
-      else if (ids.length === 2) {
-        var pts = ids.map(function (id) { return pointers[id]; });
-        pinchStartDist = dist(pts[0], pts[1]); pinchStartZoom = mapState.zoom;
+      if (ids.length === 1) {
+        dragLast = [e.clientX, e.clientY]; svg.classList.add('dragging');
+        tapStart = { x: e.clientX, y: e.clientY, id: e.pointerId, moved: false };
+      } else {
+        tapStart = null;
+        if (ids.length === 2) {
+          var pts = ids.map(function (id) { return pointers[id]; });
+          pinchStartDist = dist(pts[0], pts[1]); pinchStartZoom = mapState.zoom;
+        }
       }
     });
     svg.addEventListener('pointermove', function (e) {
@@ -853,6 +864,9 @@
       var ids = Object.keys(pointers);
       dismissHint();
       if (ids.length === 1 && dragLast) {
+        if (tapStart && tapStart.id === e.pointerId && !tapStart.moved) {
+          if (Math.hypot(e.clientX - tapStart.x, e.clientY - tapStart.y) > TAP_MOVE_THRESHOLD) tapStart.moved = true;
+        }
         var rect = svg.getBoundingClientRect();
         var dxSvg = (e.clientX - dragLast[0]) / rect.width * mapState.vbW;
         var dySvg = (e.clientY - dragLast[1]) / rect.height * mapState.vbH;
@@ -868,12 +882,16 @@
       }
     });
     function endPointer(e) {
+      var tapCandidate = Object.keys(pointers).length === 1
+        && tapStart && tapStart.id === e.pointerId && !tapStart.moved;
       delete pointers[e.pointerId];
       if (svg.hasPointerCapture && svg.hasPointerCapture(e.pointerId)) svg.releasePointerCapture(e.pointerId);
       var ids = Object.keys(pointers);
       if (ids.length < 2) pinchStartDist = null;
       if (ids.length === 1) dragLast = [pointers[ids[0]].clientX, pointers[ids[0]].clientY];
       if (ids.length === 0) { dragLast = null; svg.classList.remove('dragging'); }
+      if (tapCandidate) handleTap(e.clientX, e.clientY);
+      tapStart = null;
     }
     svg.addEventListener('pointerup', endPointer);
     svg.addEventListener('pointercancel', endPointer);
@@ -910,6 +928,18 @@
       });
       return best;
     }
+    function handleTap(clientX, clientY) {
+      var found = pickFeature(clientX, clientY);
+      if (found) {
+        clearActiveFeature();
+        activeFeature = found;
+        activeFeature.el.classList.add(activeFeature.hoverClass);
+        showTooltip(clientX, clientY, found.label, found.valueText);
+      } else {
+        clearActiveFeature();
+        hideTooltip();
+      }
+    }
     svg.addEventListener('pointermove', function (e) {
       if (!mapState || Object.keys(pointers).length > 0) return;
       var found = pickFeature(e.clientX, e.clientY);
@@ -925,7 +955,12 @@
         hideTooltip();
       }
     });
-    svg.addEventListener('pointerleave', function () { clearActiveFeature(); hideTooltip(); });
+    svg.addEventListener('pointerleave', function (e) {
+      // A touch pointer fires "leave" the moment the finger lifts, which would
+      // otherwise immediately hide the tooltip a tap just showed. Only a real
+      // mouse leaving the map area should dismiss it.
+      if (e.pointerType === 'mouse') { clearActiveFeature(); hideTooltip(); }
+    });
   })();
 
   function buildMap(raw) {

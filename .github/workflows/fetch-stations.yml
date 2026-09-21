@@ -145,13 +145,7 @@ jobs:
               area_dict["websites"] = json.loads(area_dict["websites"] or "[]")
               result.append(area_dict)
 
-          with open("stations-batch.json", "w", encoding="utf-8") as f:
-              json.dump(result, f, ensure_ascii=False)
-          print(f"Wrote {len(result)} stations to stations-batch.json")
+          print("===BATCH_JSON_START===")
+          print(json.dumps(result))
+          print("===BATCH_JSON_END===")
           PY
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: stations-batch
-          path: data-pipeline/stations-batch.json
-          retention-days: 3

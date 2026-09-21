@@ -339,6 +339,12 @@
       </div>
     </section>
 
+    <section id="domain-section" hidden>
+      <div class="section-head"><h2 id="domain-title">Dominio esquiable</h2></div>
+      <p class="quality-note" id="domain-note"></p>
+      <div class="chips" id="domain-links"></div>
+    </section>
+
     <section>
       <div class="section-head"><h2>Sol y tiempo</h2><span class="sub" id="weather-updated"></span></div>
       <div class="kpi-grid">
@@ -582,6 +588,45 @@
   };
   var currentCountry = null;
 
+  // Ski areas that OpenSkiMap/OpenStreetMap still map as separate entries
+  // even though they share lifts/pistes with their neighbours in real life.
+  // Curated by hand -- there's no reliable "part of domain X" tag to derive
+  // this from automatically.
+  var STATION_GROUPS = [
+    {
+      label: 'Formigal-Panticosa',
+      ids: ['0f46917975b8dab5e541edf6469105c3c091ec22', 'b11f8a9b8390463caf77e7adc3db6c226cfe088b']
+    },
+    {
+      label: 'Vía Láctea / Via Lattea',
+      ids: [
+        '35a6ed0e1f5424feddcbc15b62e84b1b97f07624', // Sestriere
+        'a82f34f376325886d7e9645f44a5f0e20084e78f', // Sauze D'Oulx
+        'bd7b3458f542e69b67d1aadb4d474ffe5f5aa157', // Sansicario
+        'b1a655113e872a26a397061747cc833b8a6932b2', // Montgenèvre
+        '5c965369d0727ccd79ab98ae91909542a33c7fe6'  // Claviere
+      ]
+    }
+  ];
+  function findGroupFor(id) {
+    for (var i = 0; i < STATION_GROUPS.length; i++) {
+      if (STATION_GROUPS[i].ids.indexOf(id) !== -1) return STATION_GROUPS[i];
+    }
+    return null;
+  }
+  function stationById(id) {
+    for (var i = 0; i < STATIONS.length; i++) {
+      if (STATIONS[i].id === id) return STATIONS[i];
+    }
+    return null;
+  }
+  function goToStation(id) {
+    var s = stationById(id);
+    if (!s) return;
+    if ((s.country || 'ES') !== currentCountry) setActiveCountry(s.country || 'ES');
+    selectStation(id);
+  }
+
   var countryListEl = document.getElementById('country-list');
 
   function renderCountryList() {
@@ -623,12 +668,16 @@
 
   var screenCountry = document.getElementById('screen-country');
 
-  function selectCountry(cc) {
+  function setActiveCountry(cc) {
     currentCountry = cc;
     var meta = COUNTRY_META[cc] || { name: cc };
     setText('country-list-title', 'Estaciones de ' + meta.name);
     document.getElementById('search-input').value = '';
     renderStationList('');
+  }
+
+  function selectCountry(cc) {
+    setActiveCountry(cc);
     screenCountry.hidden = true;
     screenList.hidden = false;
     document.getElementById('app').scrollTop = 0;
@@ -696,8 +745,9 @@
     window.scrollTo(0, 0);
     setText('h-name', 'Cargando…');
     setText('h-place', '');
-    ['badges', 'chart-difficulty', 'chart-lifts', 'runs-list', 'lifts-list', 'quality-list', 'run-filters', 'map-legend']
+    ['badges', 'chart-difficulty', 'chart-lifts', 'runs-list', 'lifts-list', 'quality-list', 'run-filters', 'map-legend', 'domain-links']
       .forEach(function (elId) { document.getElementById(elId).innerHTML = ''; });
+    document.getElementById('domain-section').hidden = true;
 
     fetch('data/' + id + '.json')
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
@@ -1047,6 +1097,30 @@
       setText('f-alt', '–'); setText('f-vert', '–');
     }
     setText('f-coords', formatCoord(raw.latitude, raw.longitude));
+
+    var group = findGroupFor(raw.id);
+    var domainSection = document.getElementById('domain-section');
+    if (group) {
+      var others = group.ids.filter(function (id) { return id !== raw.id; }).map(stationById).filter(Boolean);
+      var combinedKm = group.ids.map(stationById).filter(Boolean)
+        .reduce(function (sum, s) { return sum + (s.pisteKm || 0); }, 0);
+      setText('domain-title', group.label);
+      setText('domain-note',
+        'Comparte remontes y pistas con otras estaciones vecinas; en OpenStreetMap todavía aparecen como entradas separadas. '
+        + 'Entre todas suman ' + fmt(Math.round(combinedKm)) + ' km de pista.');
+      var linksEl = document.getElementById('domain-links');
+      others.forEach(function (o) {
+        var chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'chip';
+        chip.textContent = o.name + (o.pisteKm != null ? ' · ' + fmt(Math.round(o.pisteKm)) + ' km' : '');
+        chip.addEventListener('click', function () { goToStation(o.id); });
+        linksEl.appendChild(chip);
+      });
+      domainSection.hidden = false;
+    } else {
+      domainSection.hidden = true;
+    }
 
     if (raw.latitude != null && raw.longitude != null) {
       var sun = sunTimes(new Date(), raw.latitude, raw.longitude);

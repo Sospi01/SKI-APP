@@ -116,11 +116,13 @@ jobs:
               )
               area_dict["runs"] = rows(
                   """
-                  SELECT r.name, r.difficulty, r.uses, r.lit, r.snowmaking, r.patrolled,
-                         r.geometry_json, r.length_m, r.vertical_m, r.avg_pitch_percent, r.max_pitch_percent
+                  SELECT r.name, r.ref, r.difficulty, r.uses, r.grooming, r.gladed,
+                         r.lit, r.snowmaking, r.patrolled,
+                         r.geometry_json, r.length_m, r.ascent_m, r.descent_m, r.vertical_m,
+                         r.min_elevation_m, r.max_elevation_m, r.avg_pitch_percent, r.max_pitch_percent
                   FROM runs r
                   JOIN run_ski_areas rsa ON rsa.run_id = r.id
-                  WHERE rsa.ski_area_id = ?
+                  WHERE rsa.ski_area_id = ? AND (r.status IS NULL OR r.status = 'operating')
                   ORDER BY r.difficulty, r.length_m DESC
                   """,
                   (area["id"],),
@@ -130,11 +132,12 @@ jobs:
 
               area_dict["lifts"] = rows(
                   """
-                  SELECT l.name, l.lift_type, l.capacity, l.occupancy, l.detachable,
+                  SELECT l.name, l.ref, l.lift_type, l.access, l.capacity, l.occupancy,
+                         l.duration_s, l.detachable, l.bubble, l.heating,
                          l.geometry_json, l.length_m, l.vertical_m
                   FROM lifts l
                   JOIN lift_ski_areas lsa ON lsa.lift_id = l.id
-                  WHERE lsa.ski_area_id = ?
+                  WHERE lsa.ski_area_id = ? AND (l.status IS NULL OR l.status = 'operating')
                   ORDER BY l.length_m DESC
                   """,
                   (area["id"],),

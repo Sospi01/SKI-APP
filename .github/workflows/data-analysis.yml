@@ -38,7 +38,7 @@ jobs:
           def q(sql, params=()):
               return [dict(r) for r in conn.execute(sql, params).fetchall()]
 
-          countries = ["ES", "FR", "AT", "IT", "CH", "AD"]
+          countries = ["DE", "SI", "US", "CA"]
           thresholds = [0, 5, 10, 20, 30, 50, 75, 100]
           print("===COUNTRY_COUNTS_START===")
           for cc in countries:

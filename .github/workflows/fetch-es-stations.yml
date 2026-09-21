@@ -15,7 +15,7 @@ on:
       limit:
         description: "How many stations to process in this run"
         required: false
-        default: "9"
+        default: "33"
 
 jobs:
   build-and-fetch:
@@ -31,34 +31,23 @@ jobs:
         with:
           python-version: "3.11"
 
-      - run: pip install -r requirements.txt pillow
+      - run: pip install -r requirements.txt
 
       - name: Download OpenSkiMap data and build the database
         run: python -m ski_pipeline.cli --db data/ski_info.db -v
 
-      - name: Fetch stations + basemaps
+      - name: Fetch stations
         env:
           OFFSET: ${{ inputs.offset || '0' }}
-          LIMIT: ${{ inputs.limit || '9' }}
+          LIMIT: ${{ inputs.limit || '33' }}
         run: |
           python - <<'PY'
-          import base64
-          import io
           import json
-          import math
           import os
           import sqlite3
-          import time
-
-          import requests
-          from PIL import Image
 
           OFFSET = int(os.environ["OFFSET"])
           LIMIT = int(os.environ["LIMIT"])
-          TILE = 256
-          MAX_TILES = 130
-          MIN_ZOOM, MAX_ZOOM = 12, 17
-          MAX_OUTPUT_PX = 2000
 
           conn = sqlite3.connect("data/ski_info.db")
           conn.row_factory = sqlite3.Row
@@ -81,80 +70,6 @@ jobs:
               else:
                   return None
               return [[[round(c[0], 5), round(c[1], 5)] for c in part] for part in parts]
-
-          def deg2num(lat_deg, lon_deg, zoom):
-              lat_rad = math.radians(lat_deg)
-              n = 2.0 ** zoom
-              x = (lon_deg + 180.0) / 360.0 * n
-              y = (1.0 - math.log(math.tan(lat_rad) + 1.0 / math.cos(lat_rad)) / math.pi) / 2.0 * n
-              return x, y
-
-          def num2deg(xtile, ytile, zoom):
-              n = 2.0 ** zoom
-              lon_deg = xtile / n * 360.0 - 180.0
-              lat_rad = math.atan(math.sinh(math.pi * (1 - 2 * ytile / n)))
-              return math.degrees(lat_rad), lon_deg
-
-          session = requests.Session()
-          headers = {"User-Agent": "SkiInfoApp-Prototype/0.1 (one-off basemap fetch for a personal project)"}
-
-          def tile_grid(lon_min_p, lon_max_p, lat_min_p, lat_max_p, zoom):
-              x1, y1 = deg2num(lat_max_p, lon_min_p, zoom)
-              x2, y2 = deg2num(lat_min_p, lon_max_p, zoom)
-              xt0, xt1 = math.floor(x1), math.floor(x2)
-              yt0, yt1 = math.floor(y1), math.floor(y2)
-              return xt0, xt1, yt0, yt1
-
-          def fetch_basemap(pts):
-              lons = [p[0] for p in pts]
-              lats = [p[1] for p in pts]
-              lon_min, lon_max = min(lons), max(lons)
-              lat_min, lat_max = min(lats), max(lats)
-              lat_mid = (lat_min + lat_max) / 2
-              cos = math.cos(math.radians(lat_mid))
-              proj_w = (lon_max - lon_min) * cos
-              proj_h = lat_max - lat_min
-              pad = max(proj_w, proj_h) * 0.08
-              lon_min_p, lon_max_p = lon_min - pad / cos, lon_max + pad / cos
-              lat_min_p, lat_max_p = lat_min - pad, lat_max + pad
-
-              # Pick the highest zoom (most detail) whose tile count stays under MAX_TILES,
-              # so small stations get sharp imagery and only the biggest ones fall back.
-              zoom = MIN_ZOOM
-              for candidate in range(MAX_ZOOM, MIN_ZOOM - 1, -1):
-                  xt0, xt1, yt0, yt1 = tile_grid(lon_min_p, lon_max_p, lat_min_p, lat_max_p, candidate)
-                  cols, rows_ = xt1 - xt0 + 1, yt1 - yt0 + 1
-                  if cols * rows_ <= MAX_TILES:
-                      zoom = candidate
-                      break
-
-              xt0, xt1, yt0, yt1 = tile_grid(lon_min_p, lon_max_p, lat_min_p, lat_max_p, zoom)
-              cols, rows_ = xt1 - xt0 + 1, yt1 - yt0 + 1
-              print(f"    zoom={zoom} tiles={cols}x{rows_}={cols * rows_}")
-
-              canvas = Image.new("RGB", (cols * TILE, rows_ * TILE))
-              for row_i, ty in enumerate(range(yt0, yt1 + 1)):
-                  for col_i, tx in enumerate(range(xt0, xt1 + 1)):
-                      url = f"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{zoom}/{ty}/{tx}"
-                      resp = session.get(url, headers=headers, timeout=30)
-                      resp.raise_for_status()
-                      tile_img = Image.open(io.BytesIO(resp.content)).convert("RGB")
-                      canvas.paste(tile_img, (col_i * TILE, row_i * TILE))
-                      time.sleep(0.03)
-
-              north, west = num2deg(xt0, yt0, zoom)
-              south, east = num2deg(xt1 + 1, yt1 + 1, zoom)
-              if canvas.width > MAX_OUTPUT_PX or canvas.height > MAX_OUTPUT_PX:
-                  canvas.thumbnail((MAX_OUTPUT_PX, MAX_OUTPUT_PX), Image.LANCZOS)
-              buf = io.BytesIO()
-              canvas.save(buf, format="JPEG", quality=85)
-              b64 = base64.b64encode(buf.getvalue()).decode("ascii")
-              return {
-                  "west": west, "south": south, "east": east, "north": north,
-                  "width": canvas.width, "height": canvas.height,
-                  "attribution": "Esri, Maxar, Earthstar Geographics",
-                  "b64": b64,
-              }
 
           stations = rows(
               """
@@ -212,30 +127,10 @@ jobs:
               for l in area_dict["lifts"]:
                   l["geom"] = simplify_geometry(l.pop("geometry_json"))
 
-              pts = []
-              for r in area_dict["runs"]:
-                  for part in (r["geom"] or []):
-                      pts.extend(part)
-              for l in area_dict["lifts"]:
-                  for part in (l["geom"] or []):
-                      pts.extend(part)
-
-              if pts:
-                  try:
-                      area_dict["basemap"] = fetch_basemap(pts)
-                  except Exception as exc:
-                      print(f"basemap fetch failed for {area['name']}: {exc}")
-                      area_dict["basemap"] = None
-              else:
-                  area_dict["basemap"] = None
-
               area_dict["websites"] = json.loads(area_dict["websites"] or "[]")
               result.append(area_dict)
 
-          payload_b64 = base64.b64encode(json.dumps(result).encode("utf-8")).decode("ascii")
-          CHUNK = 2000
-          print("===ES_BATCH_B64_START===")
-          for i in range(0, len(payload_b64), CHUNK):
-              print(payload_b64[i:i + CHUNK])
-          print("===ES_BATCH_B64_END===")
+          print("===ES_BATCH_JSON_START===")
+          print(json.dumps(result))
+          print("===ES_BATCH_JSON_END===")
           PY

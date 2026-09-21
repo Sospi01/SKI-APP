@@ -539,8 +539,10 @@
   var tooltip = document.getElementById('tooltip');
   function showTooltip(x, y, label, valueText) {
     tooltip.innerHTML = '';
-    var strong = document.createElement('strong'); strong.textContent = label;
-    tooltip.appendChild(strong);
+    if (label) {
+      var strong = document.createElement('strong'); strong.textContent = label;
+      tooltip.appendChild(strong);
+    }
     tooltip.appendChild(document.createTextNode(valueText));
     tooltip.style.left = x + 'px'; tooltip.style.top = y + 'px';
     tooltip.hidden = false;
@@ -886,7 +888,7 @@
         var hit = document.createElementNS(SVGNS, 'polyline'); hit.setAttribute('points', pts); hit.setAttribute('class', 'map-hit'); hit.setAttribute('tabindex', '0');
         var line = document.createElementNS(SVGNS, 'polyline'); line.setAttribute('points', pts); line.setAttribute('class', 'map-run'); line.style.stroke = DIFF[key].color;
         content.appendChild(halo); content.appendChild(hit); content.appendChild(line);
-        var label = r.name || ('Pista sin nombre #' + (idx + 1));
+        var label = r.name || null;
         var bits = [DIFF[key].label];
         if (r.length_m) bits.push(fmt(Math.round(r.length_m)) + ' m');
         if (r.avg_pitch_percent != null) bits.push(fmt(r.avg_pitch_percent, 0) + '% pend. media');
@@ -1020,25 +1022,46 @@
       return { label: LIFT_TYPE[k] || k, value: a.km, valueText: fmt(a.km, 1) + ' km · ' + a.count, color: 'var(--accent)' };
     }));
 
-    // runs list + filters
-    setText('runs-count-sub', raw.runs.length + ' segmentos');
+    // runs list + filters: OpenStreetMap frequently maps one physical piste as
+    // several way segments sharing the same name (e.g. a short flat connector
+    // split off from the main run), so group by exact name for this list --
+    // the map itself still shows every individual segment when you hover it.
+    var namedCount = raw.runs.filter(function (r) { return r.name; }).length;
+    var runGroups = {}, runOrder = [];
+    raw.runs.forEach(function (r) {
+      if (!r.name) return;
+      if (!runGroups[r.name]) {
+        runGroups[r.name] = { name: r.name, difficulty: r.difficulty, length_m: 0, vertical_m: 0, lit: 0, segments: 0 };
+        runOrder.push(r.name);
+      }
+      var g = runGroups[r.name];
+      g.length_m += r.length_m || 0;
+      g.vertical_m += r.vertical_m || 0;
+      if (r.lit === 1) g.lit = 1;
+      g.segments += 1;
+    });
+    runOrder.sort(function (a, b) {
+      var ga = runGroups[a], gb = runGroups[b];
+      var da = DIFF_ORDER.indexOf(diffKey(ga.difficulty)), db = DIFF_ORDER.indexOf(diffKey(gb.difficulty));
+      return da !== db ? da - db : gb.length_m - ga.length_m;
+    });
+    setText('runs-count-sub', runOrder.length + ' pistas');
     var runsList = document.getElementById('runs-list');
-    var namedCount = 0;
-    raw.runs.forEach(function (r, idx) {
-      var key = diffKey(r.difficulty);
+    runOrder.forEach(function (rname) {
+      var g = runGroups[rname];
+      var key = diffKey(g.difficulty);
       var item = document.createElement('div'); item.className = 'item'; item.setAttribute('data-diff', key);
       var dot = document.createElement('span'); dot.className = 'dot'; dot.style.background = DIFF[key].color;
       var main = document.createElement('div'); main.className = 'item-main';
-      var name = document.createElement('div');
-      if (r.name) { name.className = 'item-name'; name.textContent = r.name; namedCount++; }
-      else { name.className = 'item-name muted'; name.textContent = 'Pista sin nombre #' + (idx + 1); }
+      var name = document.createElement('div'); name.className = 'item-name'; name.textContent = g.name;
       var meta = document.createElement('div'); meta.className = 'item-meta';
       var bits = [];
-      if (r.length_m) bits.push(fmt(Math.round(r.length_m)) + ' m');
-      if (r.vertical_m) bits.push('desnivel ' + fmt(Math.round(r.vertical_m)) + ' m');
-      if (r.avg_pitch_percent != null) bits.push('pend. media ' + fmt(r.avg_pitch_percent, 1) + '%');
+      if (g.length_m) bits.push(fmt(Math.round(g.length_m)) + ' m');
+      if (g.vertical_m) bits.push('desnivel ' + fmt(Math.round(g.vertical_m)) + ' m');
+      if (g.length_m) bits.push('pend. media ' + fmt(100 * g.vertical_m / g.length_m, 1) + '%');
+      if (g.segments > 1) bits.push(g.segments + ' tramos');
       meta.textContent = bits.join(' · ');
-      if (r.lit === 1) { var pill = document.createElement('span'); pill.className = 'pill'; pill.textContent = 'Nocturna'; meta.appendChild(pill); }
+      if (g.lit === 1) { var pill = document.createElement('span'); pill.className = 'pill'; pill.textContent = 'Nocturna'; meta.appendChild(pill); }
       main.appendChild(name); main.appendChild(meta);
       item.appendChild(dot); item.appendChild(main);
       runsList.appendChild(item);

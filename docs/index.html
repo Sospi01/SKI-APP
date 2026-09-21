@@ -492,6 +492,37 @@
       .catch(function (err) { console.error('weather fetch failed', err); return null; });
   }
 
+  // ============== live satellite tiles (Esri World Imagery) ==============
+  var TILE_SIZE = 256, TILE_MIN_ZOOM = 12, TILE_MAX_ZOOM = 17, TILE_MAX_COUNT = 130;
+  function deg2tile(latDeg, lonDeg, zoom) {
+    var latRad = latDeg * Math.PI / 180;
+    var n = Math.pow(2, zoom);
+    var x = (lonDeg + 180) / 360 * n;
+    var y = (1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n;
+    return [x, y];
+  }
+  function tile2deg(x, y, zoom) {
+    var n = Math.pow(2, zoom);
+    var lonDeg = x / n * 360 - 180;
+    var latRad = Math.atan(Math.sinh(Math.PI * (1 - 2 * y / n)));
+    return [latRad * 180 / Math.PI, lonDeg];
+  }
+  function tileGridAt(lonMinP, lonMaxP, latMinP, latMaxP, zoom) {
+    var p1 = deg2tile(latMaxP, lonMinP, zoom), p2 = deg2tile(latMinP, lonMaxP, zoom);
+    var xt0 = Math.floor(p1[0]), xt1 = Math.floor(p2[0]);
+    var yt0 = Math.floor(p1[1]), yt1 = Math.floor(p2[1]);
+    return { xt0: xt0, xt1: xt1, yt0: yt0, yt1: yt1 };
+  }
+  function pickTileZoom(lonMinP, lonMaxP, latMinP, latMaxP) {
+    var zoom = TILE_MIN_ZOOM;
+    for (var z = TILE_MAX_ZOOM; z >= TILE_MIN_ZOOM; z--) {
+      var g = tileGridAt(lonMinP, lonMaxP, latMinP, latMaxP, z);
+      var count = (g.xt1 - g.xt0 + 1) * (g.yt1 - g.yt0 + 1);
+      if (count <= TILE_MAX_COUNT) { zoom = z; break; }
+    }
+    return zoom;
+  }
+
   function fmt(n, d) {
     if (n == null || isNaN(n)) return "–";
     return n.toLocaleString('es-ES', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
@@ -583,7 +614,6 @@
     fetch('data/' + id + '.json')
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(function (raw) {
-        raw._imagePath = 'data/' + id + '.jpg';
         var weatherFetch = (raw.latitude != null && raw.longitude != null)
           ? fetchLiveWeather(raw.latitude, raw.longitude)
           : Promise.resolve(null);
@@ -796,16 +826,24 @@
     var content = document.createElementNS(SVGNS, 'g');
     svg.appendChild(content);
 
-    if (raw.basemap) {
-      var bm = raw.basemap;
-      var nw = project([bm.west, bm.north]), se = project([bm.east, bm.south]);
-      var img = document.createElementNS(SVGNS, 'image');
-      img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', raw._imagePath);
-      img.setAttribute('href', raw._imagePath);
-      img.setAttribute('x', nw[0]); img.setAttribute('y', nw[1]);
-      img.setAttribute('width', se[0] - nw[0]); img.setAttribute('height', se[1] - nw[1]);
-      img.setAttribute('preserveAspectRatio', 'none');
-      content.appendChild(img);
+    var lonMinP = lonMin - pad / cos, lonMaxP = lonMax + pad / cos;
+    var latMinP = latMin - pad, latMaxP = latMax + pad;
+    var tileZoom = pickTileZoom(lonMinP, lonMaxP, latMinP, latMaxP);
+    var grid = tileGridAt(lonMinP, lonMaxP, latMinP, latMaxP, tileZoom);
+    for (var ty = grid.yt0; ty <= grid.yt1; ty++) {
+      for (var tx = grid.xt0; tx <= grid.xt1; tx++) {
+        var nwDeg = tile2deg(tx, ty, tileZoom), seDeg = tile2deg(tx + 1, ty + 1, tileZoom);
+        var nwPt = project([nwDeg[1], nwDeg[0]]), sePt = project([seDeg[1], seDeg[0]]);
+        var tileImg = document.createElementNS(SVGNS, 'image');
+        var tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/'
+          + tileZoom + '/' + ty + '/' + tx;
+        tileImg.setAttributeNS('http://www.w3.org/1999/xlink', 'href', tileUrl);
+        tileImg.setAttribute('href', tileUrl);
+        tileImg.setAttribute('x', nwPt[0]); tileImg.setAttribute('y', nwPt[1]);
+        tileImg.setAttribute('width', sePt[0] - nwPt[0]); tileImg.setAttribute('height', sePt[1] - nwPt[1]);
+        tileImg.setAttribute('preserveAspectRatio', 'none');
+        content.appendChild(tileImg);
+      }
     }
 
     var features = [];
@@ -877,12 +915,10 @@
       scaleLabel.textContent = barMeters >= 1000 ? (barMeters / 1000) + ' km' : barMeters + ' m';
     }
 
-    if (raw.basemap && raw.basemap.attribution) {
-      var attrib = document.createElementNS(SVGNS, 'text');
-      attrib.setAttribute('x', vbW - 6); attrib.setAttribute('y', vbH - 6); attrib.setAttribute('text-anchor', 'end');
-      attrib.setAttribute('class', 'map-attribution'); attrib.textContent = raw.basemap.attribution;
-      svg.appendChild(attrib);
-    }
+    var attrib = document.createElementNS(SVGNS, 'text');
+    attrib.setAttribute('x', vbW - 6); attrib.setAttribute('y', vbH - 6); attrib.setAttribute('text-anchor', 'end');
+    attrib.setAttribute('class', 'map-attribution'); attrib.textContent = 'Esri, Maxar, Earthstar Geographics';
+    svg.appendChild(attrib);
 
     var present = DIFF_ORDER.filter(function (k) { return raw.runs.some(function (r) { return diffKey(r.difficulty) === k; }); });
     var legend = document.getElementById('map-legend');

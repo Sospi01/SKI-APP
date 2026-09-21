@@ -39,9 +39,9 @@ jobs:
               return [dict(r) for r in conn.execute(sql, params).fetchall()]
 
           countries = [
-              "ES", "FR", "AT", "IT", "CH", "AD", "DE", "SI", "US", "CA",
-              "NO", "SE", "FI", "PL", "CZ", "SK", "BG", "RO", "GE", "BA",
-              "RS", "ME", "IS", "GB", "LI", "MK", "HR",
+              "JP", "KR", "CN", "NZ", "AU", "CL", "AR", "RU", "TR", "GR",
+              "UA", "EE", "LV", "LT", "BY", "IR", "IN", "KG", "KZ", "AM",
+              "AZ", "LB",
           ]
           thresholds = [0, 5, 10, 20, 30, 50, 75, 100]
           print("===COUNTRY_COUNTS_START===")

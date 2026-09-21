@@ -24,7 +24,11 @@ jobs:
           distribution: "temurin"
           java-version: "17"
 
-      - uses: android-actions/setup-android@v3
+      - name: Point Gradle at the runner's preinstalled Android SDK
+        run: echo "sdk.dir=${ANDROID_HOME}" > local.properties
+
+      - name: Accept SDK licenses (in case a needed component isn't preinstalled)
+        run: yes | ${ANDROID_HOME}/cmdline-tools/*/bin/sdkmanager --licenses > /dev/null || true
 
       - name: Decode signing keystore
         env:

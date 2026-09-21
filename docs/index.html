@@ -430,6 +430,16 @@
     mixed_lift: "Mixto", "j-bar": "Arrastre (J)"
   };
   var ACTIVITY = { downhill: "Alpino", nordic: "Nórdico" };
+  var GROOMING = {
+    classic: "Pisada clásica", mogul: "Baches", "classic+skating": "Clásica + skating",
+    skating: "Skating", scooter: "Motonieve", backcountry: "Fuera de pista"
+  };
+  function formatDuration(seconds) {
+    if (!seconds) return null;
+    var m = Math.round(seconds / 60);
+    if (m < 1) return Math.round(seconds) + ' s';
+    return m + ' min';
+  }
   var STATUS = { operating: "Operativa", abandoned: "Abandonada", proposed: "Proyecto", disused: "En desuso", never_opened: "Nunca abierta" };
   var WEATHER_CODE = {
     0: "Despejado", 1: "Mayormente despejado", 2: "Parcialmente nublado", 3: "Nublado",
@@ -1178,13 +1188,21 @@
     raw.runs.forEach(function (r) {
       if (!r.name) return;
       if (!runGroups[r.name]) {
-        runGroups[r.name] = { name: r.name, difficulty: r.difficulty, length_m: 0, vertical_m: 0, lit: 0, segments: 0 };
+        runGroups[r.name] = {
+          name: r.name, difficulty: r.difficulty, length_m: 0, vertical_m: 0, lit: 0, gladed: 0, segments: 0,
+          ref: null, grooming: null, minElev: null, maxElev: null
+        };
         runOrder.push(r.name);
       }
       var g = runGroups[r.name];
       g.length_m += r.length_m || 0;
       g.vertical_m += r.vertical_m || 0;
       if (r.lit === 1) g.lit = 1;
+      if (r.gladed === 1) g.gladed = 1;
+      if (!g.ref && r.ref) g.ref = r.ref;
+      if (!g.grooming && r.grooming) g.grooming = r.grooming;
+      if (r.min_elevation_m != null) g.minElev = g.minElev == null ? r.min_elevation_m : Math.min(g.minElev, r.min_elevation_m);
+      if (r.max_elevation_m != null) g.maxElev = g.maxElev == null ? r.max_elevation_m : Math.max(g.maxElev, r.max_elevation_m);
       g.segments += 1;
     });
     runOrder.sort(function (a, b) {
@@ -1200,15 +1218,19 @@
       var item = document.createElement('div'); item.className = 'item'; item.setAttribute('data-diff', key);
       var dot = document.createElement('span'); dot.className = 'dot'; dot.style.background = DIFF[key].color;
       var main = document.createElement('div'); main.className = 'item-main';
-      var name = document.createElement('div'); name.className = 'item-name'; name.textContent = g.name;
+      var name = document.createElement('div'); name.className = 'item-name';
+      name.textContent = (g.ref ? g.ref + ' · ' : '') + g.name;
       var meta = document.createElement('div'); meta.className = 'item-meta';
       var bits = [];
       if (g.length_m) bits.push(fmt(Math.round(g.length_m)) + ' m');
       if (g.vertical_m) bits.push('desnivel ' + fmt(Math.round(g.vertical_m)) + ' m');
       if (g.length_m) bits.push('pend. media ' + fmt(100 * g.vertical_m / g.length_m, 1) + '%');
+      if (g.minElev != null && g.maxElev != null) bits.push(fmt(Math.round(g.minElev)) + '–' + fmt(Math.round(g.maxElev)) + ' m alt.');
+      if (GROOMING[g.grooming]) bits.push(GROOMING[g.grooming]);
       if (g.segments > 1) bits.push(g.segments + ' tramos');
       meta.textContent = bits.join(' · ');
       if (g.lit === 1) { var pill = document.createElement('span'); pill.className = 'pill'; pill.textContent = 'Nocturna'; meta.appendChild(pill); }
+      if (g.gladed === 1) { var pill2 = document.createElement('span'); pill2.className = 'pill'; pill2.textContent = 'Arbolada'; meta.appendChild(pill2); }
       main.appendChild(name); main.appendChild(meta);
       item.appendChild(dot); item.appendChild(main);
       runsList.appendChild(item);
@@ -1250,15 +1272,19 @@
       var dot = document.createElement('span'); dot.className = 'dot'; dot.style.background = 'var(--accent)';
       var main = document.createElement('div'); main.className = 'item-main';
       var name = document.createElement('div'); name.className = 'item-name';
-      name.textContent = (l.name || 'Sin nombre') + '  ·  ' + (LIFT_TYPE[l.lift_type] || l.lift_type);
+      name.textContent = (l.ref ? l.ref + ' · ' : '') + (l.name || 'Sin nombre') + '  ·  ' + (LIFT_TYPE[l.lift_type] || l.lift_type);
       var meta = document.createElement('div'); meta.className = 'item-meta';
       var bits = [];
       if (l.capacity) bits.push(fmt(l.capacity) + ' p/h');
       if (l.occupancy) bits.push(l.occupancy + ' plazas');
       if (l.length_m) bits.push(fmt(Math.round(l.length_m)) + ' m');
       if (l.vertical_m) bits.push('desnivel ' + fmt(Math.round(l.vertical_m)) + ' m');
+      if (formatDuration(l.duration_s)) bits.push(formatDuration(l.duration_s) + ' de trayecto');
       meta.textContent = bits.join(' · ');
       if (l.detachable === 1) { var pill = document.createElement('span'); pill.className = 'pill'; pill.textContent = 'Desembragable'; meta.appendChild(pill); }
+      if (l.bubble === 1) { var pillB = document.createElement('span'); pillB.className = 'pill'; pillB.textContent = 'Burbuja'; meta.appendChild(pillB); }
+      if (l.heating === 1) { var pillH = document.createElement('span'); pillH.className = 'pill'; pillH.textContent = 'Calefactado'; meta.appendChild(pillH); }
+      if (l.access === 'private') { var pillP = document.createElement('span'); pillP.className = 'pill'; pillP.textContent = 'Privado'; meta.appendChild(pillP); }
       main.appendChild(name); main.appendChild(meta);
       item.appendChild(dot); item.appendChild(main);
       liftsList.appendChild(item);

@@ -27,10 +27,9 @@ jobs:
       - name: Download OpenSkiMap data and build the database
         run: python -m ski_pipeline.cli --db data/ski_info.db -v
 
-      - name: List Spanish ski areas
+      - name: Count qualifying ski areas per country
         run: |
           python - <<'PY'
-          import json
           import sqlite3
 
           conn = sqlite3.connect("data/ski_info.db")
@@ -39,22 +38,23 @@ jobs:
           def q(sql, params=()):
               return [dict(r) for r in conn.execute(sql, params).fetchall()]
 
-          rows = q(
-              """
-              SELECT sa.id, sa.name, sa.region, sa.status, sa.min_elevation_m, sa.max_elevation_m,
-                     (SELECT COUNT(*) FROM run_ski_areas WHERE ski_area_id = sa.id) AS run_segments,
-                     (SELECT COUNT(*) FROM lift_ski_areas WHERE ski_area_id = sa.id) AS lift_count,
-                     (SELECT ROUND(SUM(length_km), 1) FROM ski_area_run_stats WHERE ski_area_id = sa.id) AS piste_km
-              FROM ski_areas sa
-              WHERE sa.country_code = 'ES' AND sa.activities LIKE '%downhill%'
-              ORDER BY (piste_km IS NULL), piste_km DESC
-              """
-          )
-
-          print("===ES_STATIONS_JSON_START===")
-          print(json.dumps(rows))
-          print("===ES_STATIONS_JSON_END===")
-          print(f"TOTAL: {len(rows)}")
-          operating_with_runs = [r for r in rows if r["status"] == "operating" and (r["run_segments"] or 0) > 0 and (r["lift_count"] or 0) > 0]
-          print(f"OPERATING_WITH_RUNS_AND_LIFTS: {len(operating_with_runs)}")
+          countries = ["ES", "FR", "AT", "IT", "CH", "AD"]
+          print("===COUNTRY_COUNTS_START===")
+          total = 0
+          for cc in countries:
+              rows = q(
+                  """
+                  SELECT sa.id
+                  FROM ski_areas sa
+                  WHERE sa.country_code = ? AND sa.activities LIKE '%downhill%'
+                    AND sa.status = 'operating'
+                    AND (SELECT COUNT(*) FROM run_ski_areas WHERE ski_area_id = sa.id) > 0
+                    AND (SELECT COUNT(*) FROM lift_ski_areas WHERE ski_area_id = sa.id) > 0
+                  """,
+                  (cc,),
+              )
+              print(f"{cc}: {len(rows)}")
+              total += len(rows)
+          print(f"TOTAL: {total}")
+          print("===COUNTRY_COUNTS_END===")
           PY

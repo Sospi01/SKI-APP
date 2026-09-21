@@ -27,7 +27,7 @@ jobs:
       - name: Download OpenSkiMap data and build the database
         run: python -m ski_pipeline.cli --db data/ski_info.db -v
 
-      - name: Count qualifying ski areas per country
+      - name: Count qualifying ski areas per country at piste-km thresholds
         run: |
           python - <<'PY'
           import sqlite3
@@ -39,12 +39,12 @@ jobs:
               return [dict(r) for r in conn.execute(sql, params).fetchall()]
 
           countries = ["ES", "FR", "AT", "IT", "CH", "AD"]
+          thresholds = [0, 5, 10, 20, 30, 50, 75, 100]
           print("===COUNTRY_COUNTS_START===")
-          total = 0
           for cc in countries:
               rows = q(
                   """
-                  SELECT sa.id
+                  SELECT (SELECT ROUND(SUM(length_km), 1) FROM ski_area_run_stats WHERE ski_area_id = sa.id) AS piste_km
                   FROM ski_areas sa
                   WHERE sa.country_code = ? AND sa.activities LIKE '%downhill%'
                     AND sa.status = 'operating'
@@ -53,8 +53,8 @@ jobs:
                   """,
                   (cc,),
               )
-              print(f"{cc}: {len(rows)}")
-              total += len(rows)
-          print(f"TOTAL: {total}")
+              kms = [r["piste_km"] or 0 for r in rows]
+              counts = {t: sum(1 for k in kms if k >= t) for t in thresholds}
+              print(f"{cc} (n={len(kms)}): " + ", ".join(f">={t}km:{c}" for t, c in counts.items()))
           print("===COUNTRY_COUNTS_END===")
           PY

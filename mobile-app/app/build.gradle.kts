@@ -14,11 +14,13 @@ android {
         versionName = "1.0.0"
     }
 
+    val keystorePath = System.getenv("SKIINFO_KEYSTORE_PATH")
+    val hasSigningConfig = !keystorePath.isNullOrEmpty()
+
     signingConfigs {
-        create("release") {
-            val keystorePath = System.getenv("SKIINFO_KEYSTORE_PATH")
-            if (keystorePath != null) {
-                storeFile = file(keystorePath)
+        if (hasSigningConfig) {
+            create("release") {
+                storeFile = file(keystorePath!!)
                 storePassword = System.getenv("SKIINFO_KEYSTORE_PASSWORD")
                 keyAlias = System.getenv("SKIINFO_KEY_ALIAS")
                 keyPassword = System.getenv("SKIINFO_KEY_PASSWORD")
@@ -30,7 +32,7 @@ android {
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            if (System.getenv("SKIINFO_KEYSTORE_PATH") != null) {
+            if (hasSigningConfig) {
                 signingConfig = signingConfigs.getByName("release")
             }
         }

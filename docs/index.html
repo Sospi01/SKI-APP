@@ -232,7 +232,7 @@
   .map-run-halo { fill: none; stroke: var(--map-halo); stroke-width: 3.6; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
   .map-lift-casing { fill: none; stroke: var(--map-halo); stroke-width: 3.4; stroke-linecap: round; vector-effect: non-scaling-stroke; }
   .map-lift { fill: none; stroke: var(--map-lift-color); stroke-width: 1.8; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
-  .map-lift-station { fill: var(--map-lift-color); stroke: var(--map-halo); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+  .map-lift-station { fill: var(--map-lift-color); stroke: var(--map-halo); stroke-width: 0.8; vector-effect: non-scaling-stroke; }
   .map-hit { fill: none; stroke: transparent; stroke-width: 9; pointer-events: none; vector-effect: non-scaling-stroke; }
   .map-run.run-hovered, .map-hit:focus + .map-run { stroke-width: 3.6; }
   .map-lift.lift-hovered, .map-hit:focus + .map-lift { stroke-width: 3; }
@@ -949,7 +949,7 @@
         [part[0], part[part.length - 1]].forEach(function (endpoint) {
           var p = project(endpoint);
           var dot = document.createElementNS(SVGNS, 'circle');
-          dot.setAttribute('cx', p[0].toFixed(1)); dot.setAttribute('cy', p[1].toFixed(1)); dot.setAttribute('r', 2.6);
+          dot.setAttribute('cx', p[0].toFixed(1)); dot.setAttribute('cy', p[1].toFixed(1)); dot.setAttribute('r', 1.5);
           dot.setAttribute('class', 'map-lift-station');
           content.appendChild(dot);
         });

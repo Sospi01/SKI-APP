@@ -1,0 +1,1058 @@
+<meta charset="utf-8">
+<title>Ski Info España</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+  :root {
+    color-scheme: light;
+    --page: #eef1f4;
+    --bg: #ffffff;
+    --surface-2: #f1f4f7;
+    --text-primary: #10161c;
+    --text-secondary: #47525c;
+    --text-muted: #7c8894;
+    --border: rgba(16,22,28,0.09);
+    --accent: #2a78d6;
+    --accent-soft: #dfeafb;
+    --diff-novice: hsl(125 82% 30%);
+    --diff-easy: hsl(208 88% 41%);
+    --diff-intermediate: hsl(359 78% 49%);
+    --diff-advanced: hsl(0 0% 12%);
+    --diff-expert: hsl(0 0% 12%);
+    --diff-freeride: hsl(34 93% 46%);
+    --diff-extreme: hsl(34 93% 46%);
+    --diff-other: hsl(0 0% 55%);
+    --map-halo: rgba(255,255,255,0.88);
+    --map-lift-color: #4a3aa7;
+    --shadow: 0 24px 60px -24px rgba(16,22,28,0.35);
+    --hero-1: #163a5c;
+    --hero-2: #2a78d6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #05070a;
+      --bg: #12161c;
+      --surface-2: #1b2129;
+      --text-primary: #f2f5f8;
+      --text-secondary: #c3ccd6;
+      --text-muted: #8a94a0;
+      --border: rgba(255,255,255,0.10);
+      --accent: #3987e5;
+      --accent-soft: #1c3559;
+      --diff-novice: hsl(125 60% 48%);
+      --diff-easy: hsl(208 85% 60%);
+      --diff-intermediate: hsl(359 75% 62%);
+      --diff-advanced: hsl(0 0% 90%);
+      --diff-expert: hsl(0 0% 90%);
+      --diff-freeride: hsl(34 88% 58%);
+      --diff-extreme: hsl(34 88% 58%);
+      --diff-other: hsl(0 0% 55%);
+      --map-halo: rgba(5,7,10,0.85);
+      --map-lift-color: #9085e9;
+      --hero-1: #0b2036;
+      --hero-2: #164a80;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #05070a;
+    --bg: #12161c;
+    --surface-2: #1b2129;
+    --text-primary: #f2f5f8;
+    --text-secondary: #c3ccd6;
+    --text-muted: #8a94a0;
+    --border: rgba(255,255,255,0.10);
+    --accent: #3987e5;
+    --accent-soft: #1c3559;
+    --diff-novice: hsl(125 60% 48%);
+    --diff-easy: hsl(208 85% 60%);
+    --diff-intermediate: hsl(359 75% 62%);
+    --diff-advanced: hsl(0 0% 90%);
+    --diff-expert: hsl(0 0% 90%);
+    --diff-freeride: hsl(34 88% 58%);
+    --diff-extreme: hsl(34 88% 58%);
+    --diff-other: hsl(0 0% 55%);
+    --map-halo: rgba(5,7,10,0.85);
+    --map-lift-color: #9085e9;
+    --hero-1: #0b2036;
+    --hero-2: #164a80;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif; }
+
+  .app {
+    max-width: 430px;
+    margin: 0 auto;
+    background: var(--bg);
+    color: var(--text-primary);
+    min-height: 100%;
+  }
+  @media (min-width: 480px) {
+    body { padding-block: 28px; }
+    .app {
+      border-radius: 22px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      min-height: 640px;
+    }
+  }
+
+  h1, h2, h3 { font-family: 'Barlow Condensed', sans-serif; margin: 0; text-wrap: balance; }
+
+  /* ---------- list screen ---------- */
+  .list-header { padding: 22px 18px 14px; }
+  .eyebrow {
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 12.5px;
+    letter-spacing: 1.6px; text-transform: uppercase; color: var(--accent);
+  }
+  .list-header h1 { font-size: 30px; font-weight: 700; margin-top: 4px; }
+  .list-sub { font-size: 13px; color: var(--text-secondary); margin: 8px 0 16px; line-height: 1.5; }
+
+  .search-box { position: relative; color: var(--text-muted); }
+  .search-box svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; pointer-events: none; }
+  .search-box input {
+    width: 100%; padding: 11px 14px 11px 38px; border-radius: 12px; border: 1px solid var(--border);
+    background: var(--surface-2); color: var(--text-primary); font-size: 14px; font-family: inherit;
+  }
+  .search-box input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .search-box input::-webkit-search-cancel-button { filter: var(--cancel-filter, none); }
+
+  .station-list { padding: 6px 18px 24px; display: flex; flex-direction: column; gap: 8px; }
+  .station-card {
+    display: flex; align-items: center; gap: 12px; width: 100%;
+    padding: 12px 14px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface-2);
+    cursor: pointer; text-align: left; font-family: inherit; color: inherit;
+  }
+  .station-card:hover, .station-card:focus-visible { border-color: var(--accent); outline: none; }
+  .station-card .info { flex: 1; min-width: 0; }
+  .station-card .name { font-size: 14.5px; font-weight: 600; line-height: 1.25; }
+  .station-card .region { font-size: 11.5px; color: var(--text-muted); margin-top: 1px; }
+  .station-card .stats { text-align: right; flex-shrink: 0; }
+  .station-card .stats .km { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 17px; color: var(--accent); line-height: 1; }
+  .station-card .stats .km-label { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; margin-top: 2px; }
+  .station-card .chevron { color: var(--text-muted); font-size: 20px; flex-shrink: 0; }
+  .empty-state { padding: 34px 18px; text-align: center; color: var(--text-muted); font-size: 13.5px; line-height: 1.5; }
+  .list-footer { padding: 4px 18px 22px; font-size: 11px; color: var(--text-muted); text-align: center; line-height: 1.6; }
+
+  /* ---------- dashboard screen ---------- */
+  .topbar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 18px;
+  }
+  .back-btn {
+    display: flex; align-items: center; gap: 6px; background: none; border: none; padding: 0; cursor: pointer;
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 600; letter-spacing: 1.4px; font-size: 12.5px;
+    text-transform: uppercase; color: var(--text-muted);
+  }
+  .back-btn .chev { font-size: 16px; color: var(--text-secondary); }
+
+  .hero {
+    position: relative;
+    padding: 26px 20px 22px;
+    background: linear-gradient(160deg, var(--hero-1), var(--hero-2) 130%);
+    color: #fff;
+    overflow: hidden;
+  }
+  .hero svg.peaks { position: absolute; inset: auto 0 0 0; width: 100%; height: 64%; opacity: 0.55; }
+  .hero-content { position: relative; z-index: 1; }
+  .hero .badges { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; min-height: 20px; }
+  .badge {
+    font-size: 10.5px; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase;
+    padding: 4px 9px; border-radius: 999px; background: rgba(255,255,255,0.16);
+    color: #fff; backdrop-filter: blur(2px);
+  }
+  .hero h1 { font-size: 36px; font-weight: 700; line-height: 0.98; }
+  .hero .place { font-size: 14px; opacity: 0.85; margin-top: 4px; }
+  .hero .facts { display: flex; gap: 16px; margin-top: 16px; flex-wrap: wrap; }
+  .hero .fact .v { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 19px; line-height: 1; }
+  .hero .fact .k { font-size: 10.5px; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+  .hero a.site {
+    display: inline-flex; align-items: center; gap: 5px; margin-top: 16px;
+    font-size: 12.5px; color: #fff; text-decoration: none;
+    border: 1px solid rgba(255,255,255,0.4); border-radius: 999px; padding: 6px 12px;
+  }
+
+  section { padding: 20px 18px; border-bottom: 1px solid var(--border); }
+  section:last-of-type { border-bottom: none; }
+  .section-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
+  .section-head h2 { font-size: 18px; font-weight: 600; }
+  .section-head .sub { font-size: 11.5px; color: var(--text-muted); }
+
+  .kpi-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .kpi {
+    background: var(--surface-2); border-radius: 12px; padding: 12px 14px;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .kpi .value { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 24px; color: var(--accent); }
+  .kpi .label { font-size: 11.5px; color: var(--text-secondary); }
+
+  .barlist { display: flex; flex-direction: column; gap: 8px; }
+  .bar-row { display: grid; grid-template-columns: 84px 1fr auto; align-items: center; gap: 8px; }
+  .bar-row-label { font-size: 12px; color: var(--text-primary); line-height: 1.2; }
+  .bar-track { height: 14px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px 2px 2px 4px; }
+  .bar-value { font-size: 11.5px; color: var(--text-secondary); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .chip {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 12px; font-weight: 500; padding: 6px 12px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--surface-2); color: var(--text-secondary);
+    cursor: pointer;
+  }
+  .chip[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .chip .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+
+  .list-scroll { max-height: 380px; overflow-y: auto; border: 1px solid var(--border); border-radius: 12px; }
+  .item { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  .item:last-child { border-bottom: none; }
+  .item .dot { width: 9px; height: 9px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+  .item-main { flex: 1; min-width: 0; }
+  .item-name { font-size: 13px; font-weight: 500; line-height: 1.3; }
+  .item-name.muted { color: var(--text-muted); font-weight: 400; font-style: italic; }
+  .item-meta { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+  .pill { display: inline-block; font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); margin-left: 5px; }
+
+  .quality-list { display: flex; flex-direction: column; gap: 10px; }
+  .quality-row { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; }
+  .quality-row .name { color: var(--text-secondary); }
+  .quality-row .val { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .quality-note { font-size: 11.5px; color: var(--text-muted); margin-top: 10px; line-height: 1.5; }
+
+  .map-figure { margin: 0; }
+  .map-viewport { position: relative; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; background: var(--surface-2); }
+  #map-svg { width: 100%; height: auto; display: block; touch-action: none; cursor: grab; user-select: none; }
+  #map-svg.dragging { cursor: grabbing; }
+  .map-run { fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; transition: stroke-width 0.1s ease; }
+  .map-run-halo { fill: none; stroke: var(--map-halo); stroke-width: 3.6; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+  .map-lift-casing { fill: none; stroke: var(--map-halo); stroke-width: 3.4; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+  .map-lift { fill: none; stroke: var(--map-lift-color); stroke-width: 1.8; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
+  .map-lift-station { fill: var(--map-lift-color); stroke: var(--map-halo); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+  .map-hit { fill: none; stroke: transparent; stroke-width: 9; pointer-events: none; vector-effect: non-scaling-stroke; }
+  .map-run.run-hovered, .map-hit:focus + .map-run { stroke-width: 3.6; }
+  .map-lift.lift-hovered, .map-hit:focus + .map-lift { stroke-width: 3; }
+  .map-scale-text { font-family: 'IBM Plex Sans', sans-serif; font-size: 9px; fill: #fff; paint-order: stroke; stroke: rgba(0,0,0,0.6); stroke-width: 2.5px; }
+  .map-scale-bar { stroke: #fff; stroke-width: 1.4; paint-order: stroke; }
+  .map-attribution { font-size: 9.5px; fill: rgba(255,255,255,0.85); paint-order: stroke; stroke: rgba(0,0,0,0.55); stroke-width: 2px; font-family: 'IBM Plex Sans', sans-serif; }
+  .map-placeholder { padding: 30px 12px; text-align: center; color: var(--text-muted); font-size: 12.5px; }
+
+  .map-controls {
+    position: absolute; top: 10px; right: 10px;
+    display: flex; flex-direction: column; gap: 1px;
+    border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px -4px rgba(0,0,0,0.4);
+  }
+  .map-controls button {
+    width: 30px; height: 30px; border: none; background: rgba(20,24,28,0.72);
+    color: #fff; font-size: 16px; line-height: 1; cursor: pointer;
+    font-family: 'IBM Plex Sans', sans-serif; backdrop-filter: blur(2px);
+  }
+  .map-controls button:active { background: rgba(20,24,28,0.9); }
+  .map-controls button#map-zoom-reset { font-size: 13px; }
+  .map-hint {
+    position: absolute; left: 10px; top: 10px;
+    font-size: 10.5px; color: #fff; background: rgba(20,24,28,0.6);
+    padding: 4px 9px; border-radius: 999px; pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  .map-hint.hidden { opacity: 0; }
+  .map-legend { display: flex; flex-wrap: wrap; gap: 8px 12px; margin: 10px 0 0; padding: 0; font-size: 10.5px; color: var(--text-secondary); }
+  .map-legend .key { display: inline-flex; align-items: center; gap: 4px; }
+  .map-legend .swatch { width: 12px; height: 3px; border-radius: 2px; display: inline-block; }
+  .map-legend .swatch.lift { background: none; border-top: 1.5px dashed var(--map-lift-color); width: 12px; height: 0; }
+
+  #tooltip {
+    position: fixed; z-index: 20;
+    background: var(--text-primary); color: var(--bg);
+    font-size: 12px; padding: 6px 10px; border-radius: 6px;
+    pointer-events: none; transform: translate(-50%, -130%);
+    max-width: 220px; line-height: 1.4;
+    box-shadow: 0 8px 20px -8px rgba(0,0,0,0.4);
+  }
+  #tooltip strong { display: block; font-weight: 600; }
+
+  footer.credit { padding: 18px; font-size: 11px; color: var(--text-muted); text-align: center; line-height: 1.6; }
+</style>
+
+<div class="app" id="app">
+
+  <div class="screen" id="screen-list">
+    <div class="list-header">
+      <div class="eyebrow">Ski Info</div>
+      <h1>Estaciones de España</h1>
+      <p class="list-sub">Datos reales de OpenStreetMap / OpenSkiMap: pistas, remontes, mapa con imagen satelital. Elige una estación.</p>
+      <div class="search-box">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="14" y1="14" x2="18" y2="18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <input type="search" id="search-input" placeholder="Busca por nombre o provincia…" autocomplete="off">
+      </div>
+    </div>
+    <div class="station-list" id="station-list"></div>
+    <p class="list-footer">Datos de OpenSkiMap / OpenStreetMap (ODbL) · imágenes Esri, Maxar, Earthstar Geographics</p>
+  </div>
+
+  <div class="screen" id="screen-dashboard" hidden>
+    <div class="topbar">
+      <button type="button" class="back-btn" id="back-btn"><span class="chev">‹</span> Todas las estaciones</button>
+    </div>
+
+    <div class="hero">
+      <svg class="peaks" viewBox="0 0 400 140" preserveAspectRatio="none" aria-hidden="true">
+        <polygon points="0,140 0,90 60,40 110,80 170,20 230,75 290,35 340,85 400,55 400,140" fill="rgba(255,255,255,0.14)"/>
+        <polygon points="0,140 0,110 90,60 150,95 210,50 270,100 330,65 400,100 400,140" fill="rgba(255,255,255,0.20)"/>
+      </svg>
+      <div class="hero-content">
+        <div class="badges" id="badges"></div>
+        <h1 id="h-name">–</h1>
+        <div class="place" id="h-place">–</div>
+        <div class="facts">
+          <div class="fact"><div class="v" id="f-alt">–</div><div class="k">Altitud</div></div>
+          <div class="fact"><div class="v" id="f-vert">–</div><div class="k">Desnivel</div></div>
+          <div class="fact"><div class="v" id="f-coords">–</div><div class="k">Coordenadas</div></div>
+        </div>
+        <a class="site" id="h-site" href="#" target="_blank" rel="noopener" hidden>Web oficial ↗</a>
+      </div>
+    </div>
+
+    <section>
+      <div class="kpi-grid">
+        <div class="kpi"><div class="value" id="k-km">–</div><div class="label">km de pista</div></div>
+        <div class="kpi"><div class="value" id="k-runs">–</div><div class="label">segmentos de pista</div></div>
+        <div class="kpi"><div class="value" id="k-lifts">–</div><div class="label">remontes</div></div>
+        <div class="kpi"><div class="value" id="k-capacity">–</div><div class="label">personas/hora (remontes)</div></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head"><h2>Sol y tiempo</h2><span class="sub" id="weather-updated"></span></div>
+      <div class="kpi-grid">
+        <div class="kpi"><div class="value" id="k-sunrise">–</div><div class="label">Amanecer</div></div>
+        <div class="kpi"><div class="value" id="k-sunset">–</div><div class="label">Atardecer</div></div>
+        <div class="kpi"><div class="value" id="k-temp">–</div><div class="label" id="k-weather-desc">Tiempo actual</div></div>
+        <div class="kpi"><div class="value" id="k-wind">–</div><div class="label">Viento</div></div>
+      </div>
+      <p class="quality-note" id="weather-note" hidden>El tiempo se actualiza periódicamente desde Open-Meteo y puede no ser el instante actual.</p>
+    </section>
+
+    <section>
+      <div class="section-head"><h2>Mapa de pistas</h2><span class="sub">satélite + geometría real</span></div>
+      <figure class="map-figure">
+        <div class="map-viewport" id="map-viewport">
+          <svg id="map-svg" role="img" aria-label="Mapa interactivo de las pistas y remontes sobre imagen satelital del terreno, coloreado por dificultad"></svg>
+          <div class="map-controls">
+            <button type="button" id="map-zoom-in" aria-label="Acercar">+</button>
+            <button type="button" id="map-zoom-out" aria-label="Alejar">–</button>
+            <button type="button" id="map-zoom-reset" aria-label="Restablecer vista">⤢</button>
+          </div>
+          <div class="map-hint" id="map-hint">Arrastra para mover · rueda o pellizco para zoom</div>
+        </div>
+        <figcaption class="map-legend" id="map-legend"></figcaption>
+      </figure>
+    </section>
+
+    <section>
+      <div class="section-head"><h2>Terreno por dificultad</h2></div>
+      <div class="barlist" id="chart-difficulty"></div>
+    </section>
+
+    <section>
+      <div class="section-head"><h2>Remontes por tipo</h2></div>
+      <div class="barlist" id="chart-lifts"></div>
+    </section>
+
+    <section>
+      <div class="section-head"><h2>Todas las pistas</h2><span class="sub" id="runs-count-sub"></span></div>
+      <div class="chips" id="run-filters"></div>
+      <div class="list-scroll" id="runs-list"></div>
+    </section>
+
+    <section>
+      <div class="section-head"><h2>Todos los remontes</h2></div>
+      <div class="list-scroll" id="lifts-list"></div>
+    </section>
+
+    <section>
+      <div class="section-head"><h2>Calidad del dato</h2></div>
+      <div class="quality-list" id="quality-list"></div>
+      <p class="quality-note" id="quality-note"></p>
+    </section>
+
+    <footer class="credit" id="dashboard-credit"></footer>
+  </div>
+
+</div>
+
+<div id="tooltip" hidden></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STATIONS = [{"id":"125d02338620dc079d5d635595a099370161bf83","name":"Estació d'Esquí Baqueira-Beret","region":"Lleida","pisteKm":176.5},{"id":"5ee4bbf3ab3be8e91b05b56e05180dd4ee735335","name":"Estación de Esquí y Montaña de Sierra Nevada","region":"Granada","pisteKm":108.9},{"id":"0f46917975b8dab5e541edf6469105c3c091ec22","name":"Formigal","region":"Huesca","pisteKm":104.9},{"id":"1b306639a276ae1103bb8f7f682db30d717d65be","name":"Aramón Cerler","region":"Huesca","pisteKm":62.7},{"id":"03fcc0299c9030bf81bf077f9a94ee0b327040d9","name":"Masella","region":"Barcelona","pisteKm":51.6},{"id":"6eebeff16c8b480fc1335c8bed596286706cb776","name":"La Molina","region":"Barcelona","pisteKm":48.6},{"id":"52c9c35a9f63939f43b957b39196aa77ec0013c7","name":"Boí Taüll","region":"Lleida","pisteKm":34.9},{"id":"7e2b2e2ae39a8764945229ed9d6314ee6d0aae47","name":"Astun","region":"Huesca","pisteKm":34.4},{"id":"304d72fa57c50cd759b4ebeff3e48dbee4789b17","name":"Candanchu","region":"Huesca","pisteKm":32.9},{"id":"5de76e63f17d805e0408c795d97d0eb510223c49","name":"Estació d'esquí Port del Comte","region":"Lleida","pisteKm":26.7},{"id":"8bc747789f707f0342b2f046100b2a3b15b99d9a","name":"Estació d'esquí de Port-Ainé","region":"Lleida","pisteKm":21.9},{"id":"a6792c241300dee70b989ffcf6a12b8225bbd7d9","name":"Estación de esquí de Valdesquí","region":"Madrid","pisteKm":20.5},{"id":"3a7825318074a6cf80651dc5d976e66241982c9a","name":"Espot","region":"Lleida","pisteKm":20.0},{"id":"4061fa811727fdb41a320ed9b89bc1516574fbcd","name":"Estación de Esquí y Montaña Alto Campoo","region":"Cantabria","pisteKm":19.5},{"id":"b11f8a9b8390463caf77e7adc3db6c226cfe088b","name":"Panticosa","region":"Huesca","pisteKm":18.6},{"id":"6e135ea2a7e28e5194c76ef6acba0c49302a02e1","name":"Estació d'esquí i muntanya Vallter 2000","region":"Girona","pisteKm":18.6},{"id":"45d0f9aea9eb43a1fa74bbeb6b57c613b09a8f82","name":"Estación Invernal y de Montaña Valgrande-Pajares","region":"Asturias","pisteKm":16.1},{"id":"b1929238d8b7cb7633b24fa6629b5bbf8ef48911","name":"Estación de esquí de Valdezcaray","region":"La Rioja","pisteKm":15.1},{"id":"92e0b47ebc42bbff72cec9778f288d8bf5124db0","name":"La Covatilla","region":"Avila","pisteKm":14.7},{"id":"faa3b5961985ac8abe14b00d07ca7235b4eef86b","name":"Estación de Esquí de Manzaneda","region":"Ourense","pisteKm":13.2},{"id":"d10f2f21ec726d6ca8de5886b078f40426870c4b","name":"Estación Invernal y de Montaña San Isidro (Sector Cebolledo y Requejines)","region":"Leon","pisteKm":13.1},{"id":"0bc0af67288ed7c592e1f3364a400234763eb023","name":"La Pinilla","region":"Guadalajara","pisteKm":11.7},{"id":"f6faf99488990e64ba15017512e03b1b8634abf8","name":"Valdelinares","region":"Teruel","pisteKm":9.4},{"id":"4bfd6216f4414dd3505228bef1ea6d9e8049c74e","name":"Estación Invernal Fuentes de Invierno","region":"Asturias","pisteKm":9.3},{"id":"f208da1c140e4bdaba348f998b835c51fd028e1c","name":"Javalambre","region":"Teruel","pisteKm":8.4},{"id":"c9a311a41c98d29c1b4f6fc4411d5feb4ed51171","name":"Leitariegos","region":"Asturias","pisteKm":6.6},{"id":"acec7f838b66cfa338b12c9583387745cca11d86","name":"Estació de muntanya Vall de Núria","region":"Girona","pisteKm":6.5},{"id":"e70324e7722d70438a015278587839023291ff32","name":"Rasos de Peguera","region":"Barcelona","pisteKm":5.8},{"id":"9e00e72809ffc15563763518cdab85c73f9eccfa","name":"Estación Invernal y de Montaña San Isidro (Sector Saliencias)","region":"Asturias","pisteKm":5.6},{"id":"b0280114b1356e634938b8466c1f479bade260d5","name":"Estación Invernal y de Montaña San Isidro (Sector Riopinos)","region":"Leon","pisteKm":4.9},{"id":"28ade7297d64ecd6d406c7ea58d7df8eaec8c582","name":"Tavascan","region":"Lleida","pisteKm":4.2},{"id":"a005d05d07127924ceabfd883cef8041c3432356","name":"El Morredero","region":"Leon","pisteKm":4.0},{"id":"37f2df47c64be8ab0767bc65b3118e204e76e88b","name":"Punto de Nieves Santa Ines","region":"Soria","pisteKm":1.0}];
+
+  var DIFF = {
+    novice:       { label: "Verde",  color: "var(--diff-novice)" },
+    easy:         { label: "Azul",   color: "var(--diff-easy)" },
+    intermediate: { label: "Roja",   color: "var(--diff-intermediate)" },
+    advanced:     { label: "Negra",  color: "var(--diff-advanced)" },
+    expert:       { label: "Negra (experta)", color: "var(--diff-expert)" },
+    freeride:     { label: "Freeride", color: "var(--diff-freeride)" },
+    extreme:      { label: "Extrema", color: "var(--diff-extreme)" },
+    other:        { label: "Sin clasificar", color: "var(--diff-other)" }
+  };
+  var DIFF_ORDER = ["novice", "easy", "intermediate", "advanced", "expert", "freeride", "extreme", "other"];
+  var LIFT_TYPE = {
+    chair_lift: "Telesilla", drag_lift: "Arrastre", magic_carpet: "Cinta transportadora",
+    platter: "Telesquí (plato)", gondola: "Telecabina", cable_car: "Teleférico",
+    "t-bar": "Arrastre (pértiga)", funicular: "Funicular", railway: "Tren", rope_tow: "Cuerda de arrastre",
+    mixed_lift: "Mixto", "j-bar": "Arrastre (J)"
+  };
+  var ACTIVITY = { downhill: "Alpino", nordic: "Nórdico" };
+  var STATUS = { operating: "Operativa", abandoned: "Abandonada", proposed: "Proyecto", disused: "En desuso", never_opened: "Nunca abierta" };
+  var WEATHER_CODE = {
+    0: "Despejado", 1: "Mayormente despejado", 2: "Parcialmente nublado", 3: "Nublado",
+    45: "Niebla", 48: "Niebla escarchada",
+    51: "Llovizna débil", 53: "Llovizna", 55: "Llovizna intensa",
+    56: "Llovizna helada", 57: "Llovizna helada intensa",
+    61: "Lluvia débil", 63: "Lluvia", 65: "Lluvia intensa",
+    66: "Lluvia helada", 67: "Lluvia helada intensa",
+    71: "Nieve débil", 73: "Nieve", 75: "Nieve intensa", 77: "Cristales de nieve",
+    80: "Chubascos débiles", 81: "Chubascos", 82: "Chubascos intensos",
+    85: "Chubascos de nieve", 86: "Chubascos de nieve intensos",
+    95: "Tormenta", 96: "Tormenta con granizo", 99: "Tormenta con granizo intensa"
+  };
+
+  // Sunrise/sunset for a given date + coordinates (NOAA solar position algorithm,
+  // same core formulas as the SunCalc library). Pure client-side math, no network.
+  function sunTimes(date, lat, lon) {
+    var rad = Math.PI / 180, dayMs = 86400000;
+    var J1970 = 2440588, J2000 = 2451545, J0 = 0.0009;
+    var e = rad * 23.4397;
+    function toDays(d) { return d.valueOf() / dayMs - 0.5 + J1970 - J2000; }
+    function fromJulian(j) { return new Date((j + 0.5 - J1970) * dayMs); }
+    function solarMeanAnomaly(d) { return rad * (357.5291 + 0.98560028 * d); }
+    function eclipticLongitude(M) {
+      var C = rad * (1.9148 * Math.sin(M) + 0.0200 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M));
+      return M + C + rad * 102.9372 + Math.PI;
+    }
+    function declination(l) { return Math.asin(Math.sin(l) * Math.sin(e)); }
+    function julianCycle(d, lw) { return Math.round(d - J0 - lw / (2 * Math.PI)); }
+    function approxTransit(Ht, lw, n) { return J0 + (Ht + lw) / (2 * Math.PI) + n; }
+    function solarTransitJ(ds, M, L) { return J2000 + ds + 0.0053 * Math.sin(M) - 0.0069 * Math.sin(2 * L); }
+    function hourAngle(h, phi, d) { return Math.acos((Math.sin(h) - Math.sin(phi) * Math.sin(d)) / (Math.cos(phi) * Math.cos(d))); }
+
+    var lw = rad * -lon, phi = rad * lat;
+    var d = toDays(date);
+    var n = julianCycle(d, lw);
+    var ds = approxTransit(0, lw, n);
+    var M = solarMeanAnomaly(ds), L = eclipticLongitude(M);
+    var dec = declination(L);
+    var Jnoon = solarTransitJ(ds, M, L);
+    var h0 = rad * -0.833;
+    var w = hourAngle(h0, phi, dec);
+    var a = approxTransit(w, lw, n);
+    var Jset = solarTransitJ(a, M, L);
+    var Jrise = Jnoon - (Jset - Jnoon);
+    return { sunrise: fromJulian(Jrise), sunset: fromJulian(Jset) };
+  }
+  function formatLocalTime(date) {
+    return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Madrid' });
+  }
+
+  function fmt(n, d) {
+    if (n == null || isNaN(n)) return "–";
+    return n.toLocaleString('es-ES', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
+  }
+  function setText(id, text) { var el = document.getElementById(id); if (el) el.textContent = text; }
+  function diffKey(d) { return d && DIFF[d] ? d : "other"; }
+  function normalize(s) { return (s || "").toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ""); }
+  function formatCoord(lat, lon) {
+    if (lat == null || lon == null) return "–";
+    var latDir = lat >= 0 ? 'N' : 'S', lonDir = lon >= 0 ? 'E' : 'O';
+    return fmt(Math.abs(lat), 2) + '°' + latDir + ' ' + fmt(Math.abs(lon), 2) + '°' + lonDir;
+  }
+
+  var tooltip = document.getElementById('tooltip');
+  function showTooltip(x, y, label, valueText) {
+    tooltip.innerHTML = '';
+    var strong = document.createElement('strong'); strong.textContent = label;
+    tooltip.appendChild(strong);
+    tooltip.appendChild(document.createTextNode(valueText));
+    tooltip.style.left = x + 'px'; tooltip.style.top = y + 'px';
+    tooltip.hidden = false;
+  }
+  function hideTooltip() { tooltip.hidden = true; }
+  function wireFocusTooltip(el, label, valueText) {
+    el.addEventListener('focus', function () {
+      var box = el.getBoundingClientRect();
+      showTooltip(box.left + box.width / 2, box.top, label, valueText);
+    });
+    el.addEventListener('blur', hideTooltip);
+  }
+
+  // ============== SCREEN 1: search + list ==============
+  var listEl = document.getElementById('station-list');
+
+  function renderStationList(filter) {
+    listEl.innerHTML = '';
+    var norm = normalize(filter);
+    var matches = STATIONS.filter(function (s) {
+      return normalize(s.name + ' ' + s.region).indexOf(norm) !== -1;
+    });
+    if (!matches.length) {
+      var empty = document.createElement('div');
+      empty.className = 'empty-state';
+      empty.textContent = 'Ninguna estación coincide con "' + filter + '".';
+      listEl.appendChild(empty);
+      return;
+    }
+    matches.forEach(function (s) {
+      var card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'station-card';
+
+      var info = document.createElement('div'); info.className = 'info';
+      var name = document.createElement('div'); name.className = 'name'; name.textContent = s.name;
+      var region = document.createElement('div'); region.className = 'region'; region.textContent = s.region || 'España';
+      info.appendChild(name); info.appendChild(region);
+
+      var stats = document.createElement('div'); stats.className = 'stats';
+      var km = document.createElement('div'); km.className = 'km'; km.textContent = s.pisteKm != null ? fmt(Math.round(s.pisteKm)) + ' km' : '–';
+      var kmLabel = document.createElement('div'); kmLabel.className = 'km-label'; kmLabel.textContent = 'pista';
+      stats.appendChild(km); stats.appendChild(kmLabel);
+
+      var chevron = document.createElement('span'); chevron.className = 'chevron'; chevron.textContent = '›';
+
+      card.appendChild(info); card.appendChild(stats); card.appendChild(chevron);
+      card.addEventListener('click', function () { selectStation(s.id); });
+      listEl.appendChild(card);
+    });
+  }
+  document.getElementById('search-input').addEventListener('input', function (e) { renderStationList(e.target.value); });
+  renderStationList('');
+
+  // ============== screen switching ==============
+  var screenList = document.getElementById('screen-list');
+  var screenDashboard = document.getElementById('screen-dashboard');
+  var loadToken = 0;
+
+  function selectStation(id) {
+    var token = ++loadToken;
+    screenList.hidden = true;
+    screenDashboard.hidden = false;
+    document.getElementById('app').scrollTop = 0;
+    window.scrollTo(0, 0);
+    setText('h-name', 'Cargando…');
+    setText('h-place', '');
+    ['badges', 'chart-difficulty', 'chart-lifts', 'runs-list', 'lifts-list', 'quality-list', 'run-filters', 'map-legend']
+      .forEach(function (elId) { document.getElementById(elId).innerHTML = ''; });
+
+    var weatherFetch = fetch('data/' + id + '-weather.json')
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .catch(function () { return null; });
+
+    fetch('data/' + id + '.json')
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (raw) {
+        return weatherFetch.then(function (weather) {
+          if (token !== loadToken) return;
+          raw._imagePath = 'data/' + id + '.jpg';
+          raw.weather = weather;
+          renderDashboard(raw);
+        });
+      })
+      .catch(function (err) {
+        if (token !== loadToken) return;
+        setText('h-name', 'No se pudo cargar');
+        setText('h-place', 'Vuelve a la lista e inténtalo de nuevo.');
+        console.error(err);
+      });
+  }
+
+  document.getElementById('back-btn').addEventListener('click', function () {
+    screenDashboard.hidden = true;
+    screenList.hidden = false;
+  });
+
+  // ============== dashboard: bar chart helper ==============
+  function renderBars(containerId, items) {
+    var container = document.getElementById(containerId);
+    if (!items.length) return;
+    var max = Math.max.apply(null, items.map(function (it) { return it.value; }));
+    items.forEach(function (it) {
+      var row = document.createElement('div');
+      row.className = 'bar-row';
+      var label = document.createElement('div'); label.className = 'bar-row-label'; label.textContent = it.label;
+      var track = document.createElement('div'); track.className = 'bar-track';
+      var fill = document.createElement('div'); fill.className = 'bar-fill';
+      fill.style.width = Math.max(3, (it.value / max) * 100) + '%';
+      fill.style.background = it.color;
+      track.appendChild(fill);
+      var value = document.createElement('div'); value.className = 'bar-value'; value.textContent = it.valueText;
+      row.appendChild(label); row.appendChild(track); row.appendChild(value);
+      container.appendChild(row);
+    });
+  }
+
+  // ============== dashboard: map (persistent pan/zoom controller) ==============
+  var mapState = null;
+  (function setupMapControlsOnce() {
+    var svg = document.getElementById('map-svg');
+    var viewport = document.getElementById('map-viewport');
+    var hint = document.getElementById('map-hint');
+    var MIN_ZOOM = 1, MAX_ZOOM = 6;
+
+    function apply() {
+      if (!mapState) return;
+      mapState.content.setAttribute('transform', 'translate(' + mapState.tx.toFixed(2) + ',' + mapState.ty.toFixed(2) + ') scale(' + mapState.zoom.toFixed(3) + ')');
+      mapState.updateScaleBar(mapState.zoom);
+    }
+    function clamp() {
+      var minTx = mapState.vbW * (1 - mapState.zoom), minTy = mapState.vbH * (1 - mapState.zoom);
+      mapState.tx = Math.min(0, Math.max(minTx, mapState.tx));
+      mapState.ty = Math.min(0, Math.max(minTy, mapState.ty));
+    }
+    function svgPoint(clientX, clientY) {
+      var rect = svg.getBoundingClientRect();
+      return [(clientX - rect.left) / rect.width * mapState.vbW, (clientY - rect.top) / rect.height * mapState.vbH];
+    }
+    function zoomToward(newZoom, px, py) {
+      if (!mapState) return;
+      newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, newZoom));
+      var cx = (px - mapState.tx) / mapState.zoom, cy = (py - mapState.ty) / mapState.zoom;
+      mapState.zoom = newZoom;
+      mapState.tx = px - cx * mapState.zoom;
+      mapState.ty = py - cy * mapState.zoom;
+      clamp(); apply();
+    }
+    function dismissHint() { hint.classList.add('hidden'); }
+
+    viewport.addEventListener('wheel', function (e) {
+      if (!mapState) return;
+      e.preventDefault(); dismissHint();
+      var p = svgPoint(e.clientX, e.clientY);
+      zoomToward(mapState.zoom * Math.exp(-e.deltaY * 0.0018), p[0], p[1]);
+    }, { passive: false });
+
+    var pointers = {}, dragLast = null, pinchStartDist = null, pinchStartZoom = null;
+    function dist(a, b) { return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY); }
+    function midpoint(a, b) { return [(a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2]; }
+
+    svg.addEventListener('pointerdown', function (e) {
+      if (!mapState) return;
+      pointers[e.pointerId] = e; svg.setPointerCapture(e.pointerId);
+      var ids = Object.keys(pointers);
+      if (ids.length === 1) { dragLast = [e.clientX, e.clientY]; svg.classList.add('dragging'); }
+      else if (ids.length === 2) {
+        var pts = ids.map(function (id) { return pointers[id]; });
+        pinchStartDist = dist(pts[0], pts[1]); pinchStartZoom = mapState.zoom;
+      }
+    });
+    svg.addEventListener('pointermove', function (e) {
+      if (!mapState || !pointers[e.pointerId]) return;
+      pointers[e.pointerId] = e;
+      var ids = Object.keys(pointers);
+      dismissHint();
+      if (ids.length === 1 && dragLast) {
+        var rect = svg.getBoundingClientRect();
+        var dxSvg = (e.clientX - dragLast[0]) / rect.width * mapState.vbW;
+        var dySvg = (e.clientY - dragLast[1]) / rect.height * mapState.vbH;
+        mapState.tx += dxSvg; mapState.ty += dySvg;
+        clamp(); apply();
+        dragLast = [e.clientX, e.clientY];
+      } else if (ids.length === 2) {
+        var pts = ids.map(function (id) { return pointers[id]; });
+        var newDist = dist(pts[0], pts[1]);
+        var mid = midpoint(pts[0], pts[1]);
+        var p = svgPoint(mid[0], mid[1]);
+        zoomToward(pinchStartZoom * (newDist / pinchStartDist), p[0], p[1]);
+      }
+    });
+    function endPointer(e) {
+      delete pointers[e.pointerId];
+      if (svg.hasPointerCapture && svg.hasPointerCapture(e.pointerId)) svg.releasePointerCapture(e.pointerId);
+      var ids = Object.keys(pointers);
+      if (ids.length < 2) pinchStartDist = null;
+      if (ids.length === 1) dragLast = [pointers[ids[0]].clientX, pointers[ids[0]].clientY];
+      if (ids.length === 0) { dragLast = null; svg.classList.remove('dragging'); }
+    }
+    svg.addEventListener('pointerup', endPointer);
+    svg.addEventListener('pointercancel', endPointer);
+
+    document.getElementById('map-zoom-in').addEventListener('click', function () { if (!mapState) return; dismissHint(); zoomToward(mapState.zoom * 1.6, mapState.vbW / 2, mapState.vbH / 2); });
+    document.getElementById('map-zoom-out').addEventListener('click', function () { if (!mapState) return; dismissHint(); zoomToward(mapState.zoom / 1.6, mapState.vbW / 2, mapState.vbH / 2); });
+    document.getElementById('map-zoom-reset').addEventListener('click', function () { if (!mapState) return; dismissHint(); mapState.zoom = 1; mapState.tx = 0; mapState.ty = 0; apply(); });
+
+    // Hover picking: find the nearest run/lift line to the pointer, regardless of SVG
+    // paint order, so lifts get equal treatment to runs where the two overlap.
+    var HOVER_THRESHOLD = 5;
+    var activeFeature = null;
+    function outerPoint(cx, cy) { return [cx * mapState.zoom + mapState.tx, cy * mapState.zoom + mapState.ty]; }
+    function distToSegment(px, py, ax, ay, bx, by) {
+      var dx = bx - ax, dy = by - ay;
+      var lenSq = dx * dx + dy * dy;
+      var t = lenSq ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq)) : 0;
+      var cx = ax + t * dx, cy = ay + t * dy;
+      return Math.hypot(px - cx, py - cy);
+    }
+    function clearActiveFeature() {
+      if (activeFeature) { activeFeature.el.classList.remove(activeFeature.hoverClass); activeFeature = null; }
+    }
+    function pickFeature(clientX, clientY) {
+      var cursor = svgPoint(clientX, clientY);
+      var best = null, bestDist = HOVER_THRESHOLD;
+      (mapState.features || []).forEach(function (f) {
+        for (var i = 0; i < f.points.length - 1; i++) {
+          var a = outerPoint(f.points[i][0], f.points[i][1]);
+          var b = outerPoint(f.points[i + 1][0], f.points[i + 1][1]);
+          var d = distToSegment(cursor[0], cursor[1], a[0], a[1], b[0], b[1]);
+          if (d < bestDist) { bestDist = d; best = f; }
+        }
+      });
+      return best;
+    }
+    svg.addEventListener('pointermove', function (e) {
+      if (!mapState || Object.keys(pointers).length > 0) return;
+      var found = pickFeature(e.clientX, e.clientY);
+      if (found) {
+        if (!activeFeature || activeFeature.el !== found.el) {
+          clearActiveFeature();
+          activeFeature = found;
+          activeFeature.el.classList.add(activeFeature.hoverClass);
+        }
+        showTooltip(e.clientX, e.clientY, found.label, found.valueText);
+      } else {
+        clearActiveFeature();
+        hideTooltip();
+      }
+    });
+    svg.addEventListener('pointerleave', function () { clearActiveFeature(); hideTooltip(); });
+  })();
+
+  function buildMap(raw) {
+    var SVGNS = 'http://www.w3.org/2000/svg';
+    var svg = document.getElementById('map-svg');
+    svg.innerHTML = '';
+    document.getElementById('map-hint').classList.remove('hidden');
+    document.getElementById('map-legend').innerHTML = '';
+    mapState = null;
+
+    var allPoints = [];
+    raw.runs.forEach(function (r) { (r.geom || []).forEach(function (part) { allPoints = allPoints.concat(part); }); });
+    raw.lifts.forEach(function (l) { (l.geom || []).forEach(function (part) { allPoints = allPoints.concat(part); }); });
+
+    var mapSection = document.getElementById('map-viewport').closest('section');
+    if (!allPoints.length) {
+      mapSection.querySelector('.map-viewport').hidden = true;
+      return;
+    }
+    mapSection.querySelector('.map-viewport').hidden = false;
+
+    var lons = allPoints.map(function (p) { return p[0]; });
+    var lats = allPoints.map(function (p) { return p[1]; });
+    var lonMin = Math.min.apply(null, lons), lonMax = Math.max.apply(null, lons);
+    var latMin = Math.min.apply(null, lats), latMax = Math.max.apply(null, lats);
+    var cos = Math.cos((latMin + latMax) / 2 * Math.PI / 180);
+    var projW = (lonMax - lonMin) * cos, projH = (latMax - latMin);
+    var pad = Math.max(projW, projH) * 0.08;
+    var vbW = 400, scale = vbW / (projW + pad * 2), vbH = (projH + pad * 2) * scale;
+
+    function project(pt) { return [((pt[0] - lonMin) * cos + pad) * scale, ((latMax - pt[1]) + pad) * scale]; }
+    function partToPoints(part) { return part.map(project).map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' '); }
+
+    svg.setAttribute('viewBox', '0 0 ' + vbW.toFixed(1) + ' ' + vbH.toFixed(1));
+    var content = document.createElementNS(SVGNS, 'g');
+    svg.appendChild(content);
+
+    if (raw.basemap) {
+      var bm = raw.basemap;
+      var nw = project([bm.west, bm.north]), se = project([bm.east, bm.south]);
+      var img = document.createElementNS(SVGNS, 'image');
+      img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', raw._imagePath);
+      img.setAttribute('href', raw._imagePath);
+      img.setAttribute('x', nw[0]); img.setAttribute('y', nw[1]);
+      img.setAttribute('width', se[0] - nw[0]); img.setAttribute('height', se[1] - nw[1]);
+      img.setAttribute('preserveAspectRatio', 'none');
+      content.appendChild(img);
+    }
+
+    var features = [];
+
+    raw.lifts.forEach(function (l) {
+      (l.geom || []).forEach(function (part) {
+        if (part.length < 2) return;
+        var pts = partToPoints(part);
+        var casing = document.createElementNS(SVGNS, 'polyline'); casing.setAttribute('points', pts); casing.setAttribute('class', 'map-lift-casing');
+        content.appendChild(casing);
+        var hit = document.createElementNS(SVGNS, 'polyline'); hit.setAttribute('points', pts); hit.setAttribute('class', 'map-hit'); hit.setAttribute('tabindex', '0');
+        content.appendChild(hit);
+        var pl = document.createElementNS(SVGNS, 'polyline'); pl.setAttribute('points', pts); pl.setAttribute('class', 'map-lift');
+        content.appendChild(pl);
+        [part[0], part[part.length - 1]].forEach(function (endpoint) {
+          var p = project(endpoint);
+          var dot = document.createElementNS(SVGNS, 'circle');
+          dot.setAttribute('cx', p[0].toFixed(1)); dot.setAttribute('cy', p[1].toFixed(1)); dot.setAttribute('r', 2.6);
+          dot.setAttribute('class', 'map-lift-station');
+          content.appendChild(dot);
+        });
+        var label = l.name || 'Remonte sin nombre';
+        var bits = [LIFT_TYPE[l.lift_type] || l.lift_type];
+        if (l.length_m) bits.push(fmt(Math.round(l.length_m)) + ' m');
+        if (l.vertical_m) bits.push('desnivel ' + fmt(Math.round(l.vertical_m)) + ' m');
+        if (l.capacity) bits.push(fmt(l.capacity) + ' p/h');
+        if (l.occupancy) bits.push(l.occupancy + ' plazas');
+        var valueText = bits.join(' · ');
+        wireFocusTooltip(hit, label, valueText);
+        features.push({ el: pl, hoverClass: 'lift-hovered', points: part.map(project), label: label, valueText: valueText });
+      });
+    });
+
+    raw.runs.forEach(function (r, idx) {
+      var key = diffKey(r.difficulty);
+      (r.geom || []).forEach(function (part) {
+        if (part.length < 2) return;
+        var pts = partToPoints(part);
+        var halo = document.createElementNS(SVGNS, 'polyline'); halo.setAttribute('points', pts); halo.setAttribute('class', 'map-run-halo');
+        var hit = document.createElementNS(SVGNS, 'polyline'); hit.setAttribute('points', pts); hit.setAttribute('class', 'map-hit'); hit.setAttribute('tabindex', '0');
+        var line = document.createElementNS(SVGNS, 'polyline'); line.setAttribute('points', pts); line.setAttribute('class', 'map-run'); line.style.stroke = DIFF[key].color;
+        content.appendChild(halo); content.appendChild(hit); content.appendChild(line);
+        var label = r.name || ('Pista sin nombre #' + (idx + 1));
+        var bits = [DIFF[key].label];
+        if (r.length_m) bits.push(fmt(Math.round(r.length_m)) + ' m');
+        if (r.avg_pitch_percent != null) bits.push(fmt(r.avg_pitch_percent, 0) + '% pend. media');
+        var valueText = bits.join(' · ');
+        wireFocusTooltip(hit, label, valueText);
+        features.push({ el: line, hoverClass: 'run-hovered', points: part.map(project), label: label, valueText: valueText });
+      });
+    });
+
+    var mapWidthMeters = projW * 111320;
+    var niceSteps = [10, 20, 25, 50, 100, 200, 250, 500, 1000, 1500, 2000];
+    var bx = 10, by = vbH - 10;
+    var scaleLine = document.createElementNS(SVGNS, 'line');
+    scaleLine.setAttribute('y1', by); scaleLine.setAttribute('y2', by); scaleLine.setAttribute('x1', bx);
+    scaleLine.setAttribute('class', 'map-scale-bar');
+    svg.appendChild(scaleLine);
+    var scaleLabel = document.createElementNS(SVGNS, 'text');
+    scaleLabel.setAttribute('x', bx); scaleLabel.setAttribute('y', by - 4); scaleLabel.setAttribute('class', 'map-scale-text');
+    svg.appendChild(scaleLabel);
+    function updateScaleBar(zoomScale) {
+      var visibleWidthMeters = mapWidthMeters / zoomScale;
+      var targetMeters = visibleWidthMeters * 0.22;
+      var barMeters = niceSteps.reduce(function (best, v) { return Math.abs(v - targetMeters) < Math.abs(best - targetMeters) ? v : best; }, niceSteps[0]);
+      var barPx = (barMeters / 111320) * scale * zoomScale;
+      scaleLine.setAttribute('x2', bx + barPx);
+      scaleLabel.textContent = barMeters >= 1000 ? (barMeters / 1000) + ' km' : barMeters + ' m';
+    }
+
+    if (raw.basemap && raw.basemap.attribution) {
+      var attrib = document.createElementNS(SVGNS, 'text');
+      attrib.setAttribute('x', vbW - 6); attrib.setAttribute('y', vbH - 6); attrib.setAttribute('text-anchor', 'end');
+      attrib.setAttribute('class', 'map-attribution'); attrib.textContent = raw.basemap.attribution;
+      svg.appendChild(attrib);
+    }
+
+    var present = DIFF_ORDER.filter(function (k) { return raw.runs.some(function (r) { return diffKey(r.difficulty) === k; }); });
+    var legend = document.getElementById('map-legend');
+    present.forEach(function (k) {
+      var item = document.createElement('span'); item.className = 'key';
+      var sw = document.createElement('span'); sw.className = 'swatch'; sw.style.background = DIFF[k].color;
+      item.appendChild(sw); item.appendChild(document.createTextNode(DIFF[k].label));
+      legend.appendChild(item);
+    });
+    var liftItem = document.createElement('span'); liftItem.className = 'key';
+    var liftSw = document.createElement('span'); liftSw.className = 'swatch lift';
+    liftItem.appendChild(liftSw); liftItem.appendChild(document.createTextNode('Remonte'));
+    legend.appendChild(liftItem);
+
+    mapState = { svg: svg, content: content, vbW: vbW, vbH: vbH, scale: scale, zoom: 1, tx: 0, ty: 0, updateScaleBar: updateScaleBar, features: features };
+    updateScaleBar(1);
+  }
+
+  // ============== dashboard: full render ==============
+  function renderDashboard(raw) {
+    setText('h-name', raw.name || '–');
+    setText('h-place', [raw.locality, raw.region].filter(Boolean).join(', ') || 'España');
+
+    var badgesEl = document.getElementById('badges');
+    (raw.activities || '').split(',').filter(Boolean).map(function (a) { return ACTIVITY[a] || a; })
+      .concat([STATUS[raw.status] || raw.status, 'España'])
+      .forEach(function (label) {
+        var b = document.createElement('span'); b.className = 'badge'; b.textContent = label;
+        badgesEl.appendChild(b);
+      });
+
+    if (raw.min_elevation_m != null && raw.max_elevation_m != null) {
+      setText('f-alt', fmt(Math.round(raw.min_elevation_m)) + '–' + fmt(Math.round(raw.max_elevation_m)) + ' m');
+      setText('f-vert', fmt(Math.round(raw.max_elevation_m - raw.min_elevation_m)) + ' m');
+    } else {
+      setText('f-alt', '–'); setText('f-vert', '–');
+    }
+    setText('f-coords', formatCoord(raw.latitude, raw.longitude));
+
+    if (raw.latitude != null && raw.longitude != null) {
+      var sun = sunTimes(new Date(), raw.latitude, raw.longitude);
+      setText('k-sunrise', formatLocalTime(sun.sunrise));
+      setText('k-sunset', formatLocalTime(sun.sunset));
+    } else {
+      setText('k-sunrise', '–'); setText('k-sunset', '–');
+    }
+
+    var weatherNote = document.getElementById('weather-note');
+    if (raw.weather) {
+      setText('k-temp', fmt(Math.round(raw.weather.temperature_c)) + '°');
+      setText('k-weather-desc', WEATHER_CODE[raw.weather.weathercode] || 'Tiempo actual');
+      setText('k-wind', fmt(Math.round(raw.weather.windspeed_kmh)) + ' km/h');
+      var fetched = raw.weather.fetched_at ? new Date(raw.weather.fetched_at) : null;
+      setText('weather-updated', fetched ? 'actualizado ' + formatLocalTime(fetched) : '');
+      weatherNote.hidden = false;
+    } else {
+      setText('k-temp', '–');
+      setText('k-weather-desc', 'Sin datos de tiempo');
+      setText('k-wind', '–');
+      setText('weather-updated', '');
+      weatherNote.hidden = true;
+    }
+
+    var siteLink = document.getElementById('h-site');
+    if (raw.websites && raw.websites.length) { siteLink.href = raw.websites[0]; siteLink.hidden = false; }
+    else { siteLink.hidden = true; }
+
+    var totalKm = 0, totalCapacity = 0;
+    raw.runs.forEach(function (r) { if (r.length_m) totalKm += r.length_m; });
+    raw.lifts.forEach(function (l) { if (l.capacity) totalCapacity += l.capacity; });
+    setText('k-km', fmt(Math.round(totalKm / 1000)) + ' km');
+    setText('k-runs', fmt(raw.runs.length));
+    setText('k-lifts', fmt(raw.lifts.length));
+    setText('k-capacity', totalCapacity ? fmt(totalCapacity) : '–');
+
+    buildMap(raw);
+
+    var diffAgg = {};
+    raw.runs.forEach(function (r) {
+      var key = diffKey(r.difficulty);
+      if (!diffAgg[key]) diffAgg[key] = { km: 0, count: 0 };
+      diffAgg[key].km += (r.length_m || 0) / 1000;
+      diffAgg[key].count += 1;
+    });
+    renderBars('chart-difficulty', DIFF_ORDER.filter(function (k) { return diffAgg[k]; }).map(function (k) {
+      var a = diffAgg[k];
+      return { label: DIFF[k].label, value: a.km, valueText: fmt(a.km, 1) + ' km · ' + a.count, color: DIFF[k].color };
+    }));
+
+    var liftAgg = {};
+    raw.lifts.forEach(function (l) {
+      if (!liftAgg[l.lift_type]) liftAgg[l.lift_type] = { km: 0, count: 0 };
+      liftAgg[l.lift_type].km += (l.length_m || 0) / 1000;
+      liftAgg[l.lift_type].count += 1;
+    });
+    var liftOrder = Object.keys(liftAgg).sort(function (a, b) { return liftAgg[b].km - liftAgg[a].km; });
+    renderBars('chart-lifts', liftOrder.map(function (k) {
+      var a = liftAgg[k];
+      return { label: LIFT_TYPE[k] || k, value: a.km, valueText: fmt(a.km, 1) + ' km · ' + a.count, color: 'var(--accent)' };
+    }));
+
+    // runs list + filters
+    setText('runs-count-sub', raw.runs.length + ' segmentos');
+    var runsList = document.getElementById('runs-list');
+    var namedCount = 0;
+    raw.runs.forEach(function (r, idx) {
+      var key = diffKey(r.difficulty);
+      var item = document.createElement('div'); item.className = 'item'; item.setAttribute('data-diff', key);
+      var dot = document.createElement('span'); dot.className = 'dot'; dot.style.background = DIFF[key].color;
+      var main = document.createElement('div'); main.className = 'item-main';
+      var name = document.createElement('div');
+      if (r.name) { name.className = 'item-name'; name.textContent = r.name; namedCount++; }
+      else { name.className = 'item-name muted'; name.textContent = 'Pista sin nombre #' + (idx + 1); }
+      var meta = document.createElement('div'); meta.className = 'item-meta';
+      var bits = [];
+      if (r.length_m) bits.push(fmt(Math.round(r.length_m)) + ' m');
+      if (r.vertical_m) bits.push('desnivel ' + fmt(Math.round(r.vertical_m)) + ' m');
+      if (r.avg_pitch_percent != null) bits.push('pend. media ' + fmt(r.avg_pitch_percent, 1) + '%');
+      meta.textContent = bits.join(' · ');
+      if (r.lit === 1) { var pill = document.createElement('span'); pill.className = 'pill'; pill.textContent = 'Nocturna'; meta.appendChild(pill); }
+      main.appendChild(name); main.appendChild(meta);
+      item.appendChild(dot); item.appendChild(main);
+      runsList.appendChild(item);
+    });
+
+    var filterDefs = [
+      { key: 'all', label: 'Todas' },
+      { key: 'novice', label: 'Verde' },
+      { key: 'easy', label: 'Azul' },
+      { key: 'intermediate', label: 'Roja' },
+      { key: 'advanced', label: 'Negra', altKeys: ['advanced', 'expert'] },
+      { key: 'freeride', label: 'Freeride', altKeys: ['freeride', 'extreme'] },
+      { key: 'other', label: 'Sin clasif.' }
+    ];
+    var filtersEl = document.getElementById('run-filters');
+    var runItems = Array.prototype.slice.call(runsList.children);
+    filterDefs.forEach(function (f, i) {
+      var chip = document.createElement('button'); chip.className = 'chip'; chip.type = 'button';
+      chip.setAttribute('aria-pressed', i === 0 ? 'true' : 'false');
+      if (f.key !== 'all') {
+        var dot = document.createElement('span'); dot.className = 'dot'; dot.style.background = DIFF[f.key].color;
+        chip.appendChild(dot);
+      }
+      chip.appendChild(document.createTextNode(f.label));
+      chip.addEventListener('click', function () {
+        Array.prototype.forEach.call(filtersEl.children, function (c) { c.setAttribute('aria-pressed', 'false'); });
+        chip.setAttribute('aria-pressed', 'true');
+        var keys = f.altKeys || [f.key];
+        runItems.forEach(function (item) {
+          item.style.display = (f.key === 'all' || keys.indexOf(item.getAttribute('data-diff')) !== -1) ? '' : 'none';
+        });
+      });
+      filtersEl.appendChild(chip);
+    });
+
+    var liftsList = document.getElementById('lifts-list');
+    raw.lifts.forEach(function (l) {
+      var item = document.createElement('div'); item.className = 'item';
+      var dot = document.createElement('span'); dot.className = 'dot'; dot.style.background = 'var(--accent)';
+      var main = document.createElement('div'); main.className = 'item-main';
+      var name = document.createElement('div'); name.className = 'item-name';
+      name.textContent = (l.name || 'Sin nombre') + '  ·  ' + (LIFT_TYPE[l.lift_type] || l.lift_type);
+      var meta = document.createElement('div'); meta.className = 'item-meta';
+      var bits = [];
+      if (l.capacity) bits.push(fmt(l.capacity) + ' p/h');
+      if (l.occupancy) bits.push(l.occupancy + ' plazas');
+      if (l.length_m) bits.push(fmt(Math.round(l.length_m)) + ' m');
+      if (l.vertical_m) bits.push('desnivel ' + fmt(Math.round(l.vertical_m)) + ' m');
+      meta.textContent = bits.join(' · ');
+      if (l.detachable === 1) { var pill = document.createElement('span'); pill.className = 'pill'; pill.textContent = 'Desembragable'; meta.appendChild(pill); }
+      main.appendChild(name); main.appendChild(meta);
+      item.appendChild(dot); item.appendChild(main);
+      liftsList.appendChild(item);
+    });
+
+    var runCount = raw.runs.length || 1, liftCount = raw.lifts.length || 1;
+    var diffKnown = raw.runs.filter(function (r) { return r.difficulty; }).length;
+    var litKnown = raw.runs.filter(function (r) { return r.lit !== null && r.lit !== undefined; }).length;
+    var snowKnown = raw.runs.filter(function (r) { return r.snowmaking !== null && r.snowmaking !== undefined; }).length;
+    var capKnown = raw.lifts.filter(function (l) { return l.capacity !== null && l.capacity !== undefined; }).length;
+    var detKnown = raw.lifts.filter(function (l) { return l.detachable !== null && l.detachable !== undefined; }).length;
+
+    var qualityItems = [
+      { name: 'Pistas con nombre', val: namedCount + ' / ' + raw.runs.length },
+      { name: 'Dificultad etiquetada', val: fmt(100 * diffKnown / runCount, 0) + '%' },
+      { name: 'Iluminación etiquetada', val: fmt(100 * litKnown / runCount, 0) + '%' },
+      { name: 'Nieve artificial etiquetada', val: fmt(100 * snowKnown / runCount, 0) + '%' },
+      { name: 'Capacidad de remonte etiquetada', val: fmt(100 * capKnown / liftCount, 0) + '%' },
+      { name: 'Tipo de agarre etiquetado', val: fmt(100 * detKnown / liftCount, 0) + '%' }
+    ];
+    var qualityList = document.getElementById('quality-list');
+    qualityItems.forEach(function (q) {
+      var row = document.createElement('div'); row.className = 'quality-row';
+      var name = document.createElement('span'); name.className = 'name'; name.textContent = q.name;
+      var val = document.createElement('span'); val.className = 'val'; val.textContent = q.val;
+      row.appendChild(name); row.appendChild(val);
+      qualityList.appendChild(row);
+    });
+    setText('quality-note', 'Nieve artificial y vigilancia rara vez están etiquetadas en OpenStreetMap — no significa que no existan, es que casi nadie las mapea todavía.');
+
+    setText('dashboard-credit', 'Datos de OpenSkiMap / OpenStreetMap, licencia ODbL. ID: ' + (raw.id || '').slice(0, 12) + '…');
+  }
+})();
+</script>

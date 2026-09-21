@@ -464,20 +464,32 @@
   // no key, CORS-enabled). No pipeline, no snapshot -- always up to date.
   function fetchLiveWeather(lat, lon) {
     var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon
-      + '&current_weather=true&timezone=UTC';
+      + '&current=temperature_2m,wind_speed_10m,weather_code&current_weather=true&timezone=UTC';
     return fetch(url)
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
-        if (!data || !data.current_weather) return null;
-        var cw = data.current_weather;
-        return {
-          temperature_c: cw.temperature,
-          windspeed_kmh: cw.windspeed,
-          weathercode: cw.weathercode,
-          fetched_at: cw.time + 'Z'
-        };
+        if (!data) return null;
+        if (data.current) {
+          var c = data.current;
+          return {
+            temperature_c: c.temperature_2m,
+            windspeed_kmh: c.wind_speed_10m,
+            weathercode: c.weather_code,
+            fetched_at: c.time + 'Z'
+          };
+        }
+        if (data.current_weather) {
+          var cw = data.current_weather;
+          return {
+            temperature_c: cw.temperature,
+            windspeed_kmh: cw.windspeed,
+            weathercode: cw.weathercode,
+            fetched_at: cw.time + 'Z'
+          };
+        }
+        return null;
       })
-      .catch(function () { return null; });
+      .catch(function (err) { console.error('weather fetch failed', err); return null; });
   }
 
   function fmt(n, d) {

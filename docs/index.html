@@ -588,29 +588,16 @@
   };
   var currentCountry = null;
 
-  // Ski areas that OpenSkiMap/OpenStreetMap still map as separate entries
-  // even though they share lifts/pistes with their neighbours in real life.
-  // Curated by hand -- there's no reliable "part of domain X" tag to derive
-  // this from automatically.
-  var STATION_GROUPS = [
-    {
-      label: 'Formigal-Panticosa',
-      ids: ['0f46917975b8dab5e541edf6469105c3c091ec22', 'b11f8a9b8390463caf77e7adc3db6c226cfe088b']
-    },
-    {
-      label: 'Vía Láctea / Via Lattea',
-      ids: [
-        '35a6ed0e1f5424feddcbc15b62e84b1b97f07624', // Sestriere
-        'a82f34f376325886d7e9645f44a5f0e20084e78f', // Sauze D'Oulx
-        'bd7b3458f542e69b67d1aadb4d474ffe5f5aa157', // Sansicario
-        'b1a655113e872a26a397061747cc833b8a6932b2', // Montgenèvre
-        '5c965369d0727ccd79ab98ae91909542a33c7fe6'  // Claviere
-      ]
-    }
-  ];
+  // Ski areas that OpenSkiMap/OpenStreetMap map as separate entries but whose
+  // runs or lifts physically come within 500m of each other -- detected
+  // automatically from each station's own run/lift geometry (see
+  // data-pipeline/scripts/detect_domain_groups.py), not curated by hand. This scales to
+  // however many stations the app ends up covering; it just needs to be
+  // re-run whenever new stations are added.
+  var STATION_GROUPS = [["1fd29b021584344dd3b8f2960fe561faf357bfe2","31ba9e7c28dd9574c86fa6e4c0ead48553e45ba7","53a8bb068ae7f82160a4c6e2df63ee3a724b62dd","6d993fe595f830217b5c7abac769ea432a6cc300","71c073dc36516a01f114c98708db04e208feafd1","7346bb5d22b8259e978183dc0a4b375a3351ac90","78a67a64402b16aeb9a69bd582eb859b4a304886","888b8db51636e4f5c1554ad8393052ace9c765d8","8ebbe708c3f7b24aac9cd9d3293dc3b53d405f92","a52b30a524e35adb64e78425a0a8e62dad0f0006","c1bb41346278aa404c3e62769608553e1d22d149","ebc3833ff7fe9a3a6978c81bac56683ecae63cd2","fc89413ef26e4479473070112eb1e72e15b3d23f"],["65838d5e688d997892ba7e54d6b445d97294458b","d68b7ce7be8a7b5b3a0e020eeb9dce4770f0da6b"],["00e3880c19b3ca1bb412d2274d3c15bf4a2598f9","02196b1e0dd473176e265318bc9c06e22df53ace","0295b1657f53d93d0eb1fd692993c0d2909d6d73","04d84a3789b94eba19ce3c951fece8117d931c03","11b4273361f22eb084db41a3270d66fe1db2e7c1","3768b8c925737d2bdad4ea978f036485c508a6b3","4230b270fcf77bb82c5a46b7324a55983d3d372f","46148538bc746b16fb6cfe32916026c23e16d738","4984dcad2a0d405ed69fa07204fa4e4398f3bdaa","6ff57b9fc9073c238cb59e44b5b24b6b0aba269d","7382bc3c80658564db8fc3dc0e2f8d8f7c709fe0","748fee00e468b5d11016d8f9dab6e2e214ea78f5","7563abecd5cc2164f89cd67a02eac49bf45e2365","9d84c79afd13915cb14c9e5fc3b63189e4f160fc","ab7961704073ef3c88692eee6638c6622112defc","b038c9b06cac9bc5e400f5d1b2c3b42e00dc3728","c443cc1044843c9e8087e6c40fe118eb8d8fa18b","c75c6ca036981ab96a6547398e30e705a9e30809","dcb15d6d8592e307e3cf6da3bc1dd4e759d75d90","e615b3d384f0063fb20af785b477a97fdce907bc"],["1771e68c0cb96ffc4c834d53f8e60f77fe5ed05e","28bc6b32b26b2c57edacb1c31e4ebdc1ec6e518f","2e7ded9ef38b3609f561dd89d959e072f9cca157","45a940355cca76e598e2a54c273e06cd0916e04f","45c1ed53a5c947daeb9df201306473ac8b059788","70b5c16a6a584808d97c9084dd340e4c8605acdb","8f52a4cffc57a788e69b889d7b5c12197a606047","b2d026c49e73f7b49e043de835baa5622adc2e47"],["91c44085267ba327e1007afebcef144f436d686d","dec537b602584db89d89ab114a619f1ae356398e","f47f7e05cc676b25b6a00f77f0b86a897f03018c"],["064c258440982ec02bbffeb24ad3acffc7fa5ef0","f8176e48416adcfc9118014d5c390cd2099a6a18"],["075db540453d13b0e660135085f40523940b95ba","23365b5cea5dad5b58d9ffc5506ff573f96cb70b","3ab7375c4734163405f0f77a7c5a6afdfd600b73","68b126bc3175516c9263aed7635d14e37ff360dc","b66cd0bd82cf0860c0b65dbe7ba26066f8463554","e13d9d82f727b3101571e54b9aeeb900a8286337"],["180faeea32aba7b22fbe1438b0a3a82f6a2a4ad8","6ecf3eac97891cee8e38aa2e836e878db6ebe5a3"],["4bfd6216f4414dd3505228bef1ea6d9e8049c74e","9e00e72809ffc15563763518cdab85c73f9eccfa","b0280114b1356e634938b8466c1f479bade260d5","d10f2f21ec726d6ca8de5886b078f40426870c4b"],["4f8cc7c822ff08fe15a457cfd10dacbe603a16cf","832501429324467c9e75359846177def5f5208e5","da710e6cc602f54dfb5e724d4758c5fb5384c8d6","f83cb97ace9308e949a7638a1922ba589f5cc40d"],["a12bb085d8e841022904dbed3e471f4088c8caff","ac19567d24dc4579c52d9eeef24309e3665dfa89"],["13e89a4b35899c5870e686d3481b0c3f25892320","8ea4e409e0bbc58d0ffb58437efc4621248e9b09"],["05ec7627488328fb30e0d502b021045a348af622","4236aff4e09a8a34af56ec12b7c0085e579204db","e7c4c03bd7f9a3d907ff566775cfba1823bcf2ae"],["29248afecbb89253d31145bb08025956c1bfb71a","53410fc611922a26e32535c74bb1d9364cef4ecd","66e672470add74c3e6a2bd8d4c1bb07cc4721728","c5107fc2eb3f59b23211a3251a229b06d36f765c"],["03fcc0299c9030bf81bf077f9a94ee0b327040d9","6eebeff16c8b480fc1335c8bed596286706cb776"],["35a6ed0e1f5424feddcbc15b62e84b1b97f07624","5c965369d0727ccd79ab98ae91909542a33c7fe6","a82f34f376325886d7e9645f44a5f0e20084e78f","b1a655113e872a26a397061747cc833b8a6932b2","bd7b3458f542e69b67d1aadb4d474ffe5f5aa157"],["60bf2e0677cb20240633a22d4f82730130629872","99f28adeace732787655c845a53fcce7ab4b8129"],["403c8d67ddd348bfa3f7d02c6c21163479964926","c880b001fe8a065af66fca1a93ea7ce3d62e546a"],["3150d08706183824af7f70226eaa2222400b8a64","6bc661c68f351340fad911f747596b1d8dcc4f3c","c7cc7aab86a01a89ab0cca3e123c85bbe366f2bf","cbadd26e8f2d5f692fa56504a06c23f6aa92b160"],["0f17e89de28821511c59e184dd520b7d6aea6a51","7c2f2690d339d9df6f820e7c6e596a9b0ba3dce5"],["0345d73f7a4bf0f49815ccb16306a3ec6371544b","10f2ef5a778b65fdea26f0662b08e83c8b979356","97a14cedc5b0e781e9bd9857df1426b9376c7462","aa87548d9445d366123e7ef7aee40af9d4a78dff","ab64447adfc4646992e5e055f531038d949a74b2"],["1eeb56a80185ff1dff644357f9f747842d0f620c","37ee9c6ba5b44864ba844f804938a8b815f8b717","7bbe4370de755694437795af4d89234c73ed73d4","df2bd5abc7c60af896261373af4d7b9d6085e5bf"],["13756027a3c85c2f3e1b8742865baa4f2469a277","f9beaf4e37ef88b422b9ee4aa2ae9224f10afd02"],["21def33c68a75c001d3342fc3e711e0f1e997637","95d07bbe7b52066bdd3653541ed114ac6d24ca93"],["29b30f99e12f6399919a7bbd34ab3ad948bf6ede","fd830ae87b04dcc7ab252d9b7f21cb21029dd61f"],["696bb1ffa7c5cbea2123abdb0821791dfaaad100","a044deedf9fb7f84d9cd7c15b0d503403da71c2e"],["600f6e0f4583cb32dcc2934439cd65ff38f3a570","f8a135103929215d692c27c3b10670b5b8ff1e7b"],["c321766df512ba35d713dac3f9517527c067bb4a","f5fcc0e543cfb0e4d50280c286081c27d975697f"]];
   function findGroupFor(id) {
     for (var i = 0; i < STATION_GROUPS.length; i++) {
-      if (STATION_GROUPS[i].ids.indexOf(id) !== -1) return STATION_GROUPS[i];
+      if (STATION_GROUPS[i].indexOf(id) !== -1) return STATION_GROUPS[i];
     }
     return null;
   }
@@ -1101,13 +1088,11 @@
     var group = findGroupFor(raw.id);
     var domainSection = document.getElementById('domain-section');
     if (group) {
-      var others = group.ids.filter(function (id) { return id !== raw.id; }).map(stationById).filter(Boolean);
-      var combinedKm = group.ids.map(stationById).filter(Boolean)
-        .reduce(function (sum, s) { return sum + (s.pisteKm || 0); }, 0);
-      setText('domain-title', group.label);
+      var others = group.filter(function (id) { return id !== raw.id; }).map(stationById).filter(Boolean);
+      setText('domain-title', 'Dominio esquiable conectado');
       setText('domain-note',
-        'Comparte remontes y pistas con otras estaciones vecinas; en OpenStreetMap todavía aparecen como entradas separadas. '
-        + 'Entre todas suman ' + fmt(Math.round(combinedKm)) + ' km de pista.');
+        'Sus remontes o pistas cartografiadas llegan a menos de 500m de estas estaciones vecinas '
+        + '(detectado automáticamente por proximidad geográfica, no son fusiones manuales, así que los km de cada una pueden solaparse parcialmente):');
       var linksEl = document.getElementById('domain-links');
       others.forEach(function (o) {
         var chip = document.createElement('button');

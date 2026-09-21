@@ -1,21 +1,29 @@
-name: Fetch Spanish ski stations (batch)
+name: Fetch ski stations (batch)
 
 on:
   push:
     branches:
       - claude/ski-stations-database-rhvohj
     paths:
-      - .github/workflows/fetch-es-stations.yml
+      - .github/workflows/fetch-stations.yml
   workflow_dispatch:
     inputs:
+      country:
+        description: "ISO country code to fetch (e.g. ES, FR, AT, IT, CH, AD)"
+        required: false
+        default: "ES"
+      min_piste_km:
+        description: "Skip ski areas with less total piste km than this"
+        required: false
+        default: "0"
       offset:
-        description: "Offset into the ES station list (ordered by piste km desc)"
+        description: "Offset into the country's station list (ordered by piste km desc)"
         required: false
         default: "0"
       limit:
         description: "How many stations to process in this run"
         required: false
-        default: "33"
+        default: "500"
 
 jobs:
   build-and-fetch:
@@ -38,14 +46,18 @@ jobs:
 
       - name: Fetch stations
         env:
+          COUNTRY: ${{ inputs.country || 'ES' }}
+          MIN_PISTE_KM: ${{ inputs.min_piste_km || '0' }}
           OFFSET: ${{ inputs.offset || '0' }}
-          LIMIT: ${{ inputs.limit || '33' }}
+          LIMIT: ${{ inputs.limit || '500' }}
         run: |
           python - <<'PY'
           import json
           import os
           import sqlite3
 
+          COUNTRY = os.environ["COUNTRY"]
+          MIN_PISTE_KM = float(os.environ["MIN_PISTE_KM"])
           OFFSET = int(os.environ["OFFSET"])
           LIMIT = int(os.environ["LIMIT"])
 
@@ -73,24 +85,27 @@ jobs:
 
           stations = rows(
               """
-              SELECT sa.*
+              SELECT sa.*,
+                     COALESCE((SELECT SUM(length_km) FROM ski_area_run_stats WHERE ski_area_id = sa.id), 0) AS total_piste_km
               FROM ski_areas sa
-              WHERE sa.country_code = 'ES' AND sa.activities LIKE '%downhill%'
+              WHERE sa.country_code = ? AND sa.activities LIKE '%downhill%'
                 AND sa.status = 'operating'
                 AND (SELECT COUNT(*) FROM run_ski_areas WHERE ski_area_id = sa.id) > 0
                 AND (SELECT COUNT(*) FROM lift_ski_areas WHERE ski_area_id = sa.id) > 0
-              ORDER BY (SELECT SUM(length_km) FROM ski_area_run_stats WHERE ski_area_id = sa.id) DESC
+                AND COALESCE((SELECT SUM(length_km) FROM ski_area_run_stats WHERE ski_area_id = sa.id), 0) >= ?
+              ORDER BY total_piste_km DESC
               LIMIT ? OFFSET ?
               """,
-              (LIMIT, OFFSET),
+              (COUNTRY, MIN_PISTE_KM, LIMIT, OFFSET),
           )
 
-          print(f"Processing {len(stations)} stations (offset={OFFSET}, limit={LIMIT})")
+          print(f"Processing {len(stations)} stations (country={COUNTRY}, min_piste_km={MIN_PISTE_KM}, offset={OFFSET}, limit={LIMIT})")
 
           result = []
           for area in stations:
               print(f"--- {area['name']} ---")
               area_dict = dict(area)
+              area_dict.pop("total_piste_km", None)
               area_dict["run_stats"] = rows(
                   "SELECT * FROM ski_area_run_stats WHERE ski_area_id = ? ORDER BY activity, difficulty",
                   (area["id"],),
@@ -130,7 +145,7 @@ jobs:
               area_dict["websites"] = json.loads(area_dict["websites"] or "[]")
               result.append(area_dict)
 
-          print("===ES_BATCH_JSON_START===")
+          print("===BATCH_JSON_START===")
           print(json.dumps(result))
-          print("===ES_BATCH_JSON_END===")
+          print("===BATCH_JSON_END===")
           PY

@@ -332,7 +332,7 @@
         <div class="kpi"><div class="value" id="k-temp">–</div><div class="label" id="k-weather-desc">Tiempo actual</div></div>
         <div class="kpi"><div class="value" id="k-wind">–</div><div class="label">Viento</div></div>
       </div>
-      <p class="quality-note" id="weather-note" hidden>El tiempo se actualiza periódicamente desde Open-Meteo y puede no ser el instante actual.</p>
+      <p class="quality-note" id="weather-note" hidden>Datos en directo de Open-Meteo. La hora indicada es la de la última observación disponible.</p>
     </section>
 
     <section>
@@ -460,6 +460,26 @@
     return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Madrid' });
   }
 
+  // Live current-conditions fetch straight from the browser (Open-Meteo: free,
+  // no key, CORS-enabled). No pipeline, no snapshot -- always up to date.
+  function fetchLiveWeather(lat, lon) {
+    var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon
+      + '&current_weather=true&timezone=UTC';
+    return fetch(url)
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (!data || !data.current_weather) return null;
+        var cw = data.current_weather;
+        return {
+          temperature_c: cw.temperature,
+          windspeed_kmh: cw.windspeed,
+          weathercode: cw.weathercode,
+          fetched_at: cw.time + 'Z'
+        };
+      })
+      .catch(function () { return null; });
+  }
+
   function fmt(n, d) {
     if (n == null || isNaN(n)) return "–";
     return n.toLocaleString('es-ES', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
@@ -548,16 +568,15 @@
     ['badges', 'chart-difficulty', 'chart-lifts', 'runs-list', 'lifts-list', 'quality-list', 'run-filters', 'map-legend']
       .forEach(function (elId) { document.getElementById(elId).innerHTML = ''; });
 
-    var weatherFetch = fetch('data/' + id + '-weather.json')
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .catch(function () { return null; });
-
     fetch('data/' + id + '.json')
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(function (raw) {
+        raw._imagePath = 'data/' + id + '.jpg';
+        var weatherFetch = (raw.latitude != null && raw.longitude != null)
+          ? fetchLiveWeather(raw.latitude, raw.longitude)
+          : Promise.resolve(null);
         return weatherFetch.then(function (weather) {
           if (token !== loadToken) return;
-          raw._imagePath = 'data/' + id + '.jpg';
           raw.weather = weather;
           renderDashboard(raw);
         });

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "254160061971",
+    "project_id": "ski-info-9910e",
+    "storage_bucket": "ski-info-9910e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:254160061971:android:63b40b78a779fe35eca1e6",
+        "android_client_info": {
+          "package_name": "com.sospedra.skiinfo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCaNtkjB81jYaXdpvin-m18F31WmRad42w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

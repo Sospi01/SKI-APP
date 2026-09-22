@@ -977,6 +977,8 @@
         'translate(' + mapState.tx.toFixed(2) + ',' + mapState.ty.toFixed(2) + ') ' +
         'rotate(' + mapState.angle.toFixed(2) + ') scale(' + mapState.zoom.toFixed(3) + ')');
       mapState.updateScaleBar(mapState.zoom);
+      var liftR = liftStationRadius(mapState.zoom).toFixed(3);
+      (mapState.liftStationDots || []).forEach(function (d) { d.setAttribute('r', liftR); });
     }
     function clamp() {
       // The min/max-translation box below assumes an axis-aligned (unrotated)
@@ -1158,6 +1160,16 @@
     });
   })();
 
+  // Lift-station dots are drawn at a fixed radius in content-space units, so
+  // they scale up with the map's zoom just like the run/lift lines would
+  // without vector-effect="non-scaling-stroke" -- unlike those lines this
+  // circle's radius isn't a stroke, so that CSS property doesn't help it.
+  // Keep its on-screen size constant instead by shrinking the underlying
+  // radius by the same factor the content group's scale() will multiply
+  // back in.
+  var LIFT_STATION_BASE_R = 1.5;
+  function liftStationRadius(zoom) { return LIFT_STATION_BASE_R / zoom; }
+
   function buildMap(raw) {
     var SVGNS = 'http://www.w3.org/2000/svg';
     var svg = document.getElementById('map-svg');
@@ -1214,6 +1226,7 @@
     }
 
     var features = [];
+    var liftStationDots = [];
 
     raw.lifts.forEach(function (l) {
       (l.geom || []).forEach(function (part) {
@@ -1228,9 +1241,10 @@
         [part[0], part[part.length - 1]].forEach(function (endpoint) {
           var p = project(endpoint);
           var dot = document.createElementNS(SVGNS, 'circle');
-          dot.setAttribute('cx', p[0].toFixed(1)); dot.setAttribute('cy', p[1].toFixed(1)); dot.setAttribute('r', 1.5);
+          dot.setAttribute('cx', p[0].toFixed(1)); dot.setAttribute('cy', p[1].toFixed(1)); dot.setAttribute('r', liftStationRadius(1).toFixed(2));
           dot.setAttribute('class', 'map-lift-station');
           content.appendChild(dot);
+          liftStationDots.push(dot);
         });
         var label = l.name || 'Remonte sin nombre';
         // Duration and seats-per-chair are what someone taps a lift on the
@@ -1305,7 +1319,7 @@
     liftItem.appendChild(liftSw); liftItem.appendChild(document.createTextNode('Remonte'));
     legend.appendChild(liftItem);
 
-    mapState = { svg: svg, content: content, vbW: vbW, vbH: vbH, scale: scale, zoom: 1, tx: 0, ty: 0, angle: 0, updateScaleBar: updateScaleBar, features: features };
+    mapState = { svg: svg, content: content, vbW: vbW, vbH: vbH, scale: scale, zoom: 1, tx: 0, ty: 0, angle: 0, updateScaleBar: updateScaleBar, features: features, liftStationDots: liftStationDots };
     updateScaleBar(1);
   }
 

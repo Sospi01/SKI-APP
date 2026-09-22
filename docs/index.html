@@ -1400,8 +1400,23 @@
     }
 
     var markers = [];
+    var sharedPoint = {};
     pts.forEach(function (s) {
       var p = project(s.lon, s.lat);
+      // Sibling ski areas in the same connected domain (e.g. "Ski Amadé" and
+      // "Snow Space Salzburg") sometimes share OpenSkiMap's exact same
+      // reference point. Two markers at an identical spot scale together at
+      // every zoom level and could never be separated or tapped individually
+      // -- nudge each one after the first outward a little so zooming in
+      // does spread them apart.
+      var key = p[0].toFixed(2) + ',' + p[1].toFixed(2);
+      var dupeIndex = sharedPoint[key] || 0;
+      sharedPoint[key] = dupeIndex + 1;
+      if (dupeIndex > 0) {
+        var angle = dupeIndex * 2.4; // golden-angle-ish spread
+        var ringR = 2.6 * Math.sqrt(dupeIndex);
+        p = [p[0] + Math.cos(angle) * ringR, p[1] + Math.sin(angle) * ringR];
+      }
       var dot = document.createElementNS(SVGNS, 'circle');
       dot.setAttribute('cx', p[0].toFixed(1)); dot.setAttribute('cy', p[1].toFixed(1)); dot.setAttribute('r', countryMarkerRadius(1).toFixed(2));
       dot.setAttribute('class', 'country-map-marker');

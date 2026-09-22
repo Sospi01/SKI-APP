@@ -1225,11 +1225,16 @@
           content.appendChild(dot);
         });
         var label = l.name || 'Remonte sin nombre';
-        var bits = [LIFT_TYPE[l.lift_type] || l.lift_type];
+        // Duration and seats-per-chair are what someone taps a lift on the
+        // map to find out, so they lead; type/length/etc. follow as detail.
+        var bits = [];
+        var lDuration = formatDuration(l.duration_s);
+        if (lDuration) bits.push(lDuration + ' de trayecto');
+        if (l.occupancy) bits.push(l.occupancy + ' plazas');
+        bits.push(LIFT_TYPE[l.lift_type] || l.lift_type);
         if (l.length_m) bits.push(fmt(Math.round(l.length_m)) + ' m');
         if (l.vertical_m) bits.push('desnivel ' + fmt(Math.round(l.vertical_m)) + ' m');
         if (l.capacity) bits.push(fmt(l.capacity) + ' p/h');
-        if (l.occupancy) bits.push(l.occupancy + ' plazas');
         var valueText = bits.join(' · ');
         wireFocusTooltip(hit, label, valueText);
         features.push({ el: pl, hoverClass: 'lift-hovered', points: part.map(project), label: label, valueText: valueText });

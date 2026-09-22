@@ -26,6 +26,7 @@
     --diff-other: hsl(0 0% 55%);
     --map-halo: rgba(255,255,255,0.88);
     --map-lift-color: #4a3aa7;
+    --map-border-color: #e0a020;
     --shadow: 0 24px 60px -24px rgba(16,22,28,0.35);
     --hero-1: #163a5c;
     --hero-2: #2a78d6;
@@ -52,6 +53,7 @@
       --diff-other: hsl(0 0% 55%);
       --map-halo: rgba(5,7,10,0.85);
       --map-lift-color: #9085e9;
+      --map-border-color: #f0b73a;
       --hero-1: #0b2036;
       --hero-2: #164a80;
     }
@@ -77,6 +79,7 @@
     --diff-other: hsl(0 0% 55%);
     --map-halo: rgba(5,7,10,0.85);
     --map-lift-color: #9085e9;
+    --map-border-color: #f0b73a;
     --hero-1: #0b2036;
     --hero-2: #164a80;
   }
@@ -238,6 +241,8 @@
   #map-svg.dragging, #country-map-svg.dragging { cursor: grabbing; }
   .country-map-marker { fill: var(--accent); stroke: #fff; stroke-width: 1.6; vector-effect: non-scaling-stroke; cursor: pointer; }
   .country-map-marker.marker-hovered { fill: #fff; stroke: var(--accent); stroke-width: 2.4; }
+  .country-border-halo { fill: none; stroke: var(--map-halo); stroke-width: 3; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+  .country-border-line { fill: none; stroke: var(--map-border-color); stroke-width: 1.3; stroke-dasharray: 5 3; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
   .marker-popup {
     position: fixed; z-index: 25; max-width: 240px;
     background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
@@ -360,7 +365,7 @@
         </div>
       </figure>
     </section>
-    <p class="list-footer">Datos de OpenSkiMap / OpenStreetMap (ODbL) · imágenes Esri, Maxar, Earthstar Geographics</p>
+    <p class="list-footer">Datos de OpenSkiMap / OpenStreetMap (ODbL) · imágenes Esri, Maxar, Earthstar Geographics · frontera de Natural Earth (dominio público)</p>
   </div>
 
   <div class="screen" id="screen-dashboard" hidden>
@@ -422,7 +427,7 @@
             <button type="button" id="map-zoom-out" aria-label="Alejar">–</button>
             <button type="button" id="map-zoom-reset" aria-label="Restablecer vista">⤢</button>
           </div>
-          <div class="map-hint" id="map-hint">Arrastra para mover · rueda o pellizco para zoom</div>
+          <div class="map-hint" id="map-hint">Arrastra para mover · pellizco para zoom · gira con dos dedos</div>
         </div>
         <figcaption class="map-legend" id="map-legend"></figcaption>
       </figure>
@@ -614,7 +619,11 @@
   // floor a country-wide box can demand thousands of tiles. This picker allows
   // much lower zoom levels so the tile count always stays bounded (at zoom 2
   // the whole world is only 4x4 tiles).
-  var COUNTRY_TILE_MIN_ZOOM = 2, COUNTRY_TILE_MAX_ZOOM = 13, COUNTRY_TILE_MAX_COUNT = 150;
+  // Country-wide satellite detail barely matters at this scale (you can't
+  // make out terrain at all once dozens of stations share the screen), so
+  // the tile budget is kept small -- this is the main lever on how long the
+  // country map takes to appear, since each tile is its own HTTP request.
+  var COUNTRY_TILE_MIN_ZOOM = 2, COUNTRY_TILE_MAX_ZOOM = 13, COUNTRY_TILE_MAX_COUNT = 42;
   function pickCountryTileZoom(lonMinP, lonMaxP, latMinP, latMaxP) {
     var zoom = COUNTRY_TILE_MIN_ZOOM;
     for (var z = COUNTRY_TILE_MAX_ZOOM; z >= COUNTRY_TILE_MIN_ZOOM; z--) {
@@ -936,12 +945,36 @@
     var hint = document.getElementById('map-hint');
     var MIN_ZOOM = 1, MAX_ZOOM = 6;
 
+    // The content group's transform is translate(tx,ty) rotate(angle) scale(zoom),
+    // applied to a point in that order -- these two convert between that content
+    // space and the outer (pre-transform, viewBox) space so zoom-toward-cursor and
+    // the two-finger rotate below can anchor on a fixed content point regardless
+    // of the map's current rotation.
+    function rotateXY(x, y, deg) {
+      var rad = deg * Math.PI / 180, c = Math.cos(rad), s = Math.sin(rad);
+      return [x * c - y * s, x * s + y * c];
+    }
+    function contentToOuter(cx, cy) {
+      var r = rotateXY(cx * mapState.zoom, cy * mapState.zoom, mapState.angle);
+      return [r[0] + mapState.tx, r[1] + mapState.ty];
+    }
+    function outerToContentPoint(px, py) {
+      var r = rotateXY(px - mapState.tx, py - mapState.ty, -mapState.angle);
+      return [r[0] / mapState.zoom, r[1] / mapState.zoom];
+    }
+
     function apply() {
       if (!mapState) return;
-      mapState.content.setAttribute('transform', 'translate(' + mapState.tx.toFixed(2) + ',' + mapState.ty.toFixed(2) + ') scale(' + mapState.zoom.toFixed(3) + ')');
+      mapState.content.setAttribute('transform',
+        'translate(' + mapState.tx.toFixed(2) + ',' + mapState.ty.toFixed(2) + ') ' +
+        'rotate(' + mapState.angle.toFixed(2) + ') scale(' + mapState.zoom.toFixed(3) + ')');
       mapState.updateScaleBar(mapState.zoom);
     }
     function clamp() {
+      // The min/max-translation box below assumes an axis-aligned (unrotated)
+      // map; once rotated that box no longer bounds the visible content
+      // correctly, so panning goes unclamped until the view is reset to north-up.
+      if (mapState.angle) return;
       var minTx = mapState.vbW * (1 - mapState.zoom), minTy = mapState.vbH * (1 - mapState.zoom);
       mapState.tx = Math.min(0, Math.max(minTx, mapState.tx));
       mapState.ty = Math.min(0, Math.max(minTy, mapState.ty));
@@ -953,10 +986,11 @@
     function zoomToward(newZoom, px, py) {
       if (!mapState) return;
       newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, newZoom));
-      var cx = (px - mapState.tx) / mapState.zoom, cy = (py - mapState.ty) / mapState.zoom;
+      var anchor = outerToContentPoint(px, py);
       mapState.zoom = newZoom;
-      mapState.tx = px - cx * mapState.zoom;
-      mapState.ty = py - cy * mapState.zoom;
+      var o = contentToOuter(anchor[0], anchor[1]);
+      mapState.tx += px - o[0];
+      mapState.ty += py - o[1];
       clamp(); apply();
     }
     function dismissHint() { hint.classList.add('hidden'); }
@@ -969,8 +1003,10 @@
     }, { passive: false });
 
     var pointers = {}, dragLast = null, pinchStartDist = null, pinchStartZoom = null;
+    var pinchStartAngleFingers = null, pinchStartRotation = null, pinchAnchor = null;
     function dist(a, b) { return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY); }
     function midpoint(a, b) { return [(a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2]; }
+    function fingerAngle(a, b) { return Math.atan2(b.clientY - a.clientY, b.clientX - a.clientX) * 180 / Math.PI; }
 
     // Touch has no hover state, so a tap needs its own path to the tooltip:
     // track whether a single-finger touch moved enough to count as a drag,
@@ -990,6 +1026,9 @@
         if (ids.length === 2) {
           var pts = ids.map(function (id) { return pointers[id]; });
           pinchStartDist = dist(pts[0], pts[1]); pinchStartZoom = mapState.zoom;
+          pinchStartAngleFingers = fingerAngle(pts[0], pts[1]); pinchStartRotation = mapState.angle;
+          var midXY = midpoint(pts[0], pts[1]);
+          pinchAnchor = outerToContentPoint.apply(null, svgPoint(midXY[0], midXY[1]));
         }
       }
     });
@@ -1011,9 +1050,22 @@
       } else if (ids.length === 2) {
         var pts = ids.map(function (id) { return pointers[id]; });
         var newDist = dist(pts[0], pts[1]);
-        var mid = midpoint(pts[0], pts[1]);
-        var p = svgPoint(mid[0], mid[1]);
-        zoomToward(pinchStartZoom * (newDist / pinchStartDist), p[0], p[1]);
+        var midXY = midpoint(pts[0], pts[1]);
+        var midOuter = svgPoint(midXY[0], midXY[1]);
+        // A pinch-to-zoom almost always carries a little incidental twist from
+        // imprecise fingers; a small deadzone keeps that from rotating the map
+        // on its own, while a deliberate twist still engages smoothly past it.
+        var rawDelta = fingerAngle(pts[0], pts[1]) - pinchStartAngleFingers;
+        while (rawDelta > 180) rawDelta -= 360;
+        while (rawDelta < -180) rawDelta += 360;
+        var ROTATE_DEADZONE = 4;
+        var engagedDelta = rawDelta > 0 ? Math.max(0, rawDelta - ROTATE_DEADZONE) : Math.min(0, rawDelta + ROTATE_DEADZONE);
+        mapState.zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, pinchStartZoom * (newDist / pinchStartDist)));
+        mapState.angle = pinchStartRotation + engagedDelta;
+        var o = contentToOuter(pinchAnchor[0], pinchAnchor[1]);
+        mapState.tx += midOuter[0] - o[0];
+        mapState.ty += midOuter[1] - o[1];
+        clamp(); apply();
       }
     });
     function endPointer(e) {
@@ -1033,13 +1085,13 @@
 
     document.getElementById('map-zoom-in').addEventListener('click', function () { if (!mapState) return; dismissHint(); zoomToward(mapState.zoom * 1.6, mapState.vbW / 2, mapState.vbH / 2); });
     document.getElementById('map-zoom-out').addEventListener('click', function () { if (!mapState) return; dismissHint(); zoomToward(mapState.zoom / 1.6, mapState.vbW / 2, mapState.vbH / 2); });
-    document.getElementById('map-zoom-reset').addEventListener('click', function () { if (!mapState) return; dismissHint(); mapState.zoom = 1; mapState.tx = 0; mapState.ty = 0; apply(); });
+    document.getElementById('map-zoom-reset').addEventListener('click', function () { if (!mapState) return; dismissHint(); mapState.zoom = 1; mapState.tx = 0; mapState.ty = 0; mapState.angle = 0; apply(); });
 
     // Hover picking: find the nearest run/lift line to the pointer, regardless of SVG
     // paint order, so lifts get equal treatment to runs where the two overlap.
     var HOVER_THRESHOLD = 5;
     var activeFeature = null;
-    function outerPoint(cx, cy) { return [cx * mapState.zoom + mapState.tx, cy * mapState.zoom + mapState.ty]; }
+    function outerPoint(cx, cy) { return contentToOuter(cx, cy); }
     function distToSegment(px, py, ax, ay, bx, by) {
       var dx = bx - ax, dy = by - ay;
       var lenSq = dx * dx + dy * dy;
@@ -1240,7 +1292,7 @@
     liftItem.appendChild(liftSw); liftItem.appendChild(document.createTextNode('Remonte'));
     legend.appendChild(liftItem);
 
-    mapState = { svg: svg, content: content, vbW: vbW, vbH: vbH, scale: scale, zoom: 1, tx: 0, ty: 0, updateScaleBar: updateScaleBar, features: features };
+    mapState = { svg: svg, content: content, vbW: vbW, vbH: vbH, scale: scale, zoom: 1, tx: 0, ty: 0, angle: 0, updateScaleBar: updateScaleBar, features: features };
     updateScaleBar(1);
   }
 
@@ -1257,6 +1309,33 @@
     return apparent / zoom;
   }
 
+  var countryMapToken = 0;
+
+  function drawCountryBorder(content, project, rings, beforeEl) {
+    var SVGNS = 'http://www.w3.org/2000/svg';
+    var g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'country-border');
+    rings.forEach(function (ring) {
+      // Split wherever a ring jumps across the antimeridian (e.g. Russia's
+      // Chukotka), so it doesn't draw a spurious line clear across the map.
+      var segments = [[]];
+      for (var i = 0; i < ring.length; i++) {
+        if (i > 0 && Math.abs(ring[i][0] - ring[i - 1][0]) > 180) segments.push([]);
+        segments[segments.length - 1].push(ring[i]);
+      }
+      segments.forEach(function (seg) {
+        if (seg.length < 2) return;
+        var ptsStr = seg.map(function (p) { var xy = project(p[0], p[1]); return xy[0].toFixed(1) + ',' + xy[1].toFixed(1); }).join(' ');
+        var halo = document.createElementNS(SVGNS, 'polyline');
+        halo.setAttribute('points', ptsStr); halo.setAttribute('class', 'country-border-halo');
+        var line = document.createElementNS(SVGNS, 'polyline');
+        line.setAttribute('points', ptsStr); line.setAttribute('class', 'country-border-line');
+        g.appendChild(halo); g.appendChild(line);
+      });
+    });
+    content.insertBefore(g, beforeEl || null);
+  }
+
   function buildCountryMap(stations) {
     var SVGNS = 'http://www.w3.org/2000/svg';
     var svg = document.getElementById('country-map-svg');
@@ -1264,6 +1343,8 @@
     document.getElementById('country-map-hint').classList.remove('hidden');
     document.getElementById('marker-popup').hidden = true;
     countryMapState = null;
+    var myToken = ++countryMapToken;
+    var borderCountry = currentCountry;
 
     var pts = stations.filter(function (s) { return s.lat != null && s.lon != null; });
     var viewport = document.getElementById('country-map-viewport');
@@ -1331,6 +1412,18 @@
     svg.appendChild(attrib);
 
     countryMapState = { svg: svg, content: content, vbW: vbW, vbH: vbH, zoom: 1, tx: 0, ty: 0, markers: markers };
+
+    // Best-effort: not every country has a bundled border (very small
+    // countries dropped out at the source data's resolution), and it should
+    // never hold up the tiles/pins that already render above.
+    var firstMarkerEl = markers.length ? markers[0].el : null;
+    fetch('data/borders/' + borderCountry + '.json')
+      .then(function (r) { if (!r.ok) throw new Error('no border data'); return r.json(); })
+      .then(function (rings) {
+        if (myToken !== countryMapToken) return;
+        drawCountryBorder(content, project, rings, firstMarkerEl);
+      })
+      .catch(function () { /* no border for this country -- the pins still work fine without it */ });
   }
 
   (function setupCountryMapControlsOnce() {

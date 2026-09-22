@@ -93,6 +93,14 @@
     background: var(--bg);
     color: var(--text-primary);
     min-height: 100%;
+    /* Android 15+ draws the WebView edge-to-edge behind the status/nav bars
+       by default (can't be opted out of on newer targetSdk), so without this
+       the back button in .topbar ends up underneath the status bar icons,
+       unreachable. viewport-fit=cover in the meta viewport tag is what makes
+       these env() values available; the 0px fallback is a no-op everywhere
+       that isn't a phone with a notch/status-bar inset. */
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   @media (min-width: 480px) {
     body { padding-block: 28px; }

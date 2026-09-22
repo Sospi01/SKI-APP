@@ -11,8 +11,8 @@ android {
         applicationId = "com.sospedra.skiinfo"
         minSdk = 24
         targetSdk = 36
-        versionCode = 3
-        versionName = "1.0.1"
+        versionCode = 4
+        versionName = "1.0.2"
     }
 
     val keystorePath = System.getenv("SKIINFO_KEYSTORE_PATH")

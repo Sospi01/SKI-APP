@@ -238,6 +238,18 @@
   #map-svg.dragging, #country-map-svg.dragging { cursor: grabbing; }
   .country-map-marker { fill: var(--accent); stroke: #fff; stroke-width: 1.6; vector-effect: non-scaling-stroke; cursor: pointer; }
   .country-map-marker.marker-hovered { fill: #fff; stroke: var(--accent); stroke-width: 2.4; }
+  .marker-popup {
+    position: fixed; z-index: 25; max-width: 240px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: var(--shadow); padding: 12px 14px;
+  }
+  .marker-popup .mp-name { font-size: 14px; font-weight: 700; color: var(--text-primary); line-height: 1.25; }
+  .marker-popup .mp-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .marker-popup .mp-go {
+    display: block; width: 100%; margin-top: 10px; border: none; border-radius: 8px;
+    background: var(--accent); color: #fff; font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 12.5px; font-weight: 600; padding: 8px 10px; cursor: pointer; text-align: center;
+  }
   .map-run { fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; transition: stroke-width 0.1s ease; }
   .map-run-halo { fill: none; stroke: var(--map-halo); stroke-width: 3.6; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
   .map-lift-casing { fill: none; stroke: var(--map-halo); stroke-width: 3.4; stroke-linecap: round; vector-effect: non-scaling-stroke; }
@@ -340,6 +352,11 @@
             <button type="button" id="country-map-zoom-reset" aria-label="Restablecer vista">⤢</button>
           </div>
           <div class="map-hint" id="country-map-hint">Arrastra para mover · rueda o pellizco para zoom · toca una estación</div>
+          <div class="marker-popup" id="marker-popup" hidden>
+            <div class="mp-name" id="marker-popup-name"></div>
+            <div class="mp-meta" id="marker-popup-meta"></div>
+            <button type="button" class="mp-go" id="marker-popup-go">Ir a la estación →</button>
+          </div>
         </div>
       </figure>
     </section>
@@ -847,6 +864,7 @@
   function selectStation(id) {
     var token = ++loadToken;
     screenList.hidden = true;
+    screenCountryMap.hidden = true;
     screenDashboard.hidden = false;
     document.getElementById('app').scrollTop = 0;
     window.scrollTo(0, 0);
@@ -1228,12 +1246,23 @@
 
   // ============== country overview map (all stations of a country as pins) ==============
   var countryMapState = null;
+  // A dot sized for the zoomed-out view of a whole country would swallow its
+  // neighbours once you zoom in -- the marker's screen radius shrinks as you
+  // zoom rather than growing with the map (down to a floor so it stays
+  // tappable). Both buildCountryMap (the marker's initial r) and the pan/zoom
+  // controller (r on every zoom change) call this.
+  var COUNTRY_MARKER_BASE_R = 4.5, COUNTRY_MARKER_MIN_APPARENT_R = 2.2;
+  function countryMarkerRadius(zoom) {
+    var apparent = Math.max(COUNTRY_MARKER_MIN_APPARENT_R, COUNTRY_MARKER_BASE_R / Math.pow(zoom, 0.6));
+    return apparent / zoom;
+  }
 
   function buildCountryMap(stations) {
     var SVGNS = 'http://www.w3.org/2000/svg';
     var svg = document.getElementById('country-map-svg');
     svg.innerHTML = '';
     document.getElementById('country-map-hint').classList.remove('hidden');
+    document.getElementById('marker-popup').hidden = true;
     countryMapState = null;
 
     var pts = stations.filter(function (s) { return s.lat != null && s.lon != null; });
@@ -1280,7 +1309,7 @@
     pts.forEach(function (s) {
       var p = project(s.lon, s.lat);
       var dot = document.createElementNS(SVGNS, 'circle');
-      dot.setAttribute('cx', p[0].toFixed(1)); dot.setAttribute('cy', p[1].toFixed(1)); dot.setAttribute('r', 4.5);
+      dot.setAttribute('cx', p[0].toFixed(1)); dot.setAttribute('cy', p[1].toFixed(1)); dot.setAttribute('r', countryMarkerRadius(1).toFixed(2));
       dot.setAttribute('class', 'country-map-marker');
       dot.setAttribute('tabindex', '0');
       content.appendChild(dot);
@@ -1310,9 +1339,30 @@
     var hint = document.getElementById('country-map-hint');
     var MIN_ZOOM = 1, MAX_ZOOM = 10;
 
+    var popupEl = document.getElementById('marker-popup');
+    var popupNameEl = document.getElementById('marker-popup-name');
+    var popupMetaEl = document.getElementById('marker-popup-meta');
+    var popupGoBtn = document.getElementById('marker-popup-go');
+    function hideMarkerPopup() { popupEl.hidden = true; }
+    function showMarkerPopup(marker, clientX, clientY) {
+      popupNameEl.textContent = marker.label || 'Estación';
+      popupMetaEl.textContent = marker.valueText || '';
+      popupGoBtn.onclick = function () { goToStation(marker.id); };
+      popupEl.hidden = false;
+      var rect = popupEl.getBoundingClientRect();
+      var pad = 10;
+      var left = Math.max(pad, Math.min(clientX - rect.width / 2, window.innerWidth - pad - rect.width));
+      var top = clientY - rect.height - 14;
+      if (top < pad) top = Math.min(clientY + 14, window.innerHeight - pad - rect.height);
+      popupEl.style.left = left + 'px';
+      popupEl.style.top = top + 'px';
+    }
+
     function apply() {
       if (!countryMapState) return;
       countryMapState.content.setAttribute('transform', 'translate(' + countryMapState.tx.toFixed(2) + ',' + countryMapState.ty.toFixed(2) + ') scale(' + countryMapState.zoom.toFixed(3) + ')');
+      var r = countryMarkerRadius(countryMapState.zoom).toFixed(3);
+      (countryMapState.markers || []).forEach(function (m) { m.el.setAttribute('r', r); });
     }
     function clamp() {
       var minTx = countryMapState.vbW * (1 - countryMapState.zoom), minTy = countryMapState.vbH * (1 - countryMapState.zoom);
@@ -1332,7 +1382,7 @@
       countryMapState.ty = py - cy * countryMapState.zoom;
       clamp(); apply();
     }
-    function dismissHint() { hint.classList.add('hidden'); }
+    function dismissHint() { hint.classList.add('hidden'); hideMarkerPopup(); }
 
     viewport.addEventListener('wheel', function (e) {
       if (!countryMapState) return;
@@ -1426,7 +1476,8 @@
     }
     function handleTap(clientX, clientY) {
       var found = pickMarker(clientX, clientY);
-      if (found) goToStation(found.id);
+      if (found) showMarkerPopup(found, clientX, clientY);
+      else hideMarkerPopup();
     }
     svg.addEventListener('pointermove', function (e) {
       if (!countryMapState || Object.keys(pointers).length > 0) return;

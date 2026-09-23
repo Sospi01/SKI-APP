@@ -81,7 +81,15 @@ jobs:
                   parts = coords[:1]
               else:
                   return None
-              return [[[round(c[0], 5), round(c[1], 5)] for c in part] for part in parts]
+              # OpenSkiMap embeds elevation as a third coordinate (lon, lat, ele) on
+              # run/lift LineStrings -- keep it (rounded to the nearest 0.1m) so the
+              # app can draw an elevation profile, instead of dropping it like the
+              # old [lon, lat]-only simplification did.
+              def simplify_point(c):
+                  if len(c) >= 3:
+                      return [round(c[0], 5), round(c[1], 5), round(c[2], 1)]
+                  return [round(c[0], 5), round(c[1], 5)]
+              return [[simplify_point(c) for c in part] for part in parts]
 
           # total_piste_km counts downhill terrain only -- some ski areas (Nordic-heavy
           # ones especially) bundle huge cross-country trail networks into the same

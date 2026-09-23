@@ -230,12 +230,32 @@
   .list-scroll { max-height: 380px; overflow-y: auto; border: 1px solid var(--border); border-radius: 12px; }
   .item { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-bottom: 1px solid var(--border); }
   .item:last-child { border-bottom: none; }
+  /* Each run item in #runs-list is now followed by its own .run-profile
+     sibling, so the item's actual :last-child is never true there anymore --
+     the real last row is the second-to-last DOM child instead. */
+  #runs-list > .item:nth-last-child(2) { border-bottom: none; }
   .item .dot { width: 9px; height: 9px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
   .item-main { flex: 1; min-width: 0; }
   .item-name { font-size: 13px; font-weight: 500; line-height: 1.3; }
   .item-name.muted { color: var(--text-muted); font-weight: 400; font-style: italic; }
   .item-meta { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
   .pill { display: inline-block; font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); margin-left: 5px; }
+
+  .item.run-item { cursor: pointer; user-select: none; }
+  .item.run-item:hover, .item.run-item:focus-visible { background: var(--surface-2); outline: none; }
+  .item.run-item:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
+  .item-chevron { flex-shrink: 0; margin-top: 3px; color: var(--text-muted); font-size: 13px; transition: transform 0.15s ease; }
+  .item.run-item[aria-expanded="true"] .item-chevron { transform: rotate(90deg); color: var(--accent); }
+
+  .run-profile { border-bottom: 1px solid var(--border); background: var(--surface-2); padding: 14px 12px 12px; }
+  .run-profile.empty { padding: 12px; font-size: 12px; color: var(--text-muted); font-style: italic; }
+  .run-profile svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .run-profile-caption { font-size: 10.5px; color: var(--text-muted); margin-top: 8px; line-height: 1.5; }
+  .run-profile-caption .zone-key { display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; white-space: nowrap; }
+  .run-profile-caption .zone-swatch { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+  .run-profile-endlabel { font-size: 9px; fill: var(--text-secondary); font-family: 'IBM Plex Sans', sans-serif; }
+  .run-profile-axis { stroke: var(--text-muted); stroke-width: 1; opacity: 0.35; }
+  .run-profile-gridline { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 2 3; opacity: 0.35; }
 
   .quality-list { display: flex; flex-direction: column; gap: 10px; }
   .quality-row { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; }
@@ -1634,6 +1654,180 @@
     });
   })();
 
+  // ============== run elevation profile ==============
+  // OpenSkiMap's run geometry carries elevation as a third [lon, lat, ele]
+  // value per point (same source the pipeline already uses for ascent_m/
+  // avg_pitch_percent); this turns that into a distance-vs-elevation profile,
+  // colored by how steep each stretch actually is.
+  function haversineM(a, b) {
+    var R = 6371000;
+    var lon1 = a[0] * Math.PI / 180, lat1 = a[1] * Math.PI / 180;
+    var lon2 = b[0] * Math.PI / 180, lat2 = b[1] * Math.PI / 180;
+    var dLat = lat2 - lat1, dLon = lon2 - lon1;
+    var h = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+
+  // Pitch-zone thresholds mirror how skiers already read piste colors
+  // (green/blue/red/black), applied here to the *local* steepness of a
+  // stretch rather than the run's overall difficulty rating.
+  var PITCH_ZONES = [
+    { max: 15, key: 'novice', label: 'Suave (<15%)' },
+    { max: 25, key: 'easy', label: 'Moderada (15-25%)' },
+    { max: 40, key: 'intermediate', label: 'Pronunciada (25-40%)' },
+    { max: Infinity, key: 'advanced', label: 'Muy pronunciada (>40%)' }
+  ];
+  function pitchZoneFor(pct) {
+    var p = Math.abs(pct);
+    for (var i = 0; i < PITCH_ZONES.length; i++) if (p < PITCH_ZONES[i].max) return PITCH_ZONES[i];
+    return PITCH_ZONES[PITCH_ZONES.length - 1];
+  }
+
+  // Builds a { dist, ele } series (meters) from every geometry part of a run
+  // group, oriented so it always reads start -> end in the skiing direction
+  // (downhill, left to right) regardless of which way OSM happened to draw it.
+  function buildElevationProfile(geomParts) {
+    var pts = [];
+    (geomParts || []).forEach(function (part) {
+      (part || []).forEach(function (p) { if (p && p.length >= 3) pts.push(p); });
+    });
+    if (pts.length < 2) return null;
+    if (pts[pts.length - 1][2] > pts[0][2]) pts = pts.slice().reverse();
+    var profile = [{ dist: 0, ele: pts[0][2] }];
+    var cum = 0;
+    for (var i = 1; i < pts.length; i++) {
+      cum += haversineM(pts[i - 1], pts[i]);
+      profile.push({ dist: cum, ele: pts[i][2] });
+    }
+    return cum > 0 ? profile : null;
+  }
+
+  // OSM elevation samples are noisy at the point-to-point scale -- smooth
+  // over a ~30m window before computing pitch, so the coloring reflects the
+  // terrain's real steepness rather than digitization jitter.
+  function smoothProfile(profile, windowM) {
+    return profile.map(function (p, i) {
+      var lo = i, hi = i;
+      while (lo > 0 && p.dist - profile[lo - 1].dist < windowM / 2) lo--;
+      while (hi < profile.length - 1 && profile[hi + 1].dist - p.dist < windowM / 2) hi++;
+      var sum = 0, n = 0;
+      for (var k = lo; k <= hi; k++) { sum += profile[k].ele; n++; }
+      return { dist: p.dist, ele: sum / n };
+    });
+  }
+
+  function buildProfileChart(raw, ascent, descent) {
+    var smoothed = smoothProfile(raw, 30);
+    var totalDist = smoothed[smoothed.length - 1].dist;
+    var eles = smoothed.map(function (p) { return p.ele; });
+    var minEle = Math.min.apply(null, eles), maxEle = Math.max.apply(null, eles);
+    if (maxEle === minEle) maxEle = minEle + 1;
+
+    var SVGNS = 'http://www.w3.org/2000/svg';
+    var W = 320, H = 128, padL = 30, padR = 8, padT = 10, padB = 20;
+    function x(d) { return padL + (d / totalDist) * (W - padL - padR); }
+    function y(e) { return padT + (1 - (e - minEle) / (maxEle - minEle)) * (H - padT - padB); }
+
+    var svg = document.createElementNS(SVGNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', 'Perfil de altitud de la pista, de ' + Math.round(smoothed[0].ele) + ' a ' + Math.round(smoothed[smoothed.length - 1].ele) + ' metros a lo largo de ' + Math.round(totalDist) + ' metros');
+
+    // gridlines at min/max elevation + their labels
+    [minEle, maxEle].forEach(function (e) {
+      var line = document.createElementNS(SVGNS, 'line');
+      line.setAttribute('x1', padL); line.setAttribute('x2', W - padR);
+      line.setAttribute('y1', y(e)); line.setAttribute('y2', y(e));
+      line.setAttribute('class', 'run-profile-gridline');
+      svg.appendChild(line);
+      var label = document.createElementNS(SVGNS, 'text');
+      label.setAttribute('x', padL - 4); label.setAttribute('y', y(e) + 3);
+      label.setAttribute('text-anchor', 'end'); label.setAttribute('class', 'run-profile-endlabel');
+      label.textContent = Math.round(e) + 'm';
+      svg.appendChild(label);
+    });
+
+    // colored fill, one quad per smoothed segment, colored by that segment's pitch
+    for (var i = 0; i < smoothed.length - 1; i++) {
+      var a = smoothed[i], b = smoothed[i + 1];
+      var dDist = b.dist - a.dist;
+      if (dDist <= 0) continue;
+      var pitchPct = ((a.ele - b.ele) / dDist) * 100;
+      var zone = pitchZoneFor(pitchPct);
+      var poly = document.createElementNS(SVGNS, 'polygon');
+      var pts = [
+        x(a.dist) + ',' + y(minEle), x(a.dist) + ',' + y(a.ele),
+        x(b.dist) + ',' + y(b.ele), x(b.dist) + ',' + y(minEle)
+      ].join(' ');
+      poly.setAttribute('points', pts);
+      poly.setAttribute('fill', DIFF[zone.key].color);
+      poly.setAttribute('opacity', '0.55');
+      svg.appendChild(poly);
+    }
+
+    // outline on top for a crisp silhouette
+    var outlinePts = smoothed.map(function (p) { return x(p.dist).toFixed(1) + ',' + y(p.ele).toFixed(1); }).join(' ');
+    var outline = document.createElementNS(SVGNS, 'polyline');
+    outline.setAttribute('points', outlinePts);
+    outline.setAttribute('fill', 'none');
+    outline.setAttribute('stroke', 'var(--text-primary)');
+    outline.setAttribute('stroke-width', '1.4');
+    outline.setAttribute('stroke-linejoin', 'round');
+    outline.setAttribute('vector-effect', 'non-scaling-stroke');
+    svg.appendChild(outline);
+
+    // baseline
+    var baseline = document.createElementNS(SVGNS, 'line');
+    baseline.setAttribute('x1', padL); baseline.setAttribute('x2', W - padR);
+    baseline.setAttribute('y1', y(minEle)); baseline.setAttribute('y2', y(minEle));
+    baseline.setAttribute('class', 'run-profile-axis');
+    svg.appendChild(baseline);
+
+    // start / end markers + labels
+    [{ p: smoothed[0], anchor: 'start', dx: 0 }, { p: smoothed[smoothed.length - 1], anchor: 'end', dx: 0 }].forEach(function (e) {
+      var dot = document.createElementNS(SVGNS, 'circle');
+      dot.setAttribute('cx', x(e.p.dist)); dot.setAttribute('cy', y(e.p.ele)); dot.setAttribute('r', 2.6);
+      dot.setAttribute('fill', 'var(--text-primary)');
+      svg.appendChild(dot);
+    });
+    var startLabel = document.createElementNS(SVGNS, 'text');
+    startLabel.setAttribute('x', x(smoothed[0].dist)); startLabel.setAttribute('y', H - 4);
+    startLabel.setAttribute('text-anchor', 'start'); startLabel.setAttribute('class', 'run-profile-endlabel');
+    startLabel.textContent = 'Salida · ' + Math.round(smoothed[0].ele) + 'm';
+    svg.appendChild(startLabel);
+    var endLabel = document.createElementNS(SVGNS, 'text');
+    endLabel.setAttribute('x', x(smoothed[smoothed.length - 1].dist)); endLabel.setAttribute('y', H - 4);
+    endLabel.setAttribute('text-anchor', 'end'); endLabel.setAttribute('class', 'run-profile-endlabel');
+    endLabel.textContent = 'Final · ' + Math.round(smoothed[smoothed.length - 1].ele) + 'm';
+    svg.appendChild(endLabel);
+
+    return svg;
+  }
+
+  function renderRunProfile(container, group) {
+    var profile = buildElevationProfile(group.geomParts);
+    if (!profile) {
+      container.className = 'run-profile empty';
+      container.textContent = 'Todavía no tenemos datos de altitud punto a punto para esta pista.';
+      return;
+    }
+    var chart = buildProfileChart(profile, group.vertical_m, group.vertical_m);
+    container.appendChild(chart);
+    var caption = document.createElement('div');
+    caption.className = 'run-profile-caption';
+    PITCH_ZONES.forEach(function (z) {
+      var key = document.createElement('span'); key.className = 'zone-key';
+      var sw = document.createElement('span'); sw.className = 'zone-swatch'; sw.style.background = DIFF[z.key].color;
+      key.appendChild(sw); key.appendChild(document.createTextNode(z.label));
+      caption.appendChild(key);
+    });
+    var note = document.createElement('div');
+    note.style.marginTop = '4px';
+    note.textContent = 'El color indica la inclinación real de cada tramo, no la dificultad oficial de la pista.';
+    caption.appendChild(note);
+    container.appendChild(caption);
+  }
+
   // ============== dashboard: full render ==============
   function renderDashboard(raw) {
     var countryName = (COUNTRY_META[raw.country_code] || {}).name || raw.country_code || '';
@@ -1752,7 +1946,7 @@
       if (!runGroups[r.name]) {
         runGroups[r.name] = {
           name: r.name, difficulty: r.difficulty, length_m: 0, vertical_m: 0, lit: 0, gladed: 0, segments: 0,
-          ref: null, grooming: null, minElev: null, maxElev: null
+          ref: null, grooming: null, minElev: null, maxElev: null, geomParts: []
         };
         runOrder.push(r.name);
       }
@@ -1765,6 +1959,7 @@
       if (!g.grooming && r.grooming) g.grooming = r.grooming;
       if (r.min_elevation_m != null) g.minElev = g.minElev == null ? r.min_elevation_m : Math.min(g.minElev, r.min_elevation_m);
       if (r.max_elevation_m != null) g.maxElev = g.maxElev == null ? r.max_elevation_m : Math.max(g.maxElev, r.max_elevation_m);
+      if (r.geom) g.geomParts = g.geomParts.concat(r.geom);
       g.segments += 1;
     });
     runOrder.sort(function (a, b) {
@@ -1777,7 +1972,8 @@
     runOrder.forEach(function (rname) {
       var g = runGroups[rname];
       var key = diffKey(g.difficulty);
-      var item = document.createElement('div'); item.className = 'item'; item.setAttribute('data-diff', key);
+      var item = document.createElement('div'); item.className = 'item run-item'; item.setAttribute('data-diff', key);
+      item.setAttribute('role', 'button'); item.setAttribute('tabindex', '0'); item.setAttribute('aria-expanded', 'false');
       var dot = document.createElement('span'); dot.className = 'dot'; dot.style.background = DIFF[key].color;
       var main = document.createElement('div'); main.className = 'item-main';
       var name = document.createElement('div'); name.className = 'item-name';
@@ -1794,8 +1990,26 @@
       if (g.lit === 1) { var pill = document.createElement('span'); pill.className = 'pill'; pill.textContent = 'Nocturna'; meta.appendChild(pill); }
       if (g.gladed === 1) { var pill2 = document.createElement('span'); pill2.className = 'pill'; pill2.textContent = 'Arbolada'; meta.appendChild(pill2); }
       main.appendChild(name); main.appendChild(meta);
-      item.appendChild(dot); item.appendChild(main);
+      var chevron = document.createElement('span'); chevron.className = 'item-chevron'; chevron.setAttribute('aria-hidden', 'true'); chevron.textContent = '›';
+      item.appendChild(dot); item.appendChild(main); item.appendChild(chevron);
       runsList.appendChild(item);
+
+      var profileEl = document.createElement('div'); profileEl.className = 'run-profile'; profileEl.hidden = true;
+      runsList.appendChild(profileEl);
+      var profileRendered = false;
+      function toggleProfile() {
+        var expanded = item.getAttribute('aria-expanded') === 'true';
+        item.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+        profileEl.hidden = expanded;
+        if (!expanded && !profileRendered) {
+          profileRendered = true;
+          renderRunProfile(profileEl, g);
+        }
+      }
+      item.addEventListener('click', toggleProfile);
+      item.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleProfile(); }
+      });
     });
 
     var filterDefs = [
@@ -1808,7 +2022,7 @@
       { key: 'other', label: 'Sin clasif.' }
     ];
     var filtersEl = document.getElementById('run-filters');
-    var runItems = Array.prototype.slice.call(runsList.children);
+    var runItems = Array.prototype.slice.call(runsList.querySelectorAll('.run-item'));
     filterDefs.forEach(function (f, i) {
       var chip = document.createElement('button'); chip.className = 'chip'; chip.type = 'button';
       chip.setAttribute('aria-pressed', i === 0 ? 'true' : 'false');
@@ -1822,7 +2036,14 @@
         chip.setAttribute('aria-pressed', 'true');
         var keys = f.altKeys || [f.key];
         runItems.forEach(function (item) {
-          item.style.display = (f.key === 'all' || keys.indexOf(item.getAttribute('data-diff')) !== -1) ? '' : 'none';
+          var match = (f.key === 'all' || keys.indexOf(item.getAttribute('data-diff')) !== -1);
+          item.style.display = match ? '' : 'none';
+          // Its elevation-profile panel is a separate sibling (so it can
+          // expand independently of the item's own layout) -- keep it in
+          // sync with the same filter decision, whether or not it's
+          // currently expanded.
+          var profile = item.nextElementSibling;
+          if (profile && profile.classList.contains('run-profile')) profile.style.display = match ? '' : 'none';
         });
       });
       filtersEl.appendChild(chip);

@@ -28,6 +28,10 @@ on:
         description: "How many stations to process in this run"
         required: false
         default: "500"
+      only_ids:
+        description: "fetch_services only: comma-separated station ids to retry (skips offset/limit selection)"
+        required: false
+        default: ""
 
 jobs:
   build-and-fetch:
@@ -182,6 +186,7 @@ jobs:
           COUNTRY: ${{ inputs.country || 'ES' }}
           OFFSET: ${{ inputs.offset || '0' }}
           LIMIT: ${{ inputs.limit || '500' }}
+          ONLY_IDS: ${{ inputs.only_ids || '' }}
         run: |
           python3 - <<'PY'
           import glob
@@ -194,6 +199,7 @@ jobs:
           COUNTRY = os.environ["COUNTRY"]
           OFFSET = int(os.environ["OFFSET"])
           LIMIT = int(os.environ["LIMIT"])
+          ONLY_IDS = set(x.strip() for x in os.environ.get("ONLY_IDS", "").split(",") if x.strip())
 
           # Curated for "useful while skiing", not a general business directory:
           # food/drink, toilets, first aid, pharmacy, mountain huts, and gear
@@ -309,9 +315,13 @@ jobs:
               if d.get("country_code") == COUNTRY:
                   stations.append(d)
           stations.sort(key=lambda s: s["id"])
-          batch = stations[OFFSET:OFFSET + LIMIT]
 
-          print(f"Processing {len(batch)} of {len(stations)} {COUNTRY} stations (offset={OFFSET}, limit={LIMIT})")
+          if ONLY_IDS:
+              batch = [s for s in stations if s["id"] in ONLY_IDS]
+              print(f"Processing {len(batch)} of {len(ONLY_IDS)} requested ids (only_ids mode)")
+          else:
+              batch = stations[OFFSET:OFFSET + LIMIT]
+              print(f"Processing {len(batch)} of {len(stations)} {COUNTRY} stations (offset={OFFSET}, limit={LIMIT})")
 
           result = {}
           for station in batch:

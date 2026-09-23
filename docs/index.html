@@ -371,12 +371,20 @@
     box-shadow: 0 8px 20px -8px rgba(0,0,0,0.4);
   }
   #tooltip strong { display: block; font-weight: 600; }
-  .map-profile-popup {
-    position: fixed; z-index: 20; width: 200px;
-    border: 1px solid var(--border); border-radius: 10px; border-bottom-width: 1px;
-    box-shadow: 0 8px 20px -8px rgba(0,0,0,0.4); pointer-events: none;
+  .map-tap-popup {
+    position: fixed; z-index: 20; width: 210px;
+    background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: 10px;
+    box-shadow: 0 8px 20px -8px rgba(0,0,0,0.4);
+    pointer-events: none; overflow: hidden;
   }
-  .map-profile-popup .run-profile-steepest { font-size: 10.5px; }
+  .map-tap-popup-head { padding: 9px 12px 7px; border-bottom: 1px solid var(--border); }
+  .map-tap-popup-title { font-weight: 700; font-size: 12.5px; color: var(--text-primary); line-height: 1.25; }
+  .map-tap-popup-meta { font-size: 10.5px; color: var(--text-secondary); margin-top: 2px; }
+  .map-tap-popup-chart { padding: 10px 12px; }
+  .map-tap-popup-chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .map-tap-popup-noprofile { padding: 10px 12px; font-size: 11px; color: var(--text-muted); font-style: italic; }
+  .map-tap-popup .run-profile-steepest { font-size: 10.5px; margin-top: 6px; }
 
   footer.credit { padding: 18px; font-size: 11px; color: var(--text-muted); text-align: center; line-height: 1.6; }
 </style>
@@ -534,7 +542,7 @@
 </div>
 
 <div id="tooltip" hidden></div>
-<div id="map-profile-popup" class="run-profile map-profile-popup" hidden></div>
+<div id="map-tap-popup" class="map-tap-popup" hidden></div>
 
 <script>
 (function () {
@@ -743,26 +751,27 @@
   }
   function hideTooltip() { tooltip.hidden = true; }
 
-  // Elevation-profile popup shown beside a piste's tap tooltip on the
-  // per-station map (see handleTap in setupMapControlsOnce) -- built and
-  // positioned only on an actual tap, not on hover, so it doesn't flicker as
-  // the pointer glides across the map.
-  var mapProfilePopup = document.getElementById('map-profile-popup');
-  function showMapProfilePopup(x, y, geomPart) {
-    mapProfilePopup.innerHTML = '';
-    mapProfilePopup.className = 'run-profile map-profile-popup';
-    mapProfilePopup.appendChild(buildMapProfilePopupContent(geomPart));
-    mapProfilePopup.hidden = false;
+  // Single popup shown on a map tap (per-station map, see handleTap in
+  // setupMapControlsOnce), replacing the plain tooltip for taps so the
+  // name/value text and the elevation-profile chart never end up as two
+  // separately-positioned floating boxes that can overlap each other.
+  // Built and positioned only on an actual tap, not on hover, so it doesn't
+  // flicker as the pointer glides across the map.
+  var mapTapPopup = document.getElementById('map-tap-popup');
+  function showMapTapPopup(x, y, label, valueText, geomPart) {
+    mapTapPopup.innerHTML = '';
+    mapTapPopup.appendChild(buildMapTapPopupContent(label, valueText, geomPart));
+    mapTapPopup.hidden = false;
     var margin = 10;
-    var rect = mapProfilePopup.getBoundingClientRect();
+    var rect = mapTapPopup.getBoundingClientRect();
     var left = x + 16;
     if (left + rect.width + margin > window.innerWidth) left = x - rect.width - 16;
     left = Math.max(margin, Math.min(left, window.innerWidth - rect.width - margin));
     var top = Math.max(margin, Math.min(y - rect.height / 2, window.innerHeight - rect.height - margin));
-    mapProfilePopup.style.left = left + 'px';
-    mapProfilePopup.style.top = top + 'px';
+    mapTapPopup.style.left = left + 'px';
+    mapTapPopup.style.top = top + 'px';
   }
-  function hideMapProfilePopup() { mapProfilePopup.hidden = true; }
+  function hideMapTapPopup() { mapTapPopup.hidden = true; }
 
   function wireFocusTooltip(el, label, valueText) {
     el.addEventListener('focus', function () {
@@ -1255,16 +1264,16 @@
         clearActiveFeature();
         activeFeature = found;
         activeFeature.el.classList.add(activeFeature.hoverClass);
-        showTooltip(clientX, clientY, found.label, found.valueText);
-        // Only pistes carry geometry the profile chart can use, and only a
-        // deliberate tap builds it -- not hover, so gliding over the map
-        // doesn't rebuild a chart on every frame.
-        if (found.geomPart) showMapProfilePopup(clientX, clientY, found.geomPart);
-        else hideMapProfilePopup();
+        // A tap shows the combined popup (name/value text, plus the profile
+        // chart for pistes) instead of the plain tooltip, so there's only
+        // ever one floating box on screen -- not a separate tooltip and
+        // chart popup that can end up overlapping.
+        hideTooltip();
+        showMapTapPopup(clientX, clientY, found.label, found.valueText, found.geomPart);
       } else {
         clearActiveFeature();
         hideTooltip();
-        hideMapProfilePopup();
+        hideMapTapPopup();
       }
     }
     svg.addEventListener('pointermove', function (e) {
@@ -1281,15 +1290,15 @@
         clearActiveFeature();
         hideTooltip();
       }
-      // The profile popup is tap-only (see handleTap); any hover movement
-      // means the pointer moved on from wherever it was tapped.
-      hideMapProfilePopup();
+      // The tap popup only appears on an actual tap (see handleTap); any
+      // hover movement means the pointer moved on from wherever it tapped.
+      hideMapTapPopup();
     });
     svg.addEventListener('pointerleave', function (e) {
       // A touch pointer fires "leave" the moment the finger lifts, which would
       // otherwise immediately hide the tooltip a tap just showed. Only a real
       // mouse leaving the map area should dismiss it.
-      if (e.pointerType === 'mouse') { clearActiveFeature(); hideTooltip(); hideMapProfilePopup(); }
+      if (e.pointerType === 'mouse') { clearActiveFeature(); hideTooltip(); hideMapTapPopup(); }
     });
   })();
 
@@ -2221,29 +2230,53 @@
     container.appendChild(caption);
   }
 
-  // Compact elevation-profile popup shown next to a piste's info tooltip
-  // when tapped on the map, so its steepness is visible without leaving the
-  // map for the "Todas las pistas" list. Scoped to the single tapped
-  // geometry part (not the whole named piste, which the map already draws
-  // as separate segments) -- that's exactly the stretch the tap landed on.
-  function buildMapProfilePopupContent(part) {
-    var container = document.createElement('div');
-    var profiles = buildElevationProfiles([part]);
-    if (!profiles.length) {
-      container.className = 'run-profile empty';
-      container.textContent = 'Todavía no tenemos datos de altitud para este tramo.';
-      return container;
+  // Content for the single map-tap popup: the name/value text that used to
+  // be its own tooltip, plus -- for pistes -- the elevation-profile chart,
+  // so a tap opens one combined box instead of two separately-positioned
+  // ones that could overlap. Scoped to the single tapped geometry part (not
+  // the whole named piste, which the map already draws as separate
+  // segments) -- that's exactly the stretch the tap landed on.
+  function buildMapTapPopupContent(label, valueText, part) {
+    var frag = document.createDocumentFragment();
+    var head = document.createElement('div');
+    head.className = 'map-tap-popup-head';
+    if (label) {
+      var title = document.createElement('div');
+      title.className = 'map-tap-popup-title';
+      title.textContent = label;
+      head.appendChild(title);
     }
-    var chart = buildProfileChart(profiles[0]);
-    container.appendChild(chart.svg);
-    if (chart.steepest) {
-      var steepestNote = document.createElement('div');
-      steepestNote.className = 'run-profile-steepest';
-      var noteRange = fmtDistRange(chart.steepest.startDist, chart.steepest.endDist);
-      steepestNote.textContent = 'Más pronunciado: ' + Math.round(Math.abs(chart.steepest.pitchPct)) + '% (' + noteRange.start + '–' + noteRange.end + ')';
-      container.appendChild(steepestNote);
+    if (valueText) {
+      var meta = document.createElement('div');
+      meta.className = 'map-tap-popup-meta';
+      meta.textContent = valueText;
+      head.appendChild(meta);
     }
-    return container;
+    frag.appendChild(head);
+
+    if (part) {
+      var profiles = buildElevationProfiles([part]);
+      if (!profiles.length) {
+        var empty = document.createElement('div');
+        empty.className = 'map-tap-popup-noprofile';
+        empty.textContent = 'Todavía no tenemos datos de altitud para este tramo.';
+        frag.appendChild(empty);
+      } else {
+        var chartWrap = document.createElement('div');
+        chartWrap.className = 'map-tap-popup-chart';
+        var chart = buildProfileChart(profiles[0]);
+        chartWrap.appendChild(chart.svg);
+        if (chart.steepest) {
+          var steepestNote = document.createElement('div');
+          steepestNote.className = 'run-profile-steepest';
+          var noteRange = fmtDistRange(chart.steepest.startDist, chart.steepest.endDist);
+          steepestNote.textContent = 'Más pronunciado: ' + Math.round(Math.abs(chart.steepest.pitchPct)) + '% (' + noteRange.start + '–' + noteRange.end + ')';
+          chartWrap.appendChild(steepestNote);
+        }
+        frag.appendChild(chartWrap);
+      }
+    }
+    return frag;
   }
 
   // ============== dashboard: full render ==============

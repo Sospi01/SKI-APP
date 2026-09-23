@@ -253,6 +253,7 @@
   .run-profile-caption { font-size: 10.5px; color: var(--text-muted); margin-top: 8px; line-height: 1.5; }
   .run-profile-caption .zone-key { display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; white-space: nowrap; }
   .run-profile-caption .zone-swatch { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+  .run-profile-steepest { margin-top: 6px; font-size: 11.5px; font-weight: 600; color: var(--text-primary); }
   .run-profile-endlabel { font-size: 9px; fill: var(--text-secondary); font-family: 'IBM Plex Sans', sans-serif; }
   .run-profile-axis { stroke: var(--text-muted); stroke-width: 1; opacity: 0.35; }
   .run-profile-gridline { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 2 3; opacity: 0.35; }
@@ -1716,7 +1717,56 @@
     });
   }
 
-  function buildProfileChart(raw, ascent, descent) {
+  // Formats a distance in meters as "850 m" below 1km, "1.5 km" above.
+  function fmtDist(m) {
+    return m < 1000 ? Math.round(m) + ' m' : (Math.round(m / 100) / 10) + ' km';
+  }
+
+  // Formats a start/end pair for the steepest-section callout, falling back
+  // to extra decimal precision if the default rounding would otherwise make
+  // both ends of a short, steep stretch print as the same value.
+  function fmtDistRange(startM, endM) {
+    function f(m, decimals) {
+      return m < 1000 ? Math.round(m) + ' m' : (m / 1000).toFixed(decimals) + ' km';
+    }
+    var decimals = 1;
+    while (f(startM, decimals) === f(endM, decimals) && decimals < 3) decimals++;
+    return { start: f(startM, decimals), end: f(endM, decimals) };
+  }
+
+  // Picks an X-axis tick spacing close to the requested "every ~0.5km",
+  // widening it for longer runs and narrowing it for short ones so a run
+  // of a few hundred meters still gets a handful of ticks.
+  function pickDistanceStep(totalDist) {
+    if (totalDist <= 1200) return 200;
+    if (totalDist <= 3000) return 500;
+    if (totalDist <= 8000) return 1000;
+    return 2000;
+  }
+
+  // Finds the steepest stretch of at least windowM meters, sliding a window
+  // over the smoothed profile. A fixed physical window (rather than just the
+  // steepest pair of adjacent smoothed points) keeps the reported stretch
+  // long enough to describe meaningfully instead of a near-zero-length spike.
+  function findSteepestSection(smoothed, windowM) {
+    var best = null;
+    for (var i = 0; i < smoothed.length; i++) {
+      var startP = smoothed[i];
+      var j = i;
+      while (j < smoothed.length - 1 && smoothed[j + 1].dist - startP.dist < windowM) j++;
+      if (j === i) continue;
+      var endP = smoothed[j];
+      var d = endP.dist - startP.dist;
+      if (d <= 0) continue;
+      var pitchPct = ((startP.ele - endP.ele) / d) * 100;
+      if (!best || Math.abs(pitchPct) > Math.abs(best.pitchPct)) {
+        best = { pitchPct: pitchPct, startDist: startP.dist, endDist: endP.dist };
+      }
+    }
+    return best;
+  }
+
+  function buildProfileChart(raw) {
     var smoothed = smoothProfile(raw, 30);
     var totalDist = smoothed[smoothed.length - 1].dist;
     var eles = smoothed.map(function (p) { return p.ele; });
@@ -1731,7 +1781,6 @@
     var svg = document.createElementNS(SVGNS, 'svg');
     svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
     svg.setAttribute('role', 'img');
-    svg.setAttribute('aria-label', 'Perfil de altitud de la pista, de ' + Math.round(smoothed[0].ele) + ' a ' + Math.round(smoothed[smoothed.length - 1].ele) + ' metros a lo largo de ' + Math.round(totalDist) + ' metros');
 
     // gridlines at min/max elevation + their labels
     [minEle, maxEle].forEach(function (e) {
@@ -1746,6 +1795,30 @@
       label.textContent = Math.round(e) + 'm';
       svg.appendChild(label);
     });
+
+    // X-axis distance ticks, spaced ~every 0.5km (adaptive for short/long runs).
+    // Skipped near either end so their labels don't collide with Salida/Final
+    // (margin sized from those labels' actual text length, not a flat guess).
+    var startLabelText = 'Salida · ' + Math.round(smoothed[0].ele) + 'm';
+    var endLabelText = 'Final · ' + Math.round(smoothed[smoothed.length - 1].ele) + 'm';
+    var CHAR_W = 4.4;
+    var startLabelEndX = padL + startLabelText.length * CHAR_W + 6;
+    var endLabelStartX = (W - padR) - endLabelText.length * CHAR_W - 6;
+    var step = pickDistanceStep(totalDist);
+    for (var t = step; t < totalDist; t += step) {
+      var tx = x(t);
+      if (tx < startLabelEndX || tx > endLabelStartX) continue;
+      var tickLine = document.createElementNS(SVGNS, 'line');
+      tickLine.setAttribute('x1', x(t)); tickLine.setAttribute('x2', x(t));
+      tickLine.setAttribute('y1', padT); tickLine.setAttribute('y2', y(minEle));
+      tickLine.setAttribute('class', 'run-profile-gridline');
+      svg.appendChild(tickLine);
+      var tickLabel = document.createElementNS(SVGNS, 'text');
+      tickLabel.setAttribute('x', x(t)); tickLabel.setAttribute('y', H - 4);
+      tickLabel.setAttribute('text-anchor', 'middle'); tickLabel.setAttribute('class', 'run-profile-endlabel');
+      tickLabel.textContent = fmtDist(t);
+      svg.appendChild(tickLabel);
+    }
 
     // colored fill, one quad per smoothed segment, colored by that segment's pitch
     for (var i = 0; i < smoothed.length - 1; i++) {
@@ -1764,6 +1837,8 @@
       poly.setAttribute('opacity', '0.55');
       svg.appendChild(poly);
     }
+
+    var steepest = findSteepestSection(smoothed, 50);
 
     // outline on top for a crisp silhouette
     var outlinePts = smoothed.map(function (p) { return x(p.dist).toFixed(1) + ',' + y(p.ele).toFixed(1); }).join(' ');
@@ -1793,15 +1868,22 @@
     var startLabel = document.createElementNS(SVGNS, 'text');
     startLabel.setAttribute('x', x(smoothed[0].dist)); startLabel.setAttribute('y', H - 4);
     startLabel.setAttribute('text-anchor', 'start'); startLabel.setAttribute('class', 'run-profile-endlabel');
-    startLabel.textContent = 'Salida · ' + Math.round(smoothed[0].ele) + 'm';
+    startLabel.textContent = startLabelText;
     svg.appendChild(startLabel);
     var endLabel = document.createElementNS(SVGNS, 'text');
     endLabel.setAttribute('x', x(smoothed[smoothed.length - 1].dist)); endLabel.setAttribute('y', H - 4);
     endLabel.setAttribute('text-anchor', 'end'); endLabel.setAttribute('class', 'run-profile-endlabel');
-    endLabel.textContent = 'Final · ' + Math.round(smoothed[smoothed.length - 1].ele) + 'm';
+    endLabel.textContent = endLabelText;
     svg.appendChild(endLabel);
 
-    return svg;
+    var ariaLabel = 'Perfil de altitud de la pista, de ' + Math.round(smoothed[0].ele) + ' a ' + Math.round(smoothed[smoothed.length - 1].ele) + ' metros a lo largo de ' + Math.round(totalDist) + ' metros.';
+    if (steepest) {
+      var ariaRange = fmtDistRange(steepest.startDist, steepest.endDist);
+      ariaLabel += ' Tramo más pronunciado: ' + Math.round(Math.abs(steepest.pitchPct)) + '% de pendiente, entre ' + ariaRange.start + ' y ' + ariaRange.end + '.';
+    }
+    svg.setAttribute('aria-label', ariaLabel);
+
+    return { svg: svg, steepest: steepest };
   }
 
   function renderRunProfile(container, group) {
@@ -1811,8 +1893,8 @@
       container.textContent = 'Todavía no tenemos datos de altitud punto a punto para esta pista.';
       return;
     }
-    var chart = buildProfileChart(profile, group.vertical_m, group.vertical_m);
-    container.appendChild(chart);
+    var chart = buildProfileChart(profile);
+    container.appendChild(chart.svg);
     var caption = document.createElement('div');
     caption.className = 'run-profile-caption';
     PITCH_ZONES.forEach(function (z) {
@@ -1821,6 +1903,13 @@
       key.appendChild(sw); key.appendChild(document.createTextNode(z.label));
       caption.appendChild(key);
     });
+    if (chart.steepest) {
+      var steepestNote = document.createElement('div');
+      steepestNote.className = 'run-profile-steepest';
+      var noteRange = fmtDistRange(chart.steepest.startDist, chart.steepest.endDist);
+      steepestNote.textContent = 'Tramo más pronunciado: ' + Math.round(Math.abs(chart.steepest.pitchPct)) + '% de pendiente, entre ' + noteRange.start + ' y ' + noteRange.end + '.';
+      caption.appendChild(steepestNote);
+    }
     var note = document.createElement('div');
     note.style.marginTop = '4px';
     note.textContent = 'El color indica la inclinación real de cada tramo, no la dificultad oficial de la pista.';

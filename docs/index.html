@@ -212,11 +212,22 @@
     padding: 4px 9px; border-radius: 999px; background: rgba(255,255,255,0.16);
     color: #fff; backdrop-filter: blur(2px);
   }
-  .hero h1 { font-size: 36px; font-weight: 700; line-height: 0.98; }
-  .hero .place { font-size: 14px; opacity: 0.85; margin-top: 4px; }
-  .hero .facts { display: flex; gap: 16px; margin-top: 16px; flex-wrap: wrap; }
-  .hero .fact .v { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 19px; line-height: 1; }
-  .hero .fact .k { font-size: 10.5px; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+  .hero h1 { font-size: 30px; font-weight: 700; line-height: 1; }
+  .hero .place { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+  .hero-stats { display: flex; gap: 7px; margin-top: 14px; flex-wrap: wrap; }
+  .hero-stat {
+    background: rgba(255,255,255,0.13); border-radius: 10px; padding: 7px 10px;
+    min-width: 64px; backdrop-filter: blur(2px);
+  }
+  .hero-stat .v { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 16px; line-height: 1.1; }
+  .hero-stat .k { font-size: 9px; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; white-space: nowrap; }
+  .hero-weather-note { font-size: 10px; opacity: 0.65; margin-top: 8px; }
+  .hero-domain { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.18); }
+  .hero-domain-title { font-size: 12.5px; font-weight: 700; }
+  .hero-domain-note { font-size: 10.5px; opacity: 0.75; margin: 3px 0 8px; line-height: 1.4; }
+  .hero-domain .chip {
+    background: rgba(255,255,255,0.14); color: #fff; border-color: rgba(255,255,255,0.32);
+  }
   .hero a.site {
     display: inline-flex; align-items: center; gap: 5px; margin-top: 16px;
     font-size: 12.5px; color: #fff; text-decoration: none;
@@ -228,14 +239,6 @@
   .section-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
   .section-head h2 { font-size: 18px; font-weight: 600; }
   .section-head .sub { font-size: 11.5px; color: var(--text-muted); }
-
-  .kpi-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  .kpi {
-    background: var(--surface-2); border-radius: 12px; padding: 12px 14px;
-    display: flex; flex-direction: column; gap: 2px;
-  }
-  .kpi .value { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 24px; color: var(--accent); }
-  .kpi .label { font-size: 11.5px; color: var(--text-secondary); }
 
   .barlist { display: flex; flex-direction: column; gap: 8px; }
   .bar-row { display: grid; grid-template-columns: 84px 1fr auto; align-items: center; gap: 8px; }
@@ -447,40 +450,25 @@
         <div class="badges" id="badges"></div>
         <h1 id="h-name">–</h1>
         <div class="place" id="h-place">–</div>
-        <div class="facts">
-          <div class="fact"><div class="v" id="f-alt">–</div><div class="k">Altitud</div></div>
-          <div class="fact"><div class="v" id="f-vert">–</div><div class="k">Desnivel</div></div>
-          <div class="fact"><div class="v" id="f-coords">–</div><div class="k">Coordenadas</div></div>
+        <div class="hero-stats">
+          <div class="hero-stat"><div class="v" id="f-alt">–</div><div class="k">Altitud</div></div>
+          <div class="hero-stat"><div class="v" id="f-vert">–</div><div class="k">Desnivel</div></div>
+          <div class="hero-stat"><div class="v" id="k-km">–</div><div class="k">Km pista</div></div>
+          <div class="hero-stat"><div class="v" id="f-coords">–</div><div class="k">Coordenadas</div></div>
+          <div class="hero-stat"><div class="v" id="k-sunrise">–</div><div class="k">Amanecer</div></div>
+          <div class="hero-stat"><div class="v" id="k-sunset">–</div><div class="k">Atardecer</div></div>
+          <div class="hero-stat"><div class="v" id="k-temp">–</div><div class="k" id="k-weather-desc">Tiempo</div></div>
+          <div class="hero-stat"><div class="v" id="k-wind">–</div><div class="k">Viento</div></div>
+        </div>
+        <p class="hero-weather-note" id="weather-note" hidden>Open-Meteo en directo · <span id="weather-updated"></span></p>
+        <div class="hero-domain" id="domain-section" hidden>
+          <div class="hero-domain-title" id="domain-title"></div>
+          <p class="hero-domain-note" id="domain-note"></p>
+          <div class="chips" id="domain-links"></div>
         </div>
         <a class="site" id="h-site" href="#" target="_blank" rel="noopener" hidden>Web oficial ↗</a>
       </div>
     </div>
-
-    <section>
-      <div class="kpi-grid">
-        <div class="kpi"><div class="value" id="k-km">–</div><div class="label">km de pista</div></div>
-        <div class="kpi"><div class="value" id="k-runs">–</div><div class="label">segmentos de pista</div></div>
-        <div class="kpi"><div class="value" id="k-lifts">–</div><div class="label">remontes</div></div>
-        <div class="kpi"><div class="value" id="k-capacity">–</div><div class="label">personas/hora (remontes)</div></div>
-      </div>
-    </section>
-
-    <section id="domain-section" hidden>
-      <div class="section-head"><h2 id="domain-title">Dominio esquiable</h2></div>
-      <p class="quality-note" id="domain-note"></p>
-      <div class="chips" id="domain-links"></div>
-    </section>
-
-    <section>
-      <div class="section-head"><h2>Sol y tiempo</h2><span class="sub" id="weather-updated"></span></div>
-      <div class="kpi-grid">
-        <div class="kpi"><div class="value" id="k-sunrise">–</div><div class="label">Amanecer</div></div>
-        <div class="kpi"><div class="value" id="k-sunset">–</div><div class="label">Atardecer</div></div>
-        <div class="kpi"><div class="value" id="k-temp">–</div><div class="label" id="k-weather-desc">Tiempo actual</div></div>
-        <div class="kpi"><div class="value" id="k-wind">–</div><div class="label">Viento</div></div>
-      </div>
-      <p class="quality-note" id="weather-note" hidden>Datos en directo de Open-Meteo. La hora indicada es la de la última observación disponible.</p>
-    </section>
 
     <section>
       <div class="section-head"><h2>Mapa de pistas</h2><span class="sub">satélite + geometría real</span></div>
@@ -2219,9 +2207,7 @@
     if (group) {
       var others = group.filter(function (id) { return id !== raw.id; }).map(stationById).filter(Boolean);
       setText('domain-title', 'Dominio esquiable conectado');
-      setText('domain-note',
-        'Sus remontes o pistas cartografiadas llegan a menos de 500m de estas estaciones vecinas '
-        + '(detectado automáticamente por proximidad geográfica, no son fusiones manuales, así que los km de cada una pueden solaparse parcialmente):');
+      setText('domain-note', 'Detectado por proximidad geográfica; los km de cada una pueden solaparse:');
       var linksEl = document.getElementById('domain-links');
       others.forEach(function (o) {
         var chip = document.createElement('button');
@@ -2264,13 +2250,9 @@
     if (raw.websites && raw.websites.length) { siteLink.href = raw.websites[0]; siteLink.hidden = false; }
     else { siteLink.hidden = true; }
 
-    var totalKm = 0, totalCapacity = 0;
+    var totalKm = 0;
     raw.runs.forEach(function (r) { if (r.length_m) totalKm += r.length_m; });
-    raw.lifts.forEach(function (l) { if (l.capacity) totalCapacity += l.capacity; });
     setText('k-km', fmt(Math.round(totalKm / 1000)) + ' km');
-    setText('k-runs', fmt(raw.runs.length));
-    setText('k-lifts', fmt(raw.lifts.length));
-    setText('k-capacity', totalCapacity ? fmt(totalCapacity) : '–');
 
     buildMap(raw);
 

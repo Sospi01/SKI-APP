@@ -321,6 +321,9 @@
   .map-service { stroke: var(--map-halo); stroke-width: 1; vector-effect: non-scaling-stroke; cursor: pointer; transition: stroke-width 0.1s ease; }
   .map-service.service-hovered { stroke-width: 1.8; }
   .map-service-icon { font-family: 'IBM Plex Sans', sans-serif; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+  .map-service-leader { stroke: var(--text-primary); stroke-width: 1; stroke-dasharray: 2 2; opacity: 0.5; vector-effect: non-scaling-stroke; pointer-events: none; }
+  .map-service-anchor { stroke: var(--map-halo); stroke-width: 0.6; vector-effect: non-scaling-stroke; pointer-events: none; }
+  .map-direction-arrow { fill: var(--text-primary); stroke: var(--map-halo); stroke-width: 1.3; vector-effect: non-scaling-stroke; pointer-events: none; display: none; }
   .map-hit { fill: none; stroke: transparent; stroke-width: 9; pointer-events: none; vector-effect: non-scaling-stroke; }
   .map-run.run-hovered, .map-hit:focus + .map-run { stroke-width: 3.6; }
   .map-lift.lift-hovered, .map-hit:focus + .map-lift { stroke-width: 3; }
@@ -514,6 +517,11 @@
     <section>
       <div class="section-head"><h2>Todos los remontes</h2></div>
       <div class="list-scroll" id="lifts-list"></div>
+    </section>
+
+    <section id="services-section" hidden>
+      <div class="section-head"><h2>Servicios de la estación</h2><span class="sub" id="services-count-sub"></span></div>
+      <div class="list-scroll" id="services-list"></div>
     </section>
 
     <section>
@@ -955,9 +963,10 @@
     window.scrollTo(0, 0);
     setText('h-name', 'Cargando…');
     setText('h-place', '');
-    ['badges', 'chart-difficulty', 'chart-lifts', 'runs-list', 'lifts-list', 'quality-list', 'run-filters', 'map-legend', 'domain-links']
+    ['badges', 'chart-difficulty', 'chart-lifts', 'runs-list', 'lifts-list', 'services-list', 'quality-list', 'run-filters', 'map-legend', 'domain-links']
       .forEach(function (elId) { document.getElementById(elId).innerHTML = ''; });
     document.getElementById('domain-section').hidden = true;
+    document.getElementById('services-section').hidden = true;
 
     fetch('data/' + id + '.json')
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
@@ -1051,6 +1060,28 @@
       (mapState.serviceMarkers || []).forEach(function (d) { d.setAttribute('r', svcR); });
       var svcIconSize = serviceIconSize(mapState.zoom).toFixed(3);
       (mapState.serviceIcons || []).forEach(function (t) { t.setAttribute('font-size', svcIconSize); });
+      var arrowSz = arrowSize(mapState.zoom);
+      var arrows = mapState.directionArrows || [];
+      // A fixed zoom threshold declutters a normal single-valley station fine,
+      // but a huge multi-valley conglomerate (hundreds of run/lift segments)
+      // can still show dozens of separate piste clusters at once even well
+      // zoomed in. Count how many arrows actually fall in the CURRENT view
+      // instead, and only draw them once that's down to a browsable amount --
+      // scales to the resort's size rather than a one-size-fits-all zoom level.
+      var visibleFlags = new Array(arrows.length);
+      var visibleCount = 0;
+      for (var ai = 0; ai < arrows.length; ai++) {
+        var o = contentToOuter(arrows[ai].cx, arrows[ai].cy);
+        var inView = o[0] >= -10 && o[0] <= mapState.vbW + 10 && o[1] >= -10 && o[1] <= mapState.vbH + 10;
+        visibleFlags[ai] = inView;
+        if (inView) visibleCount++;
+      }
+      var showArrows = visibleCount > 0 && visibleCount <= ARROW_MAX_VISIBLE;
+      arrows.forEach(function (a, ai) {
+        var show = showArrows && visibleFlags[ai];
+        a.el.style.display = show ? 'inline' : 'none';
+        if (show) a.el.setAttribute('points', arrowPolygonPoints(a.cx, a.cy, a.angle, arrowSz));
+      });
     }
     function clamp() {
       // The min/max-translation box below assumes an axis-aligned (unrotated)
@@ -1250,6 +1281,102 @@
   function serviceMarkerRadius(zoom) { return SERVICE_MARKER_BASE_R / zoom; }
   function serviceIconSize(zoom) { return SERVICE_ICON_BASE_SIZE / zoom; }
 
+  // At the initial zoomed-out view, service markers close enough together to
+  // visually touch become impossible to pick out individually. Nudges each
+  // point in an overlapping cluster outward (golden-angle spiral, same trick
+  // used for exact-duplicate country-map pins) and returns where to actually
+  // draw it -- callers add a dashed leader line back to the real spot
+  // whenever `real` comes back non-null.
+  function declutterPoints(points) {
+    var CLUSTER_THRESHOLD = SERVICE_MARKER_BASE_R * 2.6;
+    var n = points.length, visited = new Array(n).fill(false), result = new Array(n);
+    for (var i = 0; i < n; i++) {
+      if (visited[i]) continue;
+      var cluster = [i];
+      visited[i] = true;
+      for (var j = i + 1; j < n; j++) {
+        if (visited[j]) continue;
+        var dx = points[j][0] - points[i][0], dy = points[j][1] - points[i][1];
+        if (Math.hypot(dx, dy) < CLUSTER_THRESHOLD) { cluster.push(j); visited[j] = true; }
+      }
+      cluster.forEach(function (idx, k) {
+        if (k === 0) { result[idx] = { drawn: points[idx], real: null }; return; }
+        var angle = k * 2.399963; // golden angle, spreads members evenly
+        var ringR = SERVICE_MARKER_BASE_R * (1.8 + 0.9 * Math.sqrt(k));
+        var drawn = [points[idx][0] + Math.cos(angle) * ringR, points[idx][1] + Math.sin(angle) * ringR];
+        result[idx] = { drawn: drawn, real: points[idx] };
+      });
+    }
+    return result;
+  }
+
+  // Direction arrows on runs/lifts: the order OpenStreetMap happened to
+  // digitize a way in doesn't tell you which way it's actually travelled, so
+  // this reads it off elevation instead -- downhill for runs, uphill for
+  // lifts -- the same ground truth already used to orient the elevation
+  // profile chart. Returns +1 if the geometry's stored point order already
+  // matches that real-world direction, -1 if it runs backwards, or null when
+  // there's no elevation (or no elevation change) to tell from.
+  function partFlowSign(part, wantAscending) {
+    if (!part || part.length < 2) return null;
+    var first = part[0], last = part[part.length - 1];
+    if (first.length < 3 || last.length < 3) return null;
+    if (first[2] === last[2]) return null;
+    var storedAscends = last[2] > first[2];
+    return storedAscends === wantAscending ? 1 : -1;
+  }
+
+  // Finds the point and local tangent angle at the midpoint (by path length,
+  // not by vertex count) of an already-projected polyline.
+  function polylineMidTangent(pts) {
+    if (pts.length < 2) return null;
+    var lens = [0];
+    for (var i = 1; i < pts.length; i++) {
+      lens.push(lens[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+    }
+    var total = lens[lens.length - 1];
+    if (total <= 0) return null;
+    var target = total / 2;
+    var segIdx = 0;
+    while (segIdx < lens.length - 2 && lens[segIdx + 1] < target) segIdx++;
+    var a = pts[segIdx], b = pts[segIdx + 1];
+    var segLen = lens[segIdx + 1] - lens[segIdx];
+    var t = segLen > 0 ? (target - lens[segIdx]) / segLen : 0;
+    return {
+      point: [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t],
+      angle: Math.atan2(b[1] - a[1], b[0] - a[0])
+    };
+  }
+
+  var ARROW_BASE_SIZE = 9.5;
+  // A big multi-valley resort can have 1000+ run/lift segments -- showing an
+  // arrow on every one turns the map into a wall of triangles that hides the
+  // pistes themselves. Arrows are only drawn once the current view (see
+  // apply()) contains a browsable number of them.
+  var ARROW_MAX_VISIBLE = 90;
+  function arrowSize(zoom) { return ARROW_BASE_SIZE / zoom; }
+  function arrowPolygonPoints(cx, cy, angle, size) {
+    var tipX = cx + Math.cos(angle) * size * 0.62, tipY = cy + Math.sin(angle) * size * 0.62;
+    var a1 = angle + 2.4, a2 = angle - 2.4;
+    var b1X = cx + Math.cos(a1) * size * 0.5, b1Y = cy + Math.sin(a1) * size * 0.5;
+    var b2X = cx + Math.cos(a2) * size * 0.5, b2Y = cy + Math.sin(a2) * size * 0.5;
+    return tipX.toFixed(1) + ',' + tipY.toFixed(1) + ' ' + b1X.toFixed(1) + ',' + b1Y.toFixed(1) + ' ' + b2X.toFixed(1) + ',' + b2Y.toFixed(1);
+  }
+  // Adds one direction arrow at a part's midpoint, oriented by sign relative
+  // to the tangent of the stored (projected) point order. Silently does
+  // nothing when sign is null (no reliable direction to show).
+  function addDirectionArrow(content, directionArrows, pts, sign) {
+    if (!sign) return;
+    var mt = polylineMidTangent(pts);
+    if (!mt) return;
+    var angle = sign > 0 ? mt.angle : mt.angle + Math.PI;
+    var poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    poly.setAttribute('points', arrowPolygonPoints(mt.point[0], mt.point[1], angle, arrowSize(1)));
+    poly.setAttribute('class', 'map-direction-arrow');
+    content.appendChild(poly);
+    directionArrows.push({ el: poly, cx: mt.point[0], cy: mt.point[1], angle: angle });
+  }
+
   function buildMap(raw) {
     var SVGNS = 'http://www.w3.org/2000/svg';
     var svg = document.getElementById('map-svg');
@@ -1307,6 +1434,7 @@
 
     var features = [];
     var liftStationDots = [];
+    var directionArrows = [];
 
     raw.lifts.forEach(function (l) {
       (l.geom || []).forEach(function (part) {
@@ -1339,7 +1467,10 @@
         if (l.capacity) bits.push(fmt(l.capacity) + ' p/h');
         var valueText = bits.join(' · ');
         wireFocusTooltip(hit, label, valueText);
-        features.push({ el: pl, hoverClass: 'lift-hovered', points: part.map(project), label: label, valueText: valueText });
+        var projPts = part.map(project);
+        features.push({ el: pl, hoverClass: 'lift-hovered', points: projPts, label: label, valueText: valueText });
+        // Lifts carry people uphill.
+        addDirectionArrow(content, directionArrows, projPts, partFlowSign(part, true));
       });
     });
 
@@ -1358,15 +1489,35 @@
         if (r.avg_pitch_percent != null) bits.push(fmt(r.avg_pitch_percent, 0) + '% pend. media');
         var valueText = bits.join(' · ');
         wireFocusTooltip(hit, label, valueText);
-        features.push({ el: line, hoverClass: 'run-hovered', points: part.map(project), label: label, valueText: valueText });
+        var projPts = part.map(project);
+        features.push({ el: line, hoverClass: 'run-hovered', points: projPts, label: label, valueText: valueText });
+        // Pistes are skied downhill.
+        addDirectionArrow(content, directionArrows, projPts, partFlowSign(part, false));
       });
     });
 
     var serviceMarkers = [], serviceIcons = [];
-    (raw.services || []).forEach(function (svc) {
+    var validServices = (raw.services || []).filter(function (svc) { return SERVICE_CATEGORIES[svc.category]; });
+    var servicePositions = declutterPoints(validServices.map(function (svc) { return project([svc.lon, svc.lat]); }));
+    validServices.forEach(function (svc, idx) {
       var cat = SERVICE_CATEGORIES[svc.category];
-      if (!cat) return;
-      var p = project([svc.lon, svc.lat]);
+      var pos = servicePositions[idx];
+      var p = pos.drawn;
+
+      if (pos.real) {
+        var leader = document.createElementNS(SVGNS, 'line');
+        leader.setAttribute('x1', pos.real[0].toFixed(1)); leader.setAttribute('y1', pos.real[1].toFixed(1));
+        leader.setAttribute('x2', p[0].toFixed(1)); leader.setAttribute('y2', p[1].toFixed(1));
+        leader.setAttribute('class', 'map-service-leader');
+        content.appendChild(leader);
+        var anchor = document.createElementNS(SVGNS, 'circle');
+        anchor.setAttribute('cx', pos.real[0].toFixed(1)); anchor.setAttribute('cy', pos.real[1].toFixed(1));
+        anchor.setAttribute('r', '1');
+        anchor.setAttribute('class', 'map-service-anchor');
+        anchor.style.fill = cat.color;
+        content.appendChild(anchor);
+      }
+
       var dot = document.createElementNS(SVGNS, 'circle');
       dot.setAttribute('cx', p[0].toFixed(1)); dot.setAttribute('cy', p[1].toFixed(1));
       dot.setAttribute('r', serviceMarkerRadius(1).toFixed(2));
@@ -1439,7 +1590,7 @@
       legend.appendChild(svcItem);
     });
 
-    mapState = { svg: svg, content: content, vbW: vbW, vbH: vbH, scale: scale, zoom: 1, tx: 0, ty: 0, angle: 0, updateScaleBar: updateScaleBar, features: features, liftStationDots: liftStationDots, serviceMarkers: serviceMarkers, serviceIcons: serviceIcons };
+    mapState = { svg: svg, content: content, vbW: vbW, vbH: vbH, scale: scale, zoom: 1, tx: 0, ty: 0, angle: 0, updateScaleBar: updateScaleBar, features: features, liftStationDots: liftStationDots, serviceMarkers: serviceMarkers, serviceIcons: serviceIcons, directionArrows: directionArrows };
     updateScaleBar(1);
   }
 
@@ -2284,6 +2435,38 @@
       item.appendChild(dot); item.appendChild(main);
       liftsList.appendChild(item);
     });
+
+    var servicesList = document.getElementById('services-list');
+    var servicesSection = document.getElementById('services-section');
+    var services = raw.services || [];
+    if (services.length) {
+      var catOrder = Object.keys(SERVICE_CATEGORIES);
+      var sortedServices = services.slice().sort(function (a, b) {
+        var da = catOrder.indexOf(a.category), db = catOrder.indexOf(b.category);
+        if (da !== db) return da - db;
+        return (a.name || '').localeCompare(b.name || '');
+      });
+      sortedServices.forEach(function (svc) {
+        var cat = SERVICE_CATEGORIES[svc.category];
+        if (!cat) return;
+        var item = document.createElement('div'); item.className = 'item';
+        var dot = document.createElement('span'); dot.className = 'dot'; dot.style.background = cat.color;
+        var main = document.createElement('div'); main.className = 'item-main';
+        var name = document.createElement('div'); name.className = 'item-name';
+        name.textContent = cat.icon + ' ' + (svc.name || cat.label);
+        var meta = document.createElement('div'); meta.className = 'item-meta';
+        var bits = [];
+        if (svc.name) bits.push(cat.label);
+        if (svc.opening_hours) bits.push(svc.opening_hours);
+        if (svc.phone) bits.push(svc.phone);
+        meta.textContent = bits.join(' · ');
+        main.appendChild(name); main.appendChild(meta);
+        item.appendChild(dot); item.appendChild(main);
+        servicesList.appendChild(item);
+      });
+      setText('services-count-sub', services.length + (services.length === 1 ? ' servicio' : ' servicios'));
+      servicesSection.hidden = false;
+    }
 
     var runCount = raw.runs.length || 1, liftCount = raw.lifts.length || 1;
     var diffKnown = raw.runs.filter(function (r) { return r.difficulty; }).length;

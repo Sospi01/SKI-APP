@@ -198,7 +198,12 @@ jobs:
               'way["shop"~"sports|ski"]',
           ]
 
-          def query(bbox):
+          MIRRORS = [
+              "https://overpass-api.de/api/interpreter",
+              "https://overpass.kumi.systems/api/interpreter",
+          ]
+
+          def query_once(url, bbox):
               south, west, north, east = bbox
               clauses = "\n  ".join(f'{t}({south},{west},{north},{east});' for t in TAGS)
               q = f"""
@@ -210,12 +215,25 @@ jobs:
               """
               data = q.encode("utf-8")
               req = urllib.request.Request(
-                  "https://overpass-api.de/api/interpreter",
-                  data=data,
-                  headers={"User-Agent": "SkiInfoApp-Explore/0.1"},
+                  url, data=data, headers={"User-Agent": "SkiInfoApp-Explore/0.1"}
               )
               with urllib.request.urlopen(req, timeout=60) as resp:
                   return json.load(resp)
+
+          def query(bbox):
+              # The public Overpass instances are shared/rate-limited -- retry
+              # with backoff, and fall back to a second mirror if one is busy.
+              last_exc = None
+              for mirror in MIRRORS:
+                  for attempt in range(3):
+                      try:
+                          return query_once(mirror, bbox)
+                      except Exception as exc:
+                          last_exc = exc
+                          wait = 15 * (attempt + 1)
+                          print(f"  ({mirror} attempt {attempt + 1} failed: {exc}, retrying in {wait}s)")
+                          time.sleep(wait)
+              raise last_exc
 
           for name, cc, bbox in STATIONS:
               print(f"\n=== {name} ({cc}) ===")
@@ -241,5 +259,5 @@ jobs:
                   label = tags.get("name") or "(sin nombre)"
                   kind = tags.get("amenity") or tags.get("tourism") or tags.get("shop")
                   print(f"  - {label!r} [{kind}] at ({lat}, {lon}) tags_sample={dict(list(tags.items())[:6])}")
-              time.sleep(3)
+              time.sleep(10)
           PY

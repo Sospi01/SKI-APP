@@ -24,6 +24,10 @@ on:
         description: "How many stations to process in this run"
         required: false
         default: "500"
+      explore_overpass:
+        description: "Throwaway: also query Overpass for amenity data around 3 sample stations"
+        required: false
+        default: "false"
 
 jobs:
   build-and-fetch:
@@ -164,4 +168,78 @@ jobs:
           print("===BATCH_JSON_START===")
           print(json.dumps(result))
           print("===BATCH_JSON_END===")
+          PY
+
+      # Throwaway exploration step (see explore_overpass input): checks whether
+      # OpenStreetMap has usable amenity data (restaurants, toilets, huts, ski
+      # rental shops...) around a few sample stations via the Overpass API,
+      # before deciding whether it's worth building a real pipeline for it.
+      # Not part of the normal fetch -- remove once the exploration is done.
+      - name: Explore Overpass amenity data (throwaway)
+        if: ${{ inputs.explore_overpass == 'true' }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import time
+          import urllib.request
+
+          STATIONS = [
+              ("Baqueira-Beret", "ES", (42.64877, 0.9341, 42.73846, 1.00408)),
+              ("Serfaus Fiss Ladis", "AT", (47.00891, 10.47016, 47.09035, 10.64565)),
+              ("Park City Mountain Resort", "US", (40.60963, -111.59905, 40.69904, -111.49842)),
+          ]
+
+          TAGS = [
+              'node["amenity"~"restaurant|cafe|bar|fast_food|toilets|first_aid|pharmacy|fuel|parking|atm|bank"]',
+              'way["amenity"~"restaurant|cafe|bar|fast_food|toilets|first_aid|pharmacy|fuel|parking|atm|bank"]',
+              'node["tourism"~"alpine_hut|hotel|chalet|guest_house|hostel"]',
+              'way["tourism"~"alpine_hut|hotel|chalet|guest_house|hostel"]',
+              'node["shop"~"sports|ski"]',
+              'way["shop"~"sports|ski"]',
+          ]
+
+          def query(bbox):
+              south, west, north, east = bbox
+              clauses = "\n  ".join(f'{t}({south},{west},{north},{east});' for t in TAGS)
+              q = f"""
+              [out:json][timeout:25];
+              (
+                {clauses}
+              );
+              out center tags;
+              """
+              data = q.encode("utf-8")
+              req = urllib.request.Request(
+                  "https://overpass-api.de/api/interpreter",
+                  data=data,
+                  headers={"User-Agent": "SkiInfoApp-Explore/0.1"},
+              )
+              with urllib.request.urlopen(req, timeout=60) as resp:
+                  return json.load(resp)
+
+          for name, cc, bbox in STATIONS:
+              print(f"\n=== {name} ({cc}) ===")
+              try:
+                  result = query(bbox)
+              except Exception as exc:
+                  print(f"ERROR: {exc}")
+                  continue
+              elements = result.get("elements", [])
+              print(f"total elements: {len(elements)}")
+              from collections import Counter
+              tag_counts = Counter()
+              for el in elements:
+                  tags = el.get("tags", {})
+                  key = tags.get("amenity") or tags.get("tourism") or tags.get("shop") or "?"
+                  tag_counts[key] += 1
+              print("by type:", dict(tag_counts))
+              print("sample (up to 8):")
+              for el in elements[:8]:
+                  tags = el.get("tags", {})
+                  lat = el.get("lat") or (el.get("center") or {}).get("lat")
+                  lon = el.get("lon") or (el.get("center") or {}).get("lon")
+                  label = tags.get("name") or "(sin nombre)"
+                  kind = tags.get("amenity") or tags.get("tourism") or tags.get("shop")
+                  print(f"  - {label!r} [{kind}] at ({lat}, {lon}) tags_sample={dict(list(tags.items())[:6])}")
+              time.sleep(3)
           PY

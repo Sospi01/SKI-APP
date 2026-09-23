@@ -371,6 +371,12 @@
     box-shadow: 0 8px 20px -8px rgba(0,0,0,0.4);
   }
   #tooltip strong { display: block; font-weight: 600; }
+  .map-profile-popup {
+    position: fixed; z-index: 20; width: 200px;
+    border: 1px solid var(--border); border-radius: 10px; border-bottom-width: 1px;
+    box-shadow: 0 8px 20px -8px rgba(0,0,0,0.4); pointer-events: none;
+  }
+  .map-profile-popup .run-profile-steepest { font-size: 10.5px; }
 
   footer.credit { padding: 18px; font-size: 11px; color: var(--text-muted); text-align: center; line-height: 1.6; }
 </style>
@@ -528,6 +534,7 @@
 </div>
 
 <div id="tooltip" hidden></div>
+<div id="map-profile-popup" class="run-profile map-profile-popup" hidden></div>
 
 <script>
 (function () {
@@ -735,6 +742,28 @@
     tooltip.hidden = false;
   }
   function hideTooltip() { tooltip.hidden = true; }
+
+  // Elevation-profile popup shown beside a piste's tap tooltip on the
+  // per-station map (see handleTap in setupMapControlsOnce) -- built and
+  // positioned only on an actual tap, not on hover, so it doesn't flicker as
+  // the pointer glides across the map.
+  var mapProfilePopup = document.getElementById('map-profile-popup');
+  function showMapProfilePopup(x, y, geomPart) {
+    mapProfilePopup.innerHTML = '';
+    mapProfilePopup.className = 'run-profile map-profile-popup';
+    mapProfilePopup.appendChild(buildMapProfilePopupContent(geomPart));
+    mapProfilePopup.hidden = false;
+    var margin = 10;
+    var rect = mapProfilePopup.getBoundingClientRect();
+    var left = x + 16;
+    if (left + rect.width + margin > window.innerWidth) left = x - rect.width - 16;
+    left = Math.max(margin, Math.min(left, window.innerWidth - rect.width - margin));
+    var top = Math.max(margin, Math.min(y - rect.height / 2, window.innerHeight - rect.height - margin));
+    mapProfilePopup.style.left = left + 'px';
+    mapProfilePopup.style.top = top + 'px';
+  }
+  function hideMapProfilePopup() { mapProfilePopup.hidden = true; }
+
   function wireFocusTooltip(el, label, valueText) {
     el.addEventListener('focus', function () {
       var box = el.getBoundingClientRect();
@@ -1227,9 +1256,15 @@
         activeFeature = found;
         activeFeature.el.classList.add(activeFeature.hoverClass);
         showTooltip(clientX, clientY, found.label, found.valueText);
+        // Only pistes carry geometry the profile chart can use, and only a
+        // deliberate tap builds it -- not hover, so gliding over the map
+        // doesn't rebuild a chart on every frame.
+        if (found.geomPart) showMapProfilePopup(clientX, clientY, found.geomPart);
+        else hideMapProfilePopup();
       } else {
         clearActiveFeature();
         hideTooltip();
+        hideMapProfilePopup();
       }
     }
     svg.addEventListener('pointermove', function (e) {
@@ -1246,12 +1281,15 @@
         clearActiveFeature();
         hideTooltip();
       }
+      // The profile popup is tap-only (see handleTap); any hover movement
+      // means the pointer moved on from wherever it was tapped.
+      hideMapProfilePopup();
     });
     svg.addEventListener('pointerleave', function (e) {
       // A touch pointer fires "leave" the moment the finger lifts, which would
       // otherwise immediately hide the tooltip a tap just showed. Only a real
       // mouse leaving the map area should dismiss it.
-      if (e.pointerType === 'mouse') { clearActiveFeature(); hideTooltip(); }
+      if (e.pointerType === 'mouse') { clearActiveFeature(); hideTooltip(); hideMapProfilePopup(); }
     });
   })();
 
@@ -1482,7 +1520,7 @@
         var valueText = bits.join(' · ');
         wireFocusTooltip(hit, label, valueText);
         var projPts = part.map(project);
-        features.push({ el: line, hoverClass: 'run-hovered', points: projPts, label: label, valueText: valueText });
+        features.push({ el: line, hoverClass: 'run-hovered', points: projPts, label: label, valueText: valueText, geomPart: part });
         // Pistes are skied downhill.
         addDirectionArrow(content, directionArrows, projPts, partFlowSign(part, false));
       });
@@ -2181,6 +2219,31 @@
     note.textContent = 'El color indica la inclinación real en cada punto del perfil, no la dificultad oficial de la pista.';
     caption.appendChild(note);
     container.appendChild(caption);
+  }
+
+  // Compact elevation-profile popup shown next to a piste's info tooltip
+  // when tapped on the map, so its steepness is visible without leaving the
+  // map for the "Todas las pistas" list. Scoped to the single tapped
+  // geometry part (not the whole named piste, which the map already draws
+  // as separate segments) -- that's exactly the stretch the tap landed on.
+  function buildMapProfilePopupContent(part) {
+    var container = document.createElement('div');
+    var profiles = buildElevationProfiles([part]);
+    if (!profiles.length) {
+      container.className = 'run-profile empty';
+      container.textContent = 'Todavía no tenemos datos de altitud para este tramo.';
+      return container;
+    }
+    var chart = buildProfileChart(profiles[0]);
+    container.appendChild(chart.svg);
+    if (chart.steepest) {
+      var steepestNote = document.createElement('div');
+      steepestNote.className = 'run-profile-steepest';
+      var noteRange = fmtDistRange(chart.steepest.startDist, chart.steepest.endDist);
+      steepestNote.textContent = 'Más pronunciado: ' + Math.round(Math.abs(chart.steepest.pitchPct)) + '% (' + noteRange.start + '–' + noteRange.end + ')';
+      container.appendChild(steepestNote);
+    }
+    return container;
   }
 
   // ============== dashboard: full render ==============

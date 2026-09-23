@@ -8,6 +8,10 @@ on:
       - .github/workflows/fetch-stations.yml
   workflow_dispatch:
     inputs:
+      mode:
+        description: "fetch_stations (default: OpenSkiMap runs/lifts) or fetch_services (Overpass amenities for existing docs/data stations)"
+        required: false
+        default: "fetch_stations"
       country:
         description: "ISO country code to fetch (e.g. ES, FR, AT, IT, CH, AD)"
         required: false
@@ -17,7 +21,7 @@ on:
         required: false
         default: "0"
       offset:
-        description: "Offset into the country's station list (ordered by piste km desc)"
+        description: "Offset into the country's station list (ordered by piste km desc for fetch_stations, by id for fetch_services)"
         required: false
         default: "0"
       limit:
@@ -42,9 +46,11 @@ jobs:
       - run: pip install -r requirements.txt
 
       - name: Download OpenSkiMap data and build the database
+        if: ${{ inputs.mode != 'fetch_services' }}
         run: python -m ski_pipeline.cli --db data/ski_info.db -v
 
       - name: Fetch stations
+        if: ${{ inputs.mode != 'fetch_services' }}
         env:
           COUNTRY: ${{ inputs.country || 'ES' }}
           MIN_PISTE_KM: ${{ inputs.min_piste_km || '0' }}
@@ -164,4 +170,166 @@ jobs:
           print("===BATCH_JSON_START===")
           print(json.dumps(result))
           print("===BATCH_JSON_END===")
+          PY
+
+      # Separate data source from the above: OpenStreetMap amenity tags via the
+      # Overpass API, queried directly against the bounding box of each existing
+      # docs/data station (no need to rebuild the OpenSkiMap database for this).
+      - name: Fetch station services (Overpass)
+        if: ${{ inputs.mode == 'fetch_services' }}
+        working-directory: .
+        env:
+          COUNTRY: ${{ inputs.country || 'ES' }}
+          OFFSET: ${{ inputs.offset || '0' }}
+          LIMIT: ${{ inputs.limit || '500' }}
+        run: |
+          python3 - <<'PY'
+          import glob
+          import json
+          import os
+          import time
+          import urllib.request
+          from collections import Counter
+
+          COUNTRY = os.environ["COUNTRY"]
+          OFFSET = int(os.environ["OFFSET"])
+          LIMIT = int(os.environ["LIMIT"])
+
+          # Curated for "useful while skiing", not a general business directory:
+          # food/drink, toilets, first aid, pharmacy, mountain huts, and gear
+          # rental/shops. Deliberately excludes banks/ATMs/fuel/parking/hotels --
+          # for a resort that's really a whole town (seen testing US stations),
+          # those pull in generic city amenities unrelated to the slopes.
+          TAGS = [
+              'node["amenity"~"restaurant|cafe|bar|fast_food|toilets|first_aid|pharmacy"]',
+              'way["amenity"~"restaurant|cafe|bar|fast_food|toilets|first_aid|pharmacy"]',
+              'node["tourism"="alpine_hut"]',
+              'way["tourism"="alpine_hut"]',
+              'node["shop"~"sports|ski"]',
+              'way["shop"~"sports|ski"]',
+          ]
+
+          MIRRORS = [
+              "https://overpass-api.de/api/interpreter",
+              "https://overpass.kumi.systems/api/interpreter",
+          ]
+
+          def query_once(url, bbox):
+              south, west, north, east = bbox
+              clauses = "\n  ".join(f'{t}({south},{west},{north},{east});' for t in TAGS)
+              q = f"""
+              [out:json][timeout:25];
+              (
+                {clauses}
+              );
+              out center tags;
+              """
+              req = urllib.request.Request(
+                  url, data=q.encode("utf-8"), headers={"User-Agent": "SkiInfoApp-Services/0.1"}
+              )
+              with urllib.request.urlopen(req, timeout=60) as resp:
+                  return json.load(resp)
+
+          def query(bbox):
+              last_exc = None
+              for mirror in MIRRORS:
+                  for attempt in range(3):
+                      try:
+                          return query_once(mirror, bbox)
+                      except Exception as exc:
+                          last_exc = exc
+                          wait = 15 * (attempt + 1)
+                          print(f"  ({mirror} attempt {attempt + 1} failed: {exc}, retrying in {wait}s)")
+                          time.sleep(wait)
+              raise last_exc
+
+          def station_bbox(station):
+              lons, lats = [], []
+              for r in station.get("runs", []):
+                  for part in (r.get("geom") or []):
+                      for p in part:
+                          lons.append(p[0]); lats.append(p[1])
+              for l in station.get("lifts", []):
+                  for part in (l.get("geom") or []):
+                      for p in part:
+                          lons.append(p[0]); lats.append(p[1])
+              if not lons:
+                  return None
+              # ~300m buffer so amenities just outside the piste/lift envelope
+              # (e.g. a base-lodge restaurant) aren't missed.
+              buf = 0.003
+              return (min(lats) - buf, min(lons) - buf, max(lats) + buf, max(lons) + buf)
+
+          def category_for(tags):
+              amenity = tags.get("amenity")
+              if amenity in ("restaurant", "cafe", "bar", "fast_food", "toilets", "first_aid", "pharmacy"):
+                  return amenity
+              if tags.get("tourism") == "alpine_hut":
+                  return "alpine_hut"
+              if tags.get("shop") in ("sports", "ski"):
+                  return "sports"
+              return None
+
+          def build_records(elements):
+              records = []
+              seen = set()
+              for el in elements:
+                  tags = el.get("tags", {})
+                  cat = category_for(tags)
+                  if not cat:
+                      continue
+                  lat = el.get("lat") or (el.get("center") or {}).get("lat")
+                  lon = el.get("lon") or (el.get("center") or {}).get("lon")
+                  if lat is None or lon is None:
+                      continue
+                  name = tags.get("name")
+                  # Dedup exact node+way pairs for the same real-world feature.
+                  dedup_key = (cat, name, round(lat, 4), round(lon, 4))
+                  if dedup_key in seen:
+                      continue
+                  seen.add(dedup_key)
+                  rec = {"category": cat, "lat": round(lat, 5), "lon": round(lon, 5)}
+                  if name:
+                      rec["name"] = name
+                  if tags.get("phone"):
+                      rec["phone"] = tags["phone"]
+                  if tags.get("website") or tags.get("contact:website"):
+                      rec["website"] = tags.get("website") or tags.get("contact:website")
+                  if tags.get("opening_hours"):
+                      rec["opening_hours"] = tags["opening_hours"]
+                  records.append(rec)
+              return records
+
+          stations = []
+          for path in sorted(glob.glob("docs/data/*.json")):
+              with open(path, encoding="utf-8") as f:
+                  d = json.load(f)
+              if d.get("country_code") == COUNTRY:
+                  stations.append(d)
+          stations.sort(key=lambda s: s["id"])
+          batch = stations[OFFSET:OFFSET + LIMIT]
+
+          print(f"Processing {len(batch)} of {len(stations)} {COUNTRY} stations (offset={OFFSET}, limit={LIMIT})")
+
+          result = {}
+          for station in batch:
+              print(f"\n--- {station['name']} ({station['id']}) ---")
+              bbox = station_bbox(station)
+              if not bbox:
+                  print("  no geometry, skipping")
+                  continue
+              try:
+                  data = query(bbox)
+              except Exception as exc:
+                  print(f"  ERROR: {exc}")
+                  continue
+              records = build_records(data.get("elements", []))
+              counts = Counter(r["category"] for r in records)
+              print(f"  {len(records)} services: {dict(counts)}")
+              result[station["id"]] = records
+              time.sleep(10)
+
+          print("===SERVICES_JSON_START===")
+          print(json.dumps(result))
+          print("===SERVICES_JSON_END===")
           PY

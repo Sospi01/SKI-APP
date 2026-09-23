@@ -26,7 +26,15 @@
     --diff-other: hsl(0 0% 55%);
     --map-halo: rgba(255,255,255,0.88);
     --map-lift-color: #4a3aa7;
-    --map-service-color: #0f9b8e;
+    --svc-restaurant: #d9480f;
+    --svc-cafe: #8a5a2b;
+    --svc-bar: #9c2963;
+    --svc-fast_food: #c99400;
+    --svc-toilets: #2f7fd1;
+    --svc-first_aid: #d92b2b;
+    --svc-pharmacy: #1f9d6b;
+    --svc-alpine_hut: #6b4a33;
+    --svc-sports: #0e8577;
     --map-border-color: #e0a020;
     --shadow: 0 24px 60px -24px rgba(16,22,28,0.35);
     --hero-1: #163a5c;
@@ -54,7 +62,15 @@
       --diff-other: hsl(0 0% 55%);
       --map-halo: rgba(5,7,10,0.85);
       --map-lift-color: #9085e9;
-      --map-service-color: #3dd9c4;
+      --svc-restaurant: #ff8c4a;
+      --svc-cafe: #c9915a;
+      --svc-bar: #e068c0;
+      --svc-fast_food: #f0c34d;
+      --svc-toilets: #6ab3f5;
+      --svc-first_aid: #ff6b6b;
+      --svc-pharmacy: #4fd699;
+      --svc-alpine_hut: #b08968;
+      --svc-sports: #4fe0cf;
       --map-border-color: #f0b73a;
       --hero-1: #0b2036;
       --hero-2: #164a80;
@@ -81,7 +97,15 @@
     --diff-other: hsl(0 0% 55%);
     --map-halo: rgba(5,7,10,0.85);
     --map-lift-color: #9085e9;
-    --map-service-color: #3dd9c4;
+    --svc-restaurant: #ff8c4a;
+    --svc-cafe: #c9915a;
+    --svc-bar: #e068c0;
+    --svc-fast_food: #f0c34d;
+    --svc-toilets: #6ab3f5;
+    --svc-first_aid: #ff6b6b;
+    --svc-pharmacy: #4fd699;
+    --svc-alpine_hut: #b08968;
+    --svc-sports: #4fe0cf;
     --map-border-color: #f0b73a;
     --hero-1: #0b2036;
     --hero-2: #164a80;
@@ -294,7 +318,7 @@
   .map-lift-casing { fill: none; stroke: var(--map-halo); stroke-width: 3.4; stroke-linecap: round; vector-effect: non-scaling-stroke; }
   .map-lift { fill: none; stroke: var(--map-lift-color); stroke-width: 1.8; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
   .map-lift-station { fill: var(--map-lift-color); stroke: var(--map-halo); stroke-width: 0.8; vector-effect: non-scaling-stroke; }
-  .map-service { fill: var(--map-service-color); stroke: var(--map-halo); stroke-width: 0.9; vector-effect: non-scaling-stroke; cursor: pointer; transition: stroke-width 0.1s ease; }
+  .map-service { stroke: var(--map-halo); stroke-width: 1; vector-effect: non-scaling-stroke; cursor: pointer; transition: stroke-width 0.1s ease; }
   .map-service.service-hovered { stroke-width: 1.8; }
   .map-service-icon { font-family: 'IBM Plex Sans', sans-serif; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
   .map-hit { fill: none; stroke: transparent; stroke-width: 9; pointer-events: none; vector-effect: non-scaling-stroke; }
@@ -328,7 +352,7 @@
   .map-legend .key { display: inline-flex; align-items: center; gap: 4px; }
   .map-legend .swatch { width: 12px; height: 3px; border-radius: 2px; display: inline-block; }
   .map-legend .swatch.lift { background: none; border-top: 1.5px dashed var(--map-lift-color); width: 12px; height: 0; }
-  .map-legend .swatch.service { background: var(--map-service-color); width: 8px; height: 8px; border-radius: 50%; }
+  .map-legend .swatch.service { width: 8px; height: 8px; border-radius: 50%; }
 
   #tooltip {
     position: fixed; z-index: 20;
@@ -537,15 +561,15 @@
   // OpenStreetMap/Overpass -- curated to what's actually useful while
   // skiing, not a general business directory.
   var SERVICE_CATEGORIES = {
-    restaurant: { label: "Restaurante", icon: "🍴" },
-    cafe: { label: "Cafetería", icon: "☕" },
-    bar: { label: "Bar", icon: "🍹" },
-    fast_food: { label: "Comida rápida", icon: "🍔" },
-    toilets: { label: "Baños", icon: "🚻" },
-    first_aid: { label: "Primeros auxilios", icon: "⛑️" },
-    pharmacy: { label: "Farmacia", icon: "💊" },
-    alpine_hut: { label: "Refugio de montaña", icon: "🏔️" },
-    sports: { label: "Tienda / alquiler de material", icon: "🎿" }
+    restaurant: { label: "Restaurante", icon: "🍴", color: "var(--svc-restaurant)" },
+    cafe: { label: "Cafetería", icon: "☕", color: "var(--svc-cafe)" },
+    bar: { label: "Bar", icon: "🍹", color: "var(--svc-bar)" },
+    fast_food: { label: "Comida rápida", icon: "🍔", color: "var(--svc-fast_food)" },
+    toilets: { label: "Baños", icon: "🚻", color: "var(--svc-toilets)" },
+    first_aid: { label: "Primeros auxilios", icon: "⛑️", color: "var(--svc-first_aid)" },
+    pharmacy: { label: "Farmacia", icon: "💊", color: "var(--svc-pharmacy)" },
+    alpine_hut: { label: "Refugio de montaña", icon: "🏔️", color: "var(--svc-alpine_hut)" },
+    sports: { label: "Tienda / alquiler de material", icon: "🎿", color: "var(--svc-sports)" }
   };
   function formatDuration(seconds) {
     if (!seconds) return null;
@@ -1221,8 +1245,8 @@
   // Same fixed-apparent-size trick as liftStationRadius, for service markers
   // and the icon glyph drawn on top of each one (font-size scales with zoom
   // just like a shape's radius would, for the same reason).
-  var SERVICE_MARKER_BASE_R = 3.6;
-  var SERVICE_ICON_BASE_SIZE = 4.6;
+  var SERVICE_MARKER_BASE_R = 6.5;
+  var SERVICE_ICON_BASE_SIZE = 8.5;
   function serviceMarkerRadius(zoom) { return SERVICE_MARKER_BASE_R / zoom; }
   function serviceIconSize(zoom) { return SERVICE_ICON_BASE_SIZE / zoom; }
 
@@ -1347,6 +1371,7 @@
       dot.setAttribute('cx', p[0].toFixed(1)); dot.setAttribute('cy', p[1].toFixed(1));
       dot.setAttribute('r', serviceMarkerRadius(1).toFixed(2));
       dot.setAttribute('class', 'map-service'); dot.setAttribute('tabindex', '0');
+      dot.style.fill = cat.color;
       content.appendChild(dot);
       serviceMarkers.push(dot);
 
@@ -1403,12 +1428,16 @@
     var liftSw = document.createElement('span'); liftSw.className = 'swatch lift';
     liftItem.appendChild(liftSw); liftItem.appendChild(document.createTextNode('Remonte'));
     legend.appendChild(liftItem);
-    if (serviceMarkers.length) {
+    var presentServiceCats = Object.keys(SERVICE_CATEGORIES).filter(function (k) {
+      return (raw.services || []).some(function (s) { return s.category === k; });
+    });
+    presentServiceCats.forEach(function (k) {
+      var cat = SERVICE_CATEGORIES[k];
       var svcItem = document.createElement('span'); svcItem.className = 'key';
-      var svcSw = document.createElement('span'); svcSw.className = 'swatch service';
-      svcItem.appendChild(svcSw); svcItem.appendChild(document.createTextNode('Servicios'));
+      var svcSw = document.createElement('span'); svcSw.className = 'swatch service'; svcSw.style.background = cat.color;
+      svcItem.appendChild(svcSw); svcItem.appendChild(document.createTextNode(cat.icon + ' ' + cat.label));
       legend.appendChild(svcItem);
-    }
+    });
 
     mapState = { svg: svg, content: content, vbW: vbW, vbH: vbH, scale: scale, zoom: 1, tx: 0, ty: 0, angle: 0, updateScaleBar: updateScaleBar, features: features, liftStationDots: liftStationDots, serviceMarkers: serviceMarkers, serviceIcons: serviceIcons };
     updateScaleBar(1);

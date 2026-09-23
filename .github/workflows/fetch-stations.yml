@@ -227,20 +227,22 @@ jobs:
               req = urllib.request.Request(
                   url, data=q.encode("utf-8"), headers={"User-Agent": "SkiInfoApp-Services/0.1"}
               )
-              with urllib.request.urlopen(req, timeout=60) as resp:
+              with urllib.request.urlopen(req, timeout=30) as resp:
                   return json.load(resp)
 
           def query(bbox):
+              attempts = [(m, a) for m in MIRRORS for a in range(2)]
               last_exc = None
-              for mirror in MIRRORS:
-                  for attempt in range(3):
-                      try:
-                          return query_once(mirror, bbox)
-                      except Exception as exc:
-                          last_exc = exc
-                          wait = 15 * (attempt + 1)
-                          print(f"  ({mirror} attempt {attempt + 1} failed: {exc}, retrying in {wait}s)")
-                          time.sleep(wait)
+              for i, (mirror, attempt) in enumerate(attempts):
+                  try:
+                      return query_once(mirror, bbox)
+                  except Exception as exc:
+                      last_exc = exc
+                      if i == len(attempts) - 1:
+                          break
+                      wait = 10 * (attempt + 1)
+                      print(f"  ({mirror} attempt {attempt + 1} failed: {exc}, retrying in {wait}s)")
+                      time.sleep(wait)
               raise last_exc
 
           def station_bbox(station):

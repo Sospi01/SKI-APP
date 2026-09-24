@@ -46,7 +46,9 @@ completo y committeado; solo falta que ese workflow lo compile.
 ## Estructura
 
 - `app/src/main/java/com/sospedra/skiinfo/MainActivity.java` — el `WebView`,
-  manejo del botón atrás, pantalla de "sin conexión" con reintento.
+  manejo del botón atrás, pantalla de "sin conexión" con reintento, y
+  apertura de los enlaces externos (web oficial, Booking…) en el navegador
+  del sistema mediante Custom Tabs en vez de dentro del `WebView`.
 - `app/src/main/res/` — iconos (adaptativos + legacy), tema, strings.
 - Package: `com.sospedra.skiinfo` — **irreversible una vez publicado**.
 

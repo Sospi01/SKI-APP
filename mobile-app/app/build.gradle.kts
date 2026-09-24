@@ -11,8 +11,8 @@ android {
         applicationId = "com.sospedra.skiinfo"
         minSdk = 24
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.0.2"
+        versionCode = 5
+        versionName = "1.0.3"
     }
 
     val keystorePath = System.getenv("SKIINFO_KEYSTORE_PATH")
@@ -48,6 +48,7 @@ android {
 dependencies {
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.activity:activity:1.9.1")
+    implementation("androidx.browser:browser:1.8.0")
     implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
     implementation("com.google.firebase:firebase-analytics")
 }

@@ -362,6 +362,19 @@
   .seg-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
   .seg-count { font-weight: 500; font-size: 11px; color: var(--text-muted); margin-left: 2px; }
   .catalog-panel[hidden] { display: none; }
+
+  .trip-link {
+    display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+    border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2);
+    color: var(--text-primary); text-decoration: none;
+  }
+  .trip-link:hover, .trip-link:focus-visible { border-color: var(--accent); outline: none; }
+  .trip-icon { width: 26px; height: 26px; flex-shrink: 0; color: var(--accent); }
+  .trip-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .trip-title { font-size: 14px; font-weight: 600; }
+  .trip-sub { font-size: 11.5px; color: var(--text-muted); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .trip-arrow { color: var(--text-muted); font-size: 15px; flex-shrink: 0; }
+  .trip-note { font-size: 10.5px; color: var(--text-muted); margin: 8px 2px 0; line-height: 1.4; }
   .catalog-empty { padding: 18px 12px; font-size: 12.5px; color: var(--text-muted); text-align: center; }
   #map-svg, #country-map-svg { width: 100%; height: auto; display: block; touch-action: none; cursor: grab; user-select: none; }
   #map-svg.dragging, #country-map-svg.dragging { cursor: grabbing; }
@@ -553,6 +566,19 @@
         </div>
       </div>
     </div>
+
+    <section id="trip-section" hidden>
+      <div class="section-head"><h2>Planifica tu viaje</h2></div>
+      <a class="trip-link" id="booking-link" href="#" target="_blank" rel="noopener">
+        <svg class="trip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18.5V6.5M3 14h18v4.5M21 14v-2.5a3 3 0 0 0-3-3h-7V14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="10.5" r="1.8" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+        <span class="trip-text">
+          <span class="trip-title">Alojamiento cerca</span>
+          <span class="trip-sub" id="booking-sub">Buscar en Booking.com</span>
+        </span>
+        <span class="trip-arrow" aria-hidden="true">↗</span>
+      </a>
+      <p class="trip-note" id="booking-disclosure" hidden>Enlace de afiliado: si reservas, Ski Info puede recibir una comisión, sin coste extra para ti.</p>
+    </section>
 
     <section>
       <div class="section-head"><h2>Terreno por dificultad</h2></div>
@@ -807,6 +833,34 @@
       if (count <= COUNTRY_TILE_MAX_COUNT) { zoom = z; break; }
     }
     return zoom;
+  }
+
+  // Affiliate deep-link prefix from the network's link generator (Booking's
+  // programme runs through CJ in Europe, Awin elsewhere); the encoded Booking
+  // URL is appended to it. Empty = plain Booking link, no commission.
+  var AFFILIATE = {
+    bookingDeepLinkPrefix: ''
+  };
+
+  // Search Booking by the resort's own name stripped of generic words
+  // ("Estació d'Esquí Baqueira-Beret" -> "Baqueira-Beret"), taking the first
+  // Latin-script part of names like "local script, English name". OSM's
+  // locality is only a fallback: it's sometimes an odd municipality name
+  // that Booking won't recognise as the resort.
+  function bookingSearchQuery(raw) {
+    var parts = (raw.name || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    var place = parts.filter(function (s) { return /[A-Za-zÀ-ɏ]/.test(s); })[0] || '';
+    place = place.replace(/\s*\([^)]*\)/g, '').replace(GENERIC_RESORT_WORDS_PREFIX, '');
+    var prev;
+    do { prev = place; place = place.replace(GENERIC_RESORT_WORDS_SUFFIX, ''); } while (place !== prev);
+    place = place.trim() || raw.locality || parts[0] || '';
+    return [place, raw.region].filter(Boolean).join(', ');
+  }
+  var GENERIC_RESORT_WORDS_PREFIX = /^(estaci[oó]n? (d'|de )?esqu[ií]( (y|i) (de )?(monta[ñn]a|muntanya))?|estaci[oó]n? (invernal|de muntanya)( y de monta[ñn]a)?|station (de ski|du)|centro (de )?ski|ski center|ski centre|skigebiet)( del?)?\s+/i;
+  var GENERIC_RESORT_WORDS_SUFFIX = /\s+(ski resort|ski area|mountain resort|ski centre|ski center|skiarea|ski bowl|resort)$/i;
+  function bookingUrl(raw) {
+    var dest = 'https://www.booking.com/searchresults.html?ss=' + encodeURIComponent(bookingSearchQuery(raw));
+    return AFFILIATE.bookingDeepLinkPrefix ? AFFILIATE.bookingDeepLinkPrefix + encodeURIComponent(dest) : dest;
   }
 
   function fmt(n, d) {
@@ -1144,6 +1198,7 @@
     ['badges', 'chart-difficulty', 'chart-lifts', 'runs-list', 'lifts-list', 'services-list', 'quality-list', 'run-filters', 'lift-filters', 'service-filters', 'map-legend', 'domain-links']
       .forEach(function (elId) { document.getElementById(elId).innerHTML = ''; });
     document.getElementById('domain-section').hidden = true;
+    document.getElementById('trip-section').hidden = true;
 
     fetch('data/' + id + '.json')
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
@@ -2582,6 +2637,17 @@
     var siteLink = document.getElementById('h-site');
     if (raw.websites && raw.websites.length) { siteLink.href = raw.websites[0]; siteLink.hidden = false; }
     else { siteLink.hidden = true; }
+
+    var bookingQuery = bookingSearchQuery(raw);
+    if (bookingQuery) {
+      var bookingLink = document.getElementById('booking-link');
+      var isAffiliate = !!AFFILIATE.bookingDeepLinkPrefix;
+      bookingLink.href = bookingUrl(raw);
+      bookingLink.rel = isAffiliate ? 'noopener sponsored' : 'noopener';
+      setText('booking-sub', 'Buscar en Booking.com · ' + bookingQuery);
+      document.getElementById('booking-disclosure').hidden = !isAffiliate;
+      document.getElementById('trip-section').hidden = false;
+    }
 
     var totalKm = 0;
     raw.runs.forEach(function (r) { if (r.length_m) totalKm += r.length_m; });

@@ -1,0 +1,99 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [10.960, 46.958, 1400],
+          [10.962, 46.960, 1900]
+        ]
+      },
+      "properties": {
+        "type": "Lift",
+        "id": "lift-1",
+        "liftType": "gondola",
+        "status": "operating",
+        "access": null,
+        "name": "Sample Gondola",
+        "ref": "1",
+        "refFRCAIRN": null,
+        "description": null,
+        "oneway": false,
+        "occupancy": 8,
+        "capacity": 2400,
+        "duration": 420,
+        "detachable": true,
+        "bubble": true,
+        "heating": false,
+        "tunnel": null,
+        "stations": [],
+        "skiAreas": [
+          {
+            "type": "Feature",
+            "geometry": { "type": "Point", "coordinates": [10.9646, 46.9658] },
+            "properties": {
+              "type": "SkiArea",
+              "id": "skiarea-1",
+              "name": "Sample Resort",
+              "activities": ["downhill"],
+              "status": "operating"
+            }
+          }
+        ],
+        "sources": [],
+        "websites": [],
+        "wikidataID": null,
+        "places": []
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [10.965, 46.965, 2000],
+          [10.966, 46.966, 2100]
+        ]
+      },
+      "properties": {
+        "type": "Lift",
+        "id": "lift-2",
+        "liftType": "t-bar",
+        "status": "operating",
+        "access": "private",
+        "name": null,
+        "ref": null,
+        "refFRCAIRN": null,
+        "description": null,
+        "oneway": true,
+        "occupancy": 1,
+        "capacity": 900,
+        "duration": 180,
+        "detachable": false,
+        "bubble": false,
+        "heating": false,
+        "tunnel": null,
+        "stations": [],
+        "skiAreas": [
+          {
+            "type": "Feature",
+            "geometry": { "type": "Point", "coordinates": [10.9646, 46.9658] },
+            "properties": {
+              "type": "SkiArea",
+              "id": "skiarea-1",
+              "name": "Sample Resort",
+              "activities": ["downhill"],
+              "status": "operating"
+            }
+          }
+        ],
+        "sources": [],
+        "websites": [],
+        "wikidataID": null,
+        "places": []
+      }
+    }
+  ]
+}

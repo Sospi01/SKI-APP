@@ -1,0 +1,64 @@
+name: Data descriptive analysis
+
+on:
+  push:
+    branches:
+      - claude/ski-stations-database-rhvohj
+    paths:
+      - .github/workflows/data-analysis.yml
+  workflow_dispatch: {}
+
+jobs:
+  build-and-analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: data-pipeline
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install -r requirements.txt
+
+      - name: Download OpenSkiMap data and build the database
+        run: python -m ski_pipeline.cli --db data/ski_info.db -v
+
+      - name: Count qualifying ski areas per country at piste-km thresholds
+        run: |
+          python - <<'PY'
+          import sqlite3
+
+          conn = sqlite3.connect("data/ski_info.db")
+          conn.row_factory = sqlite3.Row
+
+          def q(sql, params=()):
+              return [dict(r) for r in conn.execute(sql, params).fetchall()]
+
+          countries = [
+              "JP", "KR", "CN", "NZ", "AU", "CL", "AR", "RU", "TR", "GR",
+              "UA", "EE", "LV", "LT", "BY", "IR", "IN", "KG", "KZ", "AM",
+              "AZ", "LB",
+          ]
+          thresholds = [0, 5, 10, 20, 30, 50, 75, 100]
+          print("===COUNTRY_COUNTS_START===")
+          for cc in countries:
+              rows = q(
+                  """
+                  SELECT (SELECT ROUND(SUM(length_km), 1) FROM ski_area_run_stats WHERE ski_area_id = sa.id AND activity = 'downhill') AS piste_km
+                  FROM ski_areas sa
+                  WHERE sa.country_code = ? AND sa.activities LIKE '%downhill%'
+                    AND sa.status = 'operating'
+                    AND (SELECT COUNT(*) FROM run_ski_areas WHERE ski_area_id = sa.id) > 0
+                    AND (SELECT COUNT(*) FROM lift_ski_areas WHERE ski_area_id = sa.id) > 0
+                  """,
+                  (cc,),
+              )
+              kms = [r["piste_km"] or 0 for r in rows]
+              counts = {t: sum(1 for k in kms if k >= t) for t in thresholds}
+              print(f"{cc} (n={len(kms)}): " + ", ".join(f">={t}km:{c}" for t, c in counts.items()))
+          print("===COUNTRY_COUNTS_END===")
+          PY

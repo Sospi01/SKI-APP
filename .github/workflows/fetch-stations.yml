@@ -1,0 +1,347 @@
+name: Fetch ski stations (batch)
+
+on:
+  push:
+    branches:
+      - claude/ski-stations-database-rhvohj
+    paths:
+      - .github/workflows/fetch-stations.yml
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "fetch_stations (default: OpenSkiMap runs/lifts) or fetch_services (Overpass amenities for existing docs/data stations)"
+        required: false
+        default: "fetch_stations"
+      country:
+        description: "ISO country code to fetch (e.g. ES, FR, AT, IT, CH, AD)"
+        required: false
+        default: "ES"
+      min_piste_km:
+        description: "Skip ski areas with less total piste km than this"
+        required: false
+        default: "0"
+      offset:
+        description: "Offset into the country's station list (ordered by piste km desc for fetch_stations, by id for fetch_services)"
+        required: false
+        default: "0"
+      limit:
+        description: "How many stations to process in this run"
+        required: false
+        default: "500"
+      only_ids:
+        description: "fetch_services only: comma-separated station ids to retry (skips offset/limit selection)"
+        required: false
+        default: ""
+
+jobs:
+  build-and-fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: data-pipeline
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install -r requirements.txt
+
+      - name: Download OpenSkiMap data and build the database
+        if: ${{ inputs.mode != 'fetch_services' }}
+        run: python -m ski_pipeline.cli --db data/ski_info.db -v
+
+      - name: Fetch stations
+        if: ${{ inputs.mode != 'fetch_services' }}
+        env:
+          COUNTRY: ${{ inputs.country || 'ES' }}
+          MIN_PISTE_KM: ${{ inputs.min_piste_km || '0' }}
+          OFFSET: ${{ inputs.offset || '0' }}
+          LIMIT: ${{ inputs.limit || '500' }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import sqlite3
+
+          COUNTRY = os.environ["COUNTRY"]
+          MIN_PISTE_KM = float(os.environ["MIN_PISTE_KM"])
+          OFFSET = int(os.environ["OFFSET"])
+          LIMIT = int(os.environ["LIMIT"])
+
+          conn = sqlite3.connect("data/ski_info.db")
+          conn.row_factory = sqlite3.Row
+
+          def rows(sql, params=()):
+              return [dict(r) for r in conn.execute(sql, params).fetchall()]
+
+          def simplify_geometry(geometry_json):
+              if not geometry_json:
+                  return None
+              geom = json.loads(geometry_json)
+              gtype = geom.get("type")
+              coords = geom.get("coordinates")
+              if gtype == "LineString":
+                  parts = [coords]
+              elif gtype == "MultiLineString":
+                  parts = coords
+              elif gtype == "Polygon":
+                  parts = coords[:1]
+              else:
+                  return None
+              # OpenSkiMap embeds elevation as a third coordinate (lon, lat, ele) on
+              # run/lift LineStrings -- keep it (rounded to the nearest 0.1m) so the
+              # app can draw an elevation profile, instead of dropping it like the
+              # old [lon, lat]-only simplification did.
+              def simplify_point(c):
+                  if len(c) >= 3:
+                      return [round(c[0], 5), round(c[1], 5), round(c[2], 1)]
+                  return [round(c[0], 5), round(c[1], 5)]
+              return [[simplify_point(c) for c in part] for part in parts]
+
+          # total_piste_km counts downhill terrain only -- some ski areas (Nordic-heavy
+          # ones especially) bundle huge cross-country trail networks into the same
+          # run_stats rows, which would otherwise inflate the threshold/ordering with
+          # areas that have little or no actual downhill skiing.
+          stations = rows(
+              """
+              SELECT sa.*,
+                     COALESCE((SELECT SUM(length_km) FROM ski_area_run_stats WHERE ski_area_id = sa.id AND activity = 'downhill'), 0) AS total_piste_km
+              FROM ski_areas sa
+              WHERE sa.country_code = ? AND sa.activities LIKE '%downhill%'
+                AND sa.status = 'operating'
+                AND (SELECT COUNT(*) FROM run_ski_areas WHERE ski_area_id = sa.id) > 0
+                AND (SELECT COUNT(*) FROM lift_ski_areas WHERE ski_area_id = sa.id) > 0
+                AND COALESCE((SELECT SUM(length_km) FROM ski_area_run_stats WHERE ski_area_id = sa.id AND activity = 'downhill'), 0) >= ?
+              ORDER BY total_piste_km DESC
+              LIMIT ? OFFSET ?
+              """,
+              (COUNTRY, MIN_PISTE_KM, LIMIT, OFFSET),
+          )
+
+          print(f"Processing {len(stations)} stations (country={COUNTRY}, min_piste_km={MIN_PISTE_KM}, offset={OFFSET}, limit={LIMIT})")
+
+          result = []
+          for area in stations:
+              print(f"--- {area['name']} ---")
+              area_dict = dict(area)
+              area_dict.pop("total_piste_km", None)
+              area_dict["run_stats"] = rows(
+                  "SELECT * FROM ski_area_run_stats WHERE ski_area_id = ? ORDER BY activity, difficulty",
+                  (area["id"],),
+              )
+              area_dict["lift_stats"] = rows(
+                  "SELECT * FROM ski_area_lift_stats WHERE ski_area_id = ? ORDER BY lift_type",
+                  (area["id"],),
+              )
+              area_dict["runs"] = rows(
+                  """
+                  SELECT r.name, r.ref, r.difficulty, r.uses, r.grooming, r.gladed,
+                         r.lit, r.snowmaking, r.patrolled,
+                         r.geometry_json, r.length_m, r.ascent_m, r.descent_m, r.vertical_m,
+                         r.min_elevation_m, r.max_elevation_m, r.avg_pitch_percent, r.max_pitch_percent
+                  FROM runs r
+                  JOIN run_ski_areas rsa ON rsa.run_id = r.id
+                  WHERE rsa.ski_area_id = ? AND (r.status IS NULL OR r.status = 'operating')
+                    AND (r.uses IS NULL OR r.uses LIKE '%downhill%')
+                  ORDER BY r.difficulty, r.length_m DESC
+                  """,
+                  (area["id"],),
+              )
+              for r in area_dict["runs"]:
+                  r["geom"] = simplify_geometry(r.pop("geometry_json"))
+
+              area_dict["lifts"] = rows(
+                  """
+                  SELECT l.name, l.ref, l.lift_type, l.access, l.capacity, l.occupancy,
+                         l.duration_s, l.detachable, l.bubble, l.heating,
+                         l.geometry_json, l.length_m, l.vertical_m
+                  FROM lifts l
+                  JOIN lift_ski_areas lsa ON lsa.lift_id = l.id
+                  WHERE lsa.ski_area_id = ? AND (l.status IS NULL OR l.status = 'operating')
+                  ORDER BY l.length_m DESC
+                  """,
+                  (area["id"],),
+              )
+              for l in area_dict["lifts"]:
+                  l["geom"] = simplify_geometry(l.pop("geometry_json"))
+
+              area_dict["websites"] = json.loads(area_dict["websites"] or "[]")
+              result.append(area_dict)
+
+          print("===BATCH_JSON_START===")
+          print(json.dumps(result))
+          print("===BATCH_JSON_END===")
+          PY
+
+      # Separate data source from the above: OpenStreetMap amenity tags via the
+      # Overpass API, queried directly against the bounding box of each existing
+      # docs/data station (no need to rebuild the OpenSkiMap database for this).
+      - name: Fetch station services (Overpass)
+        if: ${{ inputs.mode == 'fetch_services' }}
+        working-directory: .
+        env:
+          COUNTRY: ${{ inputs.country || 'ES' }}
+          OFFSET: ${{ inputs.offset || '0' }}
+          LIMIT: ${{ inputs.limit || '500' }}
+          ONLY_IDS: ${{ inputs.only_ids || '' }}
+        run: |
+          python3 - <<'PY'
+          import glob
+          import json
+          import os
+          import time
+          import urllib.request
+          from collections import Counter
+
+          COUNTRY = os.environ["COUNTRY"]
+          OFFSET = int(os.environ["OFFSET"])
+          LIMIT = int(os.environ["LIMIT"])
+          ONLY_IDS = set(x.strip() for x in os.environ.get("ONLY_IDS", "").split(",") if x.strip())
+
+          # Curated for "useful while skiing", not a general business directory:
+          # food/drink, toilets, first aid, pharmacy, mountain huts, and gear
+          # rental/shops. Deliberately excludes banks/ATMs/fuel/parking/hotels --
+          # for a resort that's really a whole town (seen testing US stations),
+          # those pull in generic city amenities unrelated to the slopes.
+          TAGS = [
+              'node["amenity"~"restaurant|cafe|bar|fast_food|toilets|first_aid|pharmacy"]',
+              'way["amenity"~"restaurant|cafe|bar|fast_food|toilets|first_aid|pharmacy"]',
+              'node["tourism"="alpine_hut"]',
+              'way["tourism"="alpine_hut"]',
+              'node["shop"~"sports|ski"]',
+              'way["shop"~"sports|ski"]',
+          ]
+
+          MIRRORS = [
+              "https://overpass-api.de/api/interpreter",
+              "https://overpass.kumi.systems/api/interpreter",
+          ]
+
+          def query_once(url, bbox):
+              south, west, north, east = bbox
+              clauses = "\n  ".join(f'{t}({south},{west},{north},{east});' for t in TAGS)
+              q = f"""
+              [out:json][timeout:25];
+              (
+                {clauses}
+              );
+              out center tags;
+              """
+              req = urllib.request.Request(
+                  url, data=q.encode("utf-8"), headers={"User-Agent": "SkiInfoApp-Services/0.1"}
+              )
+              with urllib.request.urlopen(req, timeout=30) as resp:
+                  return json.load(resp)
+
+          def query(bbox):
+              attempts = [(m, a) for m in MIRRORS for a in range(2)]
+              last_exc = None
+              for i, (mirror, attempt) in enumerate(attempts):
+                  try:
+                      return query_once(mirror, bbox)
+                  except Exception as exc:
+                      last_exc = exc
+                      if i == len(attempts) - 1:
+                          break
+                      wait = 10 * (attempt + 1)
+                      print(f"  ({mirror} attempt {attempt + 1} failed: {exc}, retrying in {wait}s)")
+                      time.sleep(wait)
+              raise last_exc
+
+          def station_bbox(station):
+              lons, lats = [], []
+              for r in station.get("runs", []):
+                  for part in (r.get("geom") or []):
+                      for p in part:
+                          lons.append(p[0]); lats.append(p[1])
+              for l in station.get("lifts", []):
+                  for part in (l.get("geom") or []):
+                      for p in part:
+                          lons.append(p[0]); lats.append(p[1])
+              if not lons:
+                  return None
+              # ~300m buffer so amenities just outside the piste/lift envelope
+              # (e.g. a base-lodge restaurant) aren't missed.
+              buf = 0.003
+              return (min(lats) - buf, min(lons) - buf, max(lats) + buf, max(lons) + buf)
+
+          def category_for(tags):
+              amenity = tags.get("amenity")
+              if amenity in ("restaurant", "cafe", "bar", "fast_food", "toilets", "first_aid", "pharmacy"):
+                  return amenity
+              if tags.get("tourism") == "alpine_hut":
+                  return "alpine_hut"
+              if tags.get("shop") in ("sports", "ski"):
+                  return "sports"
+              return None
+
+          def build_records(elements):
+              records = []
+              seen = set()
+              for el in elements:
+                  tags = el.get("tags", {})
+                  cat = category_for(tags)
+                  if not cat:
+                      continue
+                  lat = el.get("lat") or (el.get("center") or {}).get("lat")
+                  lon = el.get("lon") or (el.get("center") or {}).get("lon")
+                  if lat is None or lon is None:
+                      continue
+                  name = tags.get("name")
+                  # Dedup exact node+way pairs for the same real-world feature.
+                  dedup_key = (cat, name, round(lat, 4), round(lon, 4))
+                  if dedup_key in seen:
+                      continue
+                  seen.add(dedup_key)
+                  rec = {"category": cat, "lat": round(lat, 5), "lon": round(lon, 5)}
+                  if name:
+                      rec["name"] = name
+                  if tags.get("phone"):
+                      rec["phone"] = tags["phone"]
+                  if tags.get("website") or tags.get("contact:website"):
+                      rec["website"] = tags.get("website") or tags.get("contact:website")
+                  if tags.get("opening_hours"):
+                      rec["opening_hours"] = tags["opening_hours"]
+                  records.append(rec)
+              return records
+
+          stations = []
+          for path in sorted(glob.glob("docs/data/*.json")):
+              with open(path, encoding="utf-8") as f:
+                  d = json.load(f)
+              if d.get("country_code") == COUNTRY:
+                  stations.append(d)
+          stations.sort(key=lambda s: s["id"])
+
+          if ONLY_IDS:
+              batch = [s for s in stations if s["id"] in ONLY_IDS]
+              print(f"Processing {len(batch)} of {len(ONLY_IDS)} requested ids (only_ids mode)")
+          else:
+              batch = stations[OFFSET:OFFSET + LIMIT]
+              print(f"Processing {len(batch)} of {len(stations)} {COUNTRY} stations (offset={OFFSET}, limit={LIMIT})")
+
+          result = {}
+          for station in batch:
+              print(f"\n--- {station['name']} ({station['id']}) ---")
+              bbox = station_bbox(station)
+              if not bbox:
+                  print("  no geometry, skipping")
+                  continue
+              try:
+                  data = query(bbox)
+              except Exception as exc:
+                  print(f"  ERROR: {exc}")
+                  continue
+              records = build_records(data.get("elements", []))
+              counts = Counter(r["category"] for r in records)
+              print(f"  {len(records)} services: {dict(counts)}")
+              result[station["id"]] = records
+              time.sleep(10)
+
+          print("===SERVICES_JSON_START===")
+          print(json.dumps(result))
+          print("===SERVICES_JSON_END===")
+          PY

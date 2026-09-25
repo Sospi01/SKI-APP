@@ -1,0 +1,45 @@
+rules_version = '2';
+
+// Ski Info usage stats. Paste into Firebase console -> Firestore Database -> Rules.
+// The app (docs/index.html) may only CREATE well-formed events; nobody can edit
+// or delete them, and only the owner's Google account can read them (stats.html).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email == 'fsospedra2@gmail.com';
+    }
+
+    function optString(d, key, maxLen) {
+      return !(key in d) || (d[key] is string && d[key].size() <= maxLen);
+    }
+
+    match /events/{eventId} {
+      allow read: if isOwner();
+      allow update: if false;
+      // Only the owner may delete: stats.html purges events past their 13-month
+      // "exp" date each time it's opened (Firestore TTL isn't available here).
+      allow delete: if isOwner();
+      allow create: if
+        request.resource.data.keys().hasOnly(
+          ['ts', 'exp', 'type', 'uid', 'sid', 'platform', 'isNew', 'lang', 'station', 'name', 'country', 'secs'])
+        && request.resource.data.ts == request.time
+        && request.resource.data.exp is timestamp
+        && request.resource.data.exp > request.time + duration.value(390, 'd')
+        && request.resource.data.exp < request.time + duration.value(400, 'd')
+        && request.resource.data.type in ['open', 'station', 'map', 'booking', 'time']
+        && request.resource.data.uid is string && request.resource.data.uid.size() <= 40
+        && request.resource.data.sid is string && request.resource.data.sid.size() <= 40
+        && request.resource.data.platform in ['android', 'web']
+        && (!('isNew' in request.resource.data) || request.resource.data.isNew is bool)
+        && (!('secs' in request.resource.data)
+            || (request.resource.data.secs is int && request.resource.data.secs >= 0 && request.resource.data.secs <= 86400))
+        && optString(request.resource.data, 'lang', 10)
+        && optString(request.resource.data, 'station', 64)
+        && optString(request.resource.data, 'name', 200)
+        && optString(request.resource.data, 'country', 4);
+    }
+  }
+}

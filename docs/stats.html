@@ -717,6 +717,22 @@ function listen(fs, db, user) {
       showGate('<p>Error al leer los datos: ' + esc(err.message) + '</p>');
     }
   });
+  purgeExpired(fs, db);
+}
+
+// Stand-in for a Firestore TTL policy (not available on this project's plan):
+// each dashboard visit deletes events whose 13-month "exp" date has passed.
+async function purgeExpired(fs, db) {
+  try {
+    const q = fs.query(fs.collection(db, 'events'), fs.where('exp', '<', fs.Timestamp.now()), fs.limit(450));
+    const snap = await fs.getDocs(q);
+    if (snap.empty) return;
+    const batch = fs.writeBatch(db);
+    snap.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  } catch (e) {
+    console.warn('No se pudieron borrar eventos caducados', e);
+  }
 }
 
 setInterval(() => { if (!$('dash').hidden) render(); }, 60000);

@@ -838,6 +838,109 @@
   // Affiliate deep-link prefix from the network's link generator (Booking's
   // programme runs through CJ in Europe, Awin elsewhere); the encoded Booking
   // URL is appended to it. Empty = plain Booking link, no commission.
+  // ============== anonymous usage stats ==============
+  // Events are written straight to Firestore's REST API; its security rules
+  // (firestore.rules in the repo) allow create-only from here, and reading
+  // needs the owner's Google sign-in on stats.html. No cookies and nothing
+  // personal: a random per-install id kept in localStorage, a per-visit
+  // session id, and which stations / Booking links were opened.
+  var track = (function () {
+    var PROJECT = 'ski-info-9910e';
+    var ENDPOINT = 'https://firestore.googleapis.com/v1/projects/' + PROJECT + '/databases/(default)/documents:commit';
+    var DOC_PREFIX = 'projects/' + PROJECT + '/databases/(default)/documents/events/';
+    var RETENTION_DAYS = 395;
+    var SESSION_GAP_MS = 30 * 60 * 1000;
+    var FLUSH_EVERY_MS = 10 * 60 * 1000;
+    var host = location.hostname;
+    var disabled = !/\.github\.io$/.test(host);
+    // Android's WebView user agent carries "; wv)" -- that's the Play Store app.
+    var platform = /; wv\)/.test(navigator.userAgent) ? 'android' : 'web';
+
+    function randomId(len) {
+      var chars = 'abcdefghijklmnopqrstuvwxyz0123456789', out = '';
+      var bytes = new Uint8Array(len);
+      (window.crypto || window.msCrypto).getRandomValues(bytes);
+      for (var i = 0; i < len; i++) out += chars[bytes[i] % chars.length];
+      return out;
+    }
+
+    var uid, isNew = false;
+    try {
+      uid = localStorage.getItem('si_uid');
+      if (!uid) { uid = randomId(20); localStorage.setItem('si_uid', uid); isNew = true; }
+    } catch (e) { uid = randomId(20); isNew = true; }
+
+    function send(type, extra, urgent) {
+      if (disabled) return;
+      var fields = {
+        type: { stringValue: type }, uid: { stringValue: uid }, sid: { stringValue: sid },
+        platform: { stringValue: platform },
+        exp: { timestampValue: new Date(Date.now() + RETENTION_DAYS * 86400000).toISOString() }
+      };
+      Object.keys(extra || {}).forEach(function (k) {
+        var v = extra[k];
+        if (v == null || v === '') return;
+        if (typeof v === 'number') fields[k] = { integerValue: String(Math.round(v)) };
+        else if (typeof v === 'boolean') fields[k] = { booleanValue: v };
+        else fields[k] = { stringValue: String(v).slice(0, 200) };
+      });
+      var body = JSON.stringify({ writes: [{
+        update: { name: DOC_PREFIX + randomId(20), fields: fields },
+        updateTransforms: [{ fieldPath: 'ts', setToServerValue: 'REQUEST_TIME' }],
+        currentDocument: { exists: false }
+      }] });
+      // keepalive (so the request survives the app going to the background)
+      // only where it's needed; older Chromium rejects keepalive on requests
+      // that need a CORS preflight, so fall back to a plain request then.
+      var opts = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body };
+      function plain() { try { return fetch(ENDPOINT, opts).catch(function () {}); } catch (e) {} }
+      if (!urgent) { plain(); return; }
+      try {
+        fetch(ENDPOINT, Object.assign({ keepalive: true }, opts)).catch(plain);
+      } catch (e) { plain(); }
+    }
+
+    // Foreground time is accumulated and sent when the app goes to the
+    // background (and every 10 minutes while open), so a session's length is
+    // the sum of its "time" events.
+    var sid, activeMs = 0, visibleSince = null, hiddenAt = null;
+    function flushTime() {
+      if (visibleSince != null) { activeMs += Date.now() - visibleSince; visibleSince = null; }
+      var secs = Math.round(activeMs / 1000);
+      activeMs = 0;
+      if (secs > 0) send('time', { secs: Math.min(secs, 86400) }, true);
+    }
+    function startSession() {
+      sid = randomId(16);
+      activeMs = 0;
+      visibleSince = document.hidden ? null : Date.now();
+      send('open', { isNew: isNew, lang: (navigator.language || '').slice(0, 10) });
+      isNew = false;
+    }
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) { flushTime(); hiddenAt = Date.now(); return; }
+      if (hiddenAt && Date.now() - hiddenAt > SESSION_GAP_MS) startSession();
+      else visibleSince = Date.now();
+      hiddenAt = null;
+    });
+    window.addEventListener('pagehide', flushTime);
+    setInterval(function () {
+      if (document.hidden) return;
+      flushTime();
+      visibleSince = Date.now();
+    }, FLUSH_EVERY_MS);
+    startSession();
+
+    function stationFields(raw) {
+      return { station: raw.id, name: raw.name, country: raw.country_code };
+    }
+    return {
+      station: function (raw) { send('station', stationFields(raw)); },
+      map: function (raw) { send('map', stationFields(raw)); },
+      booking: function (raw) { send('booking', stationFields(raw)); }
+    };
+  })();
+
   var AFFILIATE = {
     bookingDeepLinkPrefix: ''
   };
@@ -1156,7 +1259,14 @@
     ensureMapBuilt();
   }
   Array.prototype.forEach.call(document.querySelectorAll('.dash-tab'), function (t) {
-    t.addEventListener('click', function () { showDashPane(t.getAttribute('data-pane')); });
+    t.addEventListener('click', function () {
+      var pane = t.getAttribute('data-pane');
+      if (pane === 'map' && paneMap.hidden && currentRaw) track.map(currentRaw);
+      showDashPane(pane);
+    });
+  });
+  document.getElementById('booking-link').addEventListener('click', function () {
+    if (currentRaw) track.booking(currentRaw);
   });
 
   var resizeTimer = null;
@@ -1219,6 +1329,7 @@
           if (token !== loadToken) return;
           raw.weather = weather;
           renderDashboard(raw);
+          track.station(raw);
         });
       })
       .catch(function (err) {

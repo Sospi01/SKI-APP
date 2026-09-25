@@ -29,8 +29,30 @@
   <h2>No creamos cuentas ni recogemos datos personales</h2>
   <p>Ski Info no requiere registro, no tiene sistema de cuentas de usuario y no
   recopila, almacena ni comparte datos personales identificables (nombre, correo,
-  ubicación exacta del dispositivo, contactos, etc.). No incluye analítica de
-  terceros ni publicidad.</p>
+  ubicación exacta del dispositivo, contactos, etc.). No incluye publicidad.</p>
+
+  <h2>Estadísticas de uso anónimas</h2>
+  <p>Para saber cómo se usa la app y mejorarla, Ski Info registra estadísticas de
+  uso anónimas:</p>
+  <ul>
+    <li>Un <strong>identificador aleatorio</strong> generado en tu dispositivo la
+    primera vez que abres la app y guardado solo en él. No está ligado a tu nombre,
+    cuenta, teléfono ni a ningún identificador publicitario.</li>
+    <li>Qué haces en la app: cuándo la abres, qué estaciones consultas, si abres el
+    mapa, si pulsas el enlace de alojamiento y cuánto tiempo la usas, y si la usas
+    desde la app de Android o desde el navegador.</li>
+  </ul>
+  <p>Estos datos se guardan en <strong>Google Firebase (Cloud Firestore)</strong>,
+  que actúa como proveedor de almacenamiento. Solo el responsable de Ski Info
+  puede consultarlos, se usan exclusivamente para medir el uso de la app, no se
+  venden ni se comparten con terceros y se <strong>borran automáticamente a los
+  13 meses</strong>. Como no están asociados a tu identidad, no podemos localizar
+  qué registros son tuyos; si borras los datos de la app (o desinstalas la app),
+  se genera un identificador nuevo y los anteriores dejan de estar vinculados a
+  tu dispositivo.</p>
+  <p>La versión de Android incluye además <strong>Firebase Analytics</strong>
+  (Google) para estadísticas básicas de instalación y uso (primera apertura,
+  sesiones), con la recogida del identificador publicitario desactivada.</p>
 
   <h2>Datos que carga la app</h2>
   <p>Para funcionar, la app hace peticiones de red a estos servicios, ninguno de los
@@ -64,9 +86,11 @@
   un enlace es de afiliado, la app lo indica junto a él.</p>
 
   <h2>Almacenamiento local</h2>
-  <p>La app puede guardar en tu propio dispositivo preferencias menores de
-  visualización (por ejemplo, el zoom del mapa). Ese almacenamiento es local,
-  nunca sale de tu dispositivo y se borra si desinstalas la app.</p>
+  <p>La app guarda en tu propio dispositivo el identificador aleatorio de las
+  estadísticas de uso (ver arriba) y puede guardar preferencias menores de
+  visualización (por ejemplo, el zoom del mapa). Las preferencias nunca salen de
+  tu dispositivo; todo ello se borra si borras los datos de la app o la
+  desinstalas.</p>
 
   <h2>Permisos de la app (versión Android)</h2>
   <p>La versión de Android solo solicita permiso de acceso a internet, necesario

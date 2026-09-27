@@ -165,7 +165,10 @@ def page(*, title: str, description: str, url: str, body: str, body_attrs: str =
     if jsonld:
         head_extra += ('<script type="application/ld+json">'
                        + json.dumps(jsonld, ensure_ascii=False).replace("</", "<\\/") + "</script>\n")
-    tail = ('<script src="/profile.js"></script>\n<script src="/static-pages.js"></script>\n' if scripts else "")
+    tail = ('<script src="/profile.js"></script>\n<script src="/snow.js"></script>\n<script src="/static-pages.js"></script>\n'
+            if scripts else "")
+    if scripts:
+        head_extra = '<link rel="stylesheet" href="/snow.css">\n' + head_extra
     return f"""<!doctype html>
 <html lang="es">
 <head>
@@ -452,10 +455,32 @@ def station_page(raw: dict, meta: dict, ctx: dict) -> tuple[str, bool]:
         nearby_html = (f'<section><div class="section-head"><h2>Estaciones cercanas</h2></div>'
                        f'<div class="list-scroll">{items}</div></section>')
 
+    # ----- snow + weather: a server-rendered summary from snow.json (so the
+    # page says something about the coming week even without JS), replaced
+    # by the full live forecast by static-pages.js + snow.js -----
+    snow_html = ""
+    if raw.get("latitude") is not None:
+        fc = ctx["snow"].get(sid)
+        top_txt = f" (cota alta, {fmt(round(hi))} m)" if hi is not None else ""
+        if fc and fc.get("sf"):
+            total_sf = sum(v or 0 for v in fc["sf"])
+            when = ctx["snow_date"]
+            summary = (f"Previsión de nieve para los próximos 7 días{top_txt}: "
+                       + (f"{fmt(round(total_sf))} cm" if total_sf >= 1 else "sin nevadas significativas")
+                       + (f" (actualizada el {when})." if when else "."))
+        else:
+            summary = f"Previsión de nieve y tiempo para los próximos 7 días en {e(short)}{top_txt}."
+        attrs = f' data-lat="{raw["latitude"]:.4f}" data-lon="{raw["longitude"]:.4f}"'
+        if lo is not None and hi is not None:
+            attrs += f' data-top="{round(hi)}" data-base="{round(lo)}"'
+        snow_html = (f'<section id="snow-section"{attrs}><div class="section-head"><h2>Nieve y tiempo en {e(short)}</h2></div>'
+                     f'<div class="snow" id="snow-forecast"><p class="intro">{summary}</p></div></section>')
+
     body = f"""{hero}
 <div class="layout">
 <div class="main">
 {intro_html}
+{snow_html}
 {charts_html}
 {catalog_html}
 {quality_html}
@@ -522,7 +547,7 @@ def countries_index(by_country: dict, meta: dict, ctx: dict) -> str:
     cards = "".join(
         station_card(f'/pais/{ctx["country_slug"][cc]}/', meta["countries"].get(cc, (cc, ""))[0], f"{len(by_country[cc])} estaciones",
                      sum(s.get("pisteKm") or 0 for s in by_country[cc]), "pista total",
-                     prefix=f'{meta["countries"].get(cc, ("", ""))[1]} ')
+                     prefix=f'<img class="flag" src="/flags/{cc.lower()}.svg" alt="" width="24" height="18" loading="lazy">')
         for cc in order)
     n = sum(len(v) for v in by_country.values())
     body = f"""<div class="list-header">
@@ -578,8 +603,19 @@ def main() -> None:
         dists = sorted((haversine_km(c, oc), oid) for oid, oc in coords.items() if oid != sid)
         nearby[sid] = [(by_id[oid], d) for d, oid in dists[:8] if d <= 150]
 
+    # Written just before by fetch_snow_forecast.py; optional.
+    snow, snow_date = {}, ""
+    snow_path = args.docs / "snow.json"
+    if snow_path.exists():
+        doc = json.loads(snow_path.read_text(encoding="utf-8"))
+        snow = doc.get("stations", {})
+        months = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto",
+                  "septiembre", "octubre", "noviembre", "diciembre"]
+        y, m, d = (int(x) for x in doc.get("updated", "")[:10].split("-"))
+        snow_date = f"{d} de {months[m - 1]}"
+
     ctx = {"base_url": args.base_url.rstrip("/"), "slug": slug, "country_slug": country_slug,
-           "by_id": by_id, "group_of": group_of, "nearby": nearby}
+           "by_id": by_id, "group_of": group_of, "nearby": nearby, "snow": snow, "snow_date": snow_date}
 
     urls = [f"{ctx['base_url']}/", f"{ctx['base_url']}/pais/"]
     for s in stations:

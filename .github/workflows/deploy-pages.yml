@@ -7,8 +7,12 @@ on:
     paths:
       - docs/**
       - data-pipeline/scripts/build_seo_pages.py
+      - data-pipeline/scripts/fetch_snow_forecast.py
       - data-pipeline/station_slugs.json
       - .github/workflows/deploy-pages.yml
+  # Daily rebuild so the snow forecast (home ranking + station pages) stays fresh.
+  schedule:
+    - cron: '17 4 * * *'
   workflow_dispatch: {}
 
 permissions:
@@ -25,6 +29,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Fetch 7-day snow forecast (Open-Meteo)
+        run: python3 data-pipeline/scripts/fetch_snow_forecast.py
 
       - name: Generate per-station and per-country pages + sitemap
         run: python3 data-pipeline/scripts/build_seo_pages.py

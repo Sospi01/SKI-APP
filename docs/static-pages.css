@@ -179,7 +179,8 @@ section:last-of-type { border-bottom: none; }
 }
 .station-card:hover { border-color: var(--accent); }
 .station-card .info { flex: 1; min-width: 0; }
-.station-card .name { font-size: 14.5px; font-weight: 600; line-height: 1.25; }
+.station-card .name { font-size: 14.5px; font-weight: 600; line-height: 1.25; display: flex; align-items: center; gap: 10px; }
+.flag { width: 24px; height: 18px; border-radius: 3px; object-fit: cover; flex-shrink: 0; box-shadow: 0 0 0 1px rgba(0,0,0,0.10); }
 .station-card .region { font-size: 11.5px; color: var(--text-muted); margin-top: 1px; }
 .station-card .stats { text-align: right; flex-shrink: 0; }
 .station-card .km { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 17px; color: var(--accent); line-height: 1; }
@@ -193,6 +194,7 @@ footer.credit a { color: var(--text-secondary); }
 .map-card .cta-block { margin-top: 12px; }
 .cta-block svg { width: 18px; height: 18px; }
 @media (min-width: 1000px) {
+  .main .snow-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   body { padding-block: 0; }
   .app { max-width: none; border: none; border-radius: 0; box-shadow: none; background: var(--page); min-height: 100vh; }
   .topbar { max-width: 1200px; margin: 0 auto; padding: 14px 32px; }

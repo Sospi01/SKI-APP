@@ -35,6 +35,16 @@
     });
   });
 
+  // Live snow + weather forecast (snow.js); keeps the server-rendered
+  // summary if the request fails.
+  var snowSection = document.getElementById('snow-section');
+  if (snowSection && typeof fetchSnowForecast === 'function') {
+    var num = function (k) { var v = snowSection.getAttribute('data-' + k); return v == null ? null : Number(v); };
+    fetchSnowForecast(num('lat'), num('lon'), num('top'), num('base')).then(function (fc) {
+      if (fc) renderSnowForecast(document.getElementById('snow-forecast'), fc);
+    });
+  }
+
   var dataPromise = null;
   function stationData() {
     if (!dataPromise) {

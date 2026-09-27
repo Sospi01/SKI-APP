@@ -3,8 +3,10 @@
 The web app (docs/index.html) renders every station client-side from one URL,
 so search engines only ever see a single page. This script writes one plain
 HTML page per station (/estacion/<slug>/), one per country (/pais/<slug>/), a
-country index (/pais/), and sitemap.xml -- each station page linking into the
-interactive app via /?estacion=<id>.
+country index (/pais/), and sitemap.xml. Station pages carry the same content
+and components as the app's Info tab (styled by docs/static-pages.css, made
+interactive by docs/static-pages.js + docs/profile.js) and link into the
+interactive map via /?estacion=<id>&vista=mapa.
 
 Runs in the Pages deploy workflow; the generated files are not committed.
 Station slugs are pinned in data-pipeline/station_slugs.json so a page's URL
@@ -35,37 +37,52 @@ GENERIC_SUFFIX = re.compile(
     re.IGNORECASE,
 )
 LATIN = re.compile(r"[A-Za-zÀ-ɏ]")
+PARENS = re.compile(r"\s*[(（][^)）]*[)）]")
+
+PEAKS_SVG = ('<svg class="peaks" viewBox="0 0 400 140" preserveAspectRatio="none" aria-hidden="true">'
+             '<polygon points="0,140 0,90 60,40 110,80 170,20 230,75 290,35 340,85 400,55 400,140" fill="rgba(255,255,255,0.14)"/>'
+             '<polygon points="0,140 0,110 90,60 150,95 210,50 270,100 330,65 400,100 400,140" fill="rgba(255,255,255,0.20)"/></svg>')
+MAP_ICON = ('<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6.5l5.5-2.5 6 2.5 5.5-2.5v13.5l-5.5 2.5-6-2.5-5.5 2.5z" '
+            'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>'
+            '<line x1="9" y1="4" x2="9" y2="17.5" stroke="currentColor" stroke-width="1.6"/>'
+            '<line x1="15" y1="6.5" x2="15" y2="20" stroke="currentColor" stroke-width="1.6"/></svg>')
+
+# Same filter chips as the app's run list.
+RUN_FILTERS = [("all", "Todas", ["all"]), ("novice", "Verde", ["novice"]), ("easy", "Azul", ["easy"]),
+               ("intermediate", "Roja", ["intermediate"]), ("advanced", "Negra", ["advanced", "expert"]),
+               ("freeride", "Freeride", ["freeride", "extreme"]), ("other", "Sin clasif.", ["other"])]
 
 
 # ---------- reading the app's own metadata out of index.html ----------
 
 def js_block(src: str, var: str) -> str:
     start = src.index(f"var {var} = ")
-    return src[start:src.index("\n  };", start)]
+    end = src.index("};", start)
+    return src[start:end]
 
 
 def load_app_metadata(index_html: str) -> dict:
-    stations_line = next(l for l in index_html.splitlines() if l.startswith("  var STATIONS = "))
-    groups_line = next(l for l in index_html.splitlines() if l.startswith("  var STATION_GROUPS = "))
-    diff = dict(re.findall(r'(\w+):\s*\{ label: "([^"]+)"', js_block(index_html, "DIFF")))
-    lift_types = dict(re.findall(r'"?([\w-]+)"?:\s*"([^"]+)"', js_block(index_html, "LIFT_TYPE")))
-    services = {k: (label, icon) for k, label, icon in re.findall(
-        r'(\w+): \{ label: "([^"]+)", icon: "([^"]+)"', js_block(index_html, "SERVICE_CATEGORIES"))}
-    countries = {cc: name for cc, name in re.findall(
-        r"(\w\w): \{ name: '([^']+)', flag: '[^']+' \}", js_block(index_html, "COUNTRY_META"))}
-    diff_order = json.loads(re.search(r"var DIFF_ORDER = (\[.*?\]);", index_html).group(1))
+    lines = index_html.splitlines()
+    stations_line = next(l for l in lines if l.startswith("  var STATIONS = "))
+    groups_line = next(l for l in lines if l.startswith("  var STATION_GROUPS = "))
+    pairs = lambda var: dict(re.findall(r'"?([\w+-]+)"?:\s*"([^"]+)"', js_block(index_html, var)))
     return {
         "stations": json.loads(stations_line.split(" = ", 1)[1].rstrip(";")),
         "groups": json.loads(groups_line.split(" = ", 1)[1].rstrip(";")),
-        "diff": diff, "diff_order": diff_order, "lift_types": lift_types,
-        "services": services, "countries": countries,
+        "diff": dict(re.findall(r'(\w+):\s*\{ label: "([^"]+)"', js_block(index_html, "DIFF"))),
+        "diff_order": json.loads(re.search(r"var DIFF_ORDER = (\[.*?\]);", index_html).group(1)),
+        "lift_types": pairs("LIFT_TYPE"),
+        "activity": pairs("ACTIVITY"),
+        "status": pairs("STATUS"),
+        "grooming": pairs("GROOMING"),
+        "services": {k: (label, icon) for k, label, icon in re.findall(
+            r'(\w+): \{ label: "([^"]+)", icon: "([^"]+)"', js_block(index_html, "SERVICE_CATEGORIES"))},
+        "countries": {cc: (name, flag) for cc, name, flag in re.findall(
+            r"(\w\w): \{ name: '([^']+)', flag: '([^']+)' \}", js_block(index_html, "COUNTRY_META"))},
     }
 
 
-# ---------- helpers ----------
-
-PARENS = re.compile(r"\s*[(（][^)）]*[)）]")
-
+# ---------- names, slugs, formatting ----------
 
 def latin_name(name: str, keep_parens: bool) -> str:
     """First Latin-script form of a name: "Абзаково (Abzakovo)" -> "Abzakovo"."""
@@ -107,13 +124,17 @@ def station_slug(station: dict) -> str:
     return f"estacion-{region + '-' if region else ''}{station['id'][:6]}"
 
 
-def fmt_int(n: float) -> str:
-    return f"{round(n):,}".replace(",", ".")
+def fmt(n: float, d: int = 0) -> str:
+    """Spanish number format like the app's toLocaleString('es-ES'): no
+    thousands separator below 10.000, decimal comma."""
+    s = f"{n:,.{d}f}" if abs(n) >= 10000 else f"{n:.{d}f}"
+    return s.replace(",", "\0").replace(".", ",").replace("\0", ".")
 
 
-def fmt_km(m: float) -> str:
-    km = m / 1000
-    return (f"{km:.1f}".replace(".", ",") if km < 100 else fmt_int(km)) + " km"
+def format_coord(lat, lon) -> str:
+    if lat is None or lon is None:
+        return "–"
+    return f"{fmt(abs(lat), 2)}°{'N' if lat >= 0 else 'S'} {fmt(abs(lon), 2)}°{'E' if lon >= 0 else 'O'}"
 
 
 def haversine_km(a: tuple, b: tuple) -> float:
@@ -132,13 +153,19 @@ def is_downhill(run: dict) -> bool:
     return not uses or "downhill" in uses.split(",")
 
 
+def pill(text: str) -> str:
+    return f'<span class="pill">{e(text)}</span>'
+
+
 # ---------- page shell ----------
 
-def page(*, title: str, description: str, url: str, body: str, jsonld: dict | None = None, noindex: bool = False) -> str:
+def page(*, title: str, description: str, url: str, body: str, body_attrs: str = "",
+         jsonld: dict | None = None, noindex: bool = False, scripts: bool = False) -> str:
     head_extra = '<meta name="robots" content="noindex">\n' if noindex else ""
     if jsonld:
         head_extra += ('<script type="application/ld+json">'
                        + json.dumps(jsonld, ensure_ascii=False).replace("</", "<\\/") + "</script>\n")
+    tail = ('<script src="/profile.js"></script>\n<script src="/static-pages.js"></script>\n' if scripts else "")
     return f"""<!doctype html>
 <html lang="es">
 <head>
@@ -153,30 +180,56 @@ def page(*, title: str, description: str, url: str, body: str, jsonld: dict | No
 <meta property="og:description" content="{e(description)}">
 <meta property="og:url" content="{e(url)}">
 <meta name="theme-color" content="#14345C">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
 <link rel="stylesheet" href="/static-pages.css">
 {head_extra}</head>
-<body>
-<div class="wrap">
+<body{body_attrs}>
+<div class="app">
 {body}
-<footer>
+<footer class="credit">
 <a href="/">Ski Info</a> · <a href="/pais/">Estaciones por país</a> · <a href="/privacy.html">Privacidad</a><br>
-Datos de OpenSkiMap / OpenStreetMap (licencia ODbL).
+Datos de OpenSkiMap / OpenStreetMap, licencia ODbL.
 </footer>
 </div>
-</body>
+{tail}</body>
 </html>
 """
+
+
+def bars(items: list) -> str:
+    """App-style bar list; items are (label, value, value_text, color)."""
+    if not items:
+        return ""
+    top = max(v for _, v, _, _ in items) or 1
+    return '<div class="barlist">' + "".join(
+        f'<div class="bar-row"><div class="bar-row-label">{e(label)}</div>'
+        f'<div class="bar-track"><div class="bar-fill" style="width:{max(3, v / top * 100):.1f}%;background:{color}"></div></div>'
+        f'<div class="bar-value">{e(text)}</div></div>'
+        for label, v, text, color in items) + "</div>"
+
+
+def chips(list_id: str, defs: list) -> str:
+    """defs: (keys, label, count, color|None); the first is the 'all' chip."""
+    out = []
+    for i, (keys, label, count, color) in enumerate(defs):
+        dot = f'<span class="dot" style="background:{color}"></span>' if color else ""
+        out.append(f'<button type="button" class="chip" data-keys="{e(" ".join(keys))}" '
+                   f'aria-pressed="{"true" if i == 0 else "false"}">{dot}{e(label)} · {count}</button>')
+    return f'<div class="chips" data-list="{list_id}">{"".join(out)}</div>'
 
 
 # ---------- station page ----------
 
 def station_page(raw: dict, meta: dict, ctx: dict) -> tuple[str, bool]:
     base, sid = ctx["base_url"], raw["id"]
-    country_name = meta["countries"].get(raw.get("country_code"), raw.get("country_code") or "")
+    cc = raw.get("country_code")
+    country_name = meta["countries"].get(cc, (cc or "", ""))[0]
     name = raw.get("name") or "Estación de esquí"
     short = short_name(name) or name
-    place = ", ".join(p for p in [raw.get("locality"), raw.get("region")] if p)
-    place_full = ", ".join(p for p in [place, country_name] if p)
+    place = ", ".join(p for p in [raw.get("locality"), raw.get("region")] if p) or country_name
+    place_full = ", ".join(p for p in [raw.get("locality"), raw.get("region"), country_name] if p)
     url = f"{base}/estacion/{ctx['slug'][sid]}/"
     app_link = f"/?estacion={sid}&amp;vista=mapa"
 
@@ -184,182 +237,281 @@ def station_page(raw: dict, meta: dict, ctx: dict) -> tuple[str, bool]:
     lifts = raw.get("lifts", [])
     services = [s for s in raw.get("services") or [] if s.get("category") in meta["services"]]
     total_m = sum(r.get("length_m") or 0 for r in runs)
-
-    diff_key = lambda d: d if d in meta["diff"] else "other"
-    by_diff: dict[str, dict] = {}
-    groups: dict[str, dict] = {}
-    for r in runs:
-        k = diff_key(r.get("difficulty"))
-        by_diff.setdefault(k, {"count": 0, "m": 0.0})
-        by_diff[k]["m"] += r.get("length_m") or 0
-        nm = (r.get("name") or "").strip()
-        if nm:
-            g = groups.setdefault(nm, {"diff": k, "m": 0.0})
-            g["m"] += r.get("length_m") or 0
-    for g in groups.values():
-        by_diff[g["diff"]]["count"] += 1
-    named_count = len(groups)
-
     lo, hi = raw.get("min_elevation_m"), raw.get("max_elevation_m")
+    diff_key = lambda d: d if d in meta["diff"] else "other"
+    diff_color = lambda k: f"var(--diff-{k})"
     indexable = bool(runs or lifts)
 
-    # ----- hero -----
-    stats = []
-    if total_m:
-        stats.append((fmt_km(total_m), "de pistas"))
-    if named_count:
-        stats.append((fmt_int(named_count), "pistas"))
-    if lifts:
-        stats.append((fmt_int(len(lifts)), "remontes"))
-    if lo is not None and hi is not None:
-        stats.append((f"{fmt_int(lo)}–{fmt_int(hi)} m", "altitud"))
-        stats.append((f"{fmt_int(hi - lo)} m", "desnivel"))
-    stats_html = "".join(f'<div class="stat"><span class="v">{e(v)}</span><span class="k">{e(k)}</span></div>' for v, k in stats)
-    country_slug = ctx["country_slug"].get(raw.get("country_code"))
-    crumbs = '<a href="/">Ski Info</a> › <a href="/pais/">Países</a>'
-    if country_slug:
-        crumbs += f' › <a href="/pais/{country_slug}/">{e(country_name)}</a>'
-    parts = [f"""<header class="hero">
-<nav class="crumbs">{crumbs}</nav>
-<h1>{e(name)}</h1>
-<p class="place">{e(place_full)}</p>
-<div class="stats">{stats_html}</div>
-<a class="cta" href="{app_link}">Abrir el mapa interactivo de pistas</a>
-</header>
-<main>"""]
-
-    # ----- intro -----
-    intro = [f"{e(short)} es una estación de esquí"]
-    if place_full:
-        intro[0] += f" en {e(place_full)}"
-    intro[0] += "."
-    if total_m and named_count:
-        intro.append(f"Tiene {fmt_km(total_m)} de pistas repartidos en {fmt_int(named_count)} pistas con nombre"
-                     + (f" y {fmt_int(len(lifts))} remontes" if lifts else "") + ".")
-    if lo is not None and hi is not None:
-        intro.append(f"Su dominio va de {fmt_int(lo)} a {fmt_int(hi)} m de altitud, con {fmt_int(hi - lo)} m de desnivel.")
-    intro.append("En Ski Info puedes ver su mapa de pistas sobre imagen de satélite, el perfil de pendiente de cada pista "
-                 "y los remontes y servicios en pistas.")
+    # ----- hero (badges, title, stats, connected domain) -----
+    badges = [meta["activity"].get(a, a) for a in (raw.get("activities") or "").split(",") if a]
+    badges += [meta["status"].get(raw.get("status"), raw.get("status")), country_name]
+    badges_html = "".join(f'<span class="badge">{e(b)}</span>' for b in badges if b)
     site = (raw.get("websites") or [None])[0]
-    site_html = f' <a href="{e(site)}" rel="noopener">Web oficial de la estación</a>.' if site else ""
-    parts.append(f'<section><h2>{e(short)}: mapa de pistas y datos</h2><p>{" ".join(intro)}{site_html}</p></section>')
-
-    # ----- difficulty table -----
-    if by_diff:
-        rows = "".join(
-            f'<tr><td><span class="dot" style="background:var(--diff-{k})"></span>{e(meta["diff"][k])}</td>'
-            f'<td class="num">{fmt_int(by_diff[k]["count"])}</td><td class="num">{fmt_km(by_diff[k]["m"])}</td></tr>'
-            for k in meta["diff_order"] if k in by_diff)
-        parts.append(f'<section><h2>Pistas de {e(short)} por dificultad</h2>'
-                     f'<table><tr><th>Dificultad</th><th class="num">Pistas</th><th class="num">Longitud</th></tr>{rows}</table></section>')
-
-    # ----- lifts by type -----
-    if lifts:
-        counts: dict[str, int] = {}
-        for l in lifts:
-            label = meta["lift_types"].get(l.get("lift_type"), l.get("lift_type") or "Otro")
-            counts[label] = counts.get(label, 0) + 1
-        rows = "".join(f'<tr><td>{e(k)}</td><td class="num">{fmt_int(v)}</td></tr>'
-                       for k, v in sorted(counts.items(), key=lambda kv: -kv[1]))
-        parts.append(f'<section><h2>Remontes de {e(short)}</h2>'
-                     f'<table><tr><th>Tipo</th><th class="num">Número</th></tr>{rows}</table></section>')
-
-    # ----- services -----
-    if services:
-        counts = {}
-        for s in services:
-            counts[s["category"]] = counts.get(s["category"], 0) + 1
-        items = "".join(f'<li>{meta["services"][k][1]} {e(meta["services"][k][0])} <span class="m">· {v}</span></li>'
-                        for k, v in sorted(counts.items(), key=lambda kv: -kv[1]))
-        parts.append(f'<section><h2>Servicios en pistas</h2><ul class="cols">{items}</ul></section>')
-
-    # ----- every named run -----
-    if groups:
-        blocks = []
-        for k in meta["diff_order"]:
-            names = sorted((n for n, g in groups.items() if g["diff"] == k), key=lambda n: -groups[n]["m"])
-            if not names:
-                continue
-            lis = "".join(f'<li>{e(n)}' + (f' <span class="m">· {fmt_km(groups[n]["m"])}</span>' if groups[n]["m"] else "") + "</li>"
-                          for n in names)
-            blocks.append(f'<h3><span class="dot" style="background:var(--diff-{k})"></span>{e(meta["diff"][k])} ({len(names)})</h3>'
-                          f'<ul class="cols">{lis}</ul>')
-        parts.append(f'<section><h2>Todas las pistas de {e(short)}</h2>{"".join(blocks)}'
-                     f'<p style="margin-top:12px"><a href="{app_link}">Ver cada pista en el mapa y su perfil de pendiente →</a></p></section>')
-
-    # ----- named lifts -----
-    named_lifts = [l for l in lifts if (l.get("name") or "").strip()]
-    if named_lifts:
-        lis = "".join(
-            f'<li>{e(l["name"].strip())} <span class="m">· {e(meta["lift_types"].get(l.get("lift_type"), l.get("lift_type") or ""))}</span></li>'
-            for l in sorted(named_lifts, key=lambda l: l["name"].strip().lower()))
-        parts.append(f'<section><h2>Lista de remontes</h2><ul class="cols">{lis}</ul></section>')
-
-    # ----- connected + nearby stations -----
-    def station_li(s, extra=""):
-        return f'<li><a href="/estacion/{ctx["slug"][s["id"]]}/">{e(s["name"])}</a><span class="m">{extra}</span></li>'
-
+    site_html = f'<a class="site" href="{e(site)}" target="_blank" rel="noopener">Web oficial ↗</a>' if site else ""
+    stats = [
+        (f"{fmt(round(lo))}–{fmt(round(hi))} m" if lo is not None and hi is not None else "–", "Altitud"),
+        (f"{fmt(round(hi - lo))} m" if lo is not None and hi is not None else "–", "Desnivel"),
+        (f"{fmt(round(total_m / 1000))} km", "Km pista"),
+        (format_coord(raw.get("latitude"), raw.get("longitude")), "Coordenadas"),
+    ]
+    stats_html = "".join(f'<div class="hero-stat"><div class="v">{e(v)}</div><div class="k">{e(k)}</div></div>' for v, k in stats)
+    domain_html = ""
     group = ctx["group_of"].get(sid)
     if group:
-        lis = "".join(station_li(ctx["by_id"][o], f'{fmt_int(ctx["by_id"][o].get("pisteKm") or 0)} km')
-                      for o in group if o != sid and o in ctx["by_id"])
-        if lis:
-            parts.append(f'<section><h2>Dominio esquiable conectado</h2><p>Estaciones unidas por pistas o remontes con {e(short)}:</p>'
-                         f'<ul class="links">{lis}</ul></section>')
-    nearby = ctx["nearby"].get(sid) or []
-    if nearby:
-        lis = "".join(station_li(s, f"a {fmt_int(d)} km") for s, d in nearby)
-        parts.append(f'<section><h2>Estaciones de esquí cerca de {e(short)}</h2><ul class="links">{lis}</ul></section>')
+        links = "".join(
+            f'<a class="chip" href="/estacion/{ctx["slug"][o]}/">{e(ctx["by_id"][o]["name"])} · {fmt(round(ctx["by_id"][o].get("pisteKm") or 0))} km</a>'
+            for o in group if o != sid and o in ctx["by_id"])
+        if links:
+            domain_html = ('<div class="hero-domain"><div class="hero-domain-title">Dominio esquiable conectado</div>'
+                           '<p class="hero-domain-note">Detectado por proximidad geográfica; los km de cada una pueden solaparse:</p>'
+                           f'<div class="chips">{links}</div></div>')
+    country_slug = ctx["country_slug"].get(cc)
+    back = (f'<a class="back-btn" href="/pais/{country_slug}/"><span class="chev">‹</span> Estaciones de {e(country_name)}</a>'
+            if country_slug else '<a class="back-btn" href="/pais/"><span class="chev">‹</span> Países</a>')
+    hero = f"""<div class="topbar">{back}<a class="back-btn" href="/">Ski Info</a></div>
+<div class="hero">{PEAKS_SVG}<div class="hero-content">
+<div class="badges">{badges_html}</div>
+<div class="hero-title-row"><h1>{e(name)}</h1>{site_html}</div>
+<div class="place">{e(place)}</div>
+<div class="hero-stats">{stats_html}</div>
+{domain_html}
+<a class="hero-cta" href="{app_link}">{MAP_ICON} Abrir el mapa interactivo de pistas</a>
+</div></div>"""
 
-    parts.append(f'<section><p><a class="cta" style="background:var(--accent);color:#fff" href="{app_link}">Abrir el mapa interactivo de {e(short)}</a></p></section>')
-    parts.append("</main>")
+    # ----- intro text (what search engines read first) -----
+    groups: dict[str, dict] = {}
+    for r in runs:
+        nm = r.get("name")
+        if not nm:
+            continue
+        g = groups.setdefault(nm, {"name": nm, "difficulty": r.get("difficulty"), "length_m": 0.0, "vertical_m": 0.0,
+                                   "lit": 0, "gladed": 0, "segments": 0, "ref": None, "grooming": None,
+                                   "min": None, "max": None})
+        g["length_m"] += r.get("length_m") or 0
+        g["vertical_m"] += r.get("vertical_m") or 0
+        g["lit"] = g["lit"] or (1 if r.get("lit") == 1 else 0)
+        g["gladed"] = g["gladed"] or (1 if r.get("gladed") == 1 else 0)
+        g["ref"] = g["ref"] or r.get("ref")
+        g["grooming"] = g["grooming"] or r.get("grooming")
+        if r.get("min_elevation_m") is not None:
+            g["min"] = r["min_elevation_m"] if g["min"] is None else min(g["min"], r["min_elevation_m"])
+        if r.get("max_elevation_m") is not None:
+            g["max"] = r["max_elevation_m"] if g["max"] is None else max(g["max"], r["max_elevation_m"])
+        g["segments"] += 1
+    run_groups = sorted(groups.values(), key=lambda g: (meta["diff_order"].index(diff_key(g["difficulty"])), -g["length_m"]))
+
+    intro = [f"{e(short)} es una estación de esquí" + (f" en {e(place_full)}" if place_full else "") + "."]
+    if total_m and run_groups:
+        intro.append(f"Tiene {fmt(round(total_m / 1000))} km de pistas repartidos en {len(run_groups)} pistas con nombre"
+                     + (f" y {len(lifts)} remontes" if lifts else "") + ".")
+    if lo is not None and hi is not None:
+        intro.append(f"Su dominio va de {fmt(round(lo))} a {fmt(round(hi))} m de altitud, con {fmt(round(hi - lo))} m de desnivel.")
+    intro.append("Aquí tienes todas sus pistas con su perfil de pendiente, sus remontes y los servicios en pistas; "
+                 "en el mapa interactivo las verás sobre imagen de satélite.")
+    intro_html = (f'<section><div class="section-head"><h2>{e(short)}: mapa de pistas y datos</h2></div>'
+                  f'<p class="intro">{" ".join(intro)}</p></section>')
+
+    # ----- charts: terrain by difficulty, lifts by type (same as the app) -----
+    diff_agg: dict[str, list] = {}
+    for r in runs:
+        a = diff_agg.setdefault(diff_key(r.get("difficulty")), [0.0, 0])
+        a[0] += (r.get("length_m") or 0) / 1000
+        a[1] += 1
+    diff_bars = bars([(meta["diff"][k], diff_agg[k][0], f"{fmt(diff_agg[k][0], 1)} km · {diff_agg[k][1]}", diff_color(k))
+                      for k in meta["diff_order"] if k in diff_agg])
+    lift_agg: dict[str, list] = {}
+    for l in lifts:
+        a = lift_agg.setdefault(l.get("lift_type"), [0.0, 0])
+        a[0] += (l.get("length_m") or 0) / 1000
+        a[1] += 1
+    lift_bars = bars([(meta["lift_types"].get(k, k or "Otro"), v[0], f"{fmt(v[0], 1)} km · {v[1]}", "var(--accent)")
+                      for k, v in sorted(lift_agg.items(), key=lambda kv: -kv[1][0])])
+    charts_html = '<div class="charts">'
+    if diff_bars:
+        charts_html += f'<section><div class="section-head"><h2>Terreno por dificultad</h2></div>{diff_bars}</section>'
+    if lift_bars:
+        charts_html += f'<section><div class="section-head"><h2>Remontes por tipo</h2></div>{lift_bars}</section>'
+    charts_html += "</div>"
+
+    # ----- catalog: runs / lifts / services -----
+    run_items = []
+    for g in run_groups:
+        k = diff_key(g["difficulty"])
+        bits = []
+        if g["length_m"]:
+            bits.append(f'{fmt(round(g["length_m"]))} m')
+        if g["vertical_m"]:
+            bits.append(f'desnivel {fmt(round(g["vertical_m"]))} m')
+        if g["length_m"]:
+            bits.append(f'pend. media {fmt(100 * g["vertical_m"] / g["length_m"], 1)}%')
+        if g["min"] is not None and g["max"] is not None:
+            bits.append(f'{fmt(round(g["min"]))}–{fmt(round(g["max"]))} m alt.')
+        if meta["grooming"].get(g["grooming"]):
+            bits.append(meta["grooming"][g["grooming"]])
+        if g["segments"] > 1:
+            bits.append(f'{g["segments"]} tramos')
+        pills = (pill("Nocturna") if g["lit"] else "") + (pill("Arbolada") if g["gladed"] else "")
+        label = (f'{g["ref"]} · ' if g["ref"] else "") + g["name"]
+        run_items.append(
+            f'<div class="item run-item" data-key="{k}" data-run="{e(g["name"])}" role="button" tabindex="0" aria-expanded="false">'
+            f'<span class="dot" style="background:{diff_color(k)}"></span><div class="item-main">'
+            f'<div class="item-name">{e(label)}</div><div class="item-meta">{e(" · ".join(bits))}{pills}</div></div>'
+            f'<span class="item-chevron" aria-hidden="true">›</span></div><div class="run-profile" hidden></div>')
+    run_chip_defs = []
+    for key, label, keys in RUN_FILTERS:
+        count = len(run_groups) if key == "all" else sum(1 for g in run_groups if diff_key(g["difficulty"]) in keys)
+        if key == "all" or count:
+            run_chip_defs.append((keys, label, count, None if key == "all" else diff_color(key)))
+
+    lift_items, lift_type_counts = [], {}
+    for l in lifts:
+        t = l.get("lift_type") or "other"
+        lift_type_counts[t] = lift_type_counts.get(t, 0) + 1
+        bits = []
+        if l.get("capacity"):
+            bits.append(f'{fmt(l["capacity"])} p/h')
+        if l.get("occupancy"):
+            bits.append(f'{l["occupancy"]} plazas')
+        if l.get("length_m"):
+            bits.append(f'{fmt(round(l["length_m"]))} m')
+        if l.get("vertical_m"):
+            bits.append(f'desnivel {fmt(round(l["vertical_m"]))} m')
+        if l.get("duration_s"):
+            m = round(l["duration_s"] / 60)
+            bits.append((f"{m} min" if m >= 1 else f'{round(l["duration_s"])} s') + " de trayecto")
+        pills = ((pill("Desembragable") if l.get("detachable") == 1 else "") + (pill("Burbuja") if l.get("bubble") == 1 else "")
+                 + (pill("Calefactado") if l.get("heating") == 1 else "") + (pill("Privado") if l.get("access") == "private" else ""))
+        label = ((f'{l["ref"]} · ' if l.get("ref") else "") + (l.get("name") or "Sin nombre")
+                 + "  ·  " + meta["lift_types"].get(l.get("lift_type"), l.get("lift_type") or ""))
+        lift_items.append(f'<div class="item" data-key="{e(t)}"><span class="dot" style="background:var(--accent)"></span>'
+                          f'<div class="item-main"><div class="item-name">{e(label)}</div>'
+                          f'<div class="item-meta">{e(" · ".join(bits))}{pills}</div></div></div>')
+    lift_chip_defs = [(["all"], "Todos", len(lifts), None)] + [
+        ([t], meta["lift_types"].get(t, t), n, None) for t, n in sorted(lift_type_counts.items(), key=lambda kv: -kv[1])]
+
+    cat_order = list(meta["services"])
+    svc_items, svc_counts = [], {}
+    for s in sorted(services, key=lambda s: (cat_order.index(s["category"]), s.get("name") or "")):
+        label, icon = meta["services"][s["category"]]
+        svc_counts[s["category"]] = svc_counts.get(s["category"], 0) + 1
+        bits = [x for x in [label if s.get("name") else None, s.get("opening_hours"), s.get("phone")] if x]
+        svc_items.append(f'<div class="item" data-key="{s["category"]}"><span class="dot" style="background:var(--svc-{s["category"]})"></span>'
+                         f'<div class="item-main"><div class="item-name">{icon} {e(s.get("name") or label)}</div>'
+                         f'<div class="item-meta">{e(" · ".join(bits))}</div></div></div>')
+    svc_chip_defs = [(["all"], "Todos", len(services), None)] + [
+        ([k], f"{meta['services'][k][1]} {meta['services'][k][0]}", svc_counts[k], None) for k in cat_order if svc_counts.get(k)]
+
+    def panel(key, items, chip_defs, empty_text, hidden):
+        body = (chips(f"{key}-list", chip_defs) + f'<div class="list-scroll" id="{key}-list">{"".join(items)}</div>'
+                if items else f'<div class="list-scroll"><div class="catalog-empty">{e(empty_text)}</div></div>')
+        return f'<div class="catalog-panel" id="catalog-{key}"{" hidden" if hidden else ""}>{body}</div>'
+
+    no_services = ("No hay servicios registrados en OpenStreetMap para esta estación." if raw.get("services") is not None
+                   else "Todavía no tenemos datos de servicios para esta estación.")
+    catalog_html = f"""<section>
+<div class="section-head"><h2>Pistas, remontes y servicios</h2><span class="sub">pulsa una pista para ver su perfil</span></div>
+<div class="segmented" role="tablist" aria-label="Qué listar">
+<button type="button" role="tab" class="seg-btn" data-catalog="runs" aria-selected="true">Pistas <span class="seg-count">{len(run_groups)}</span></button>
+<button type="button" role="tab" class="seg-btn" data-catalog="lifts" aria-selected="false">Remontes <span class="seg-count">{len(lifts)}</span></button>
+<button type="button" role="tab" class="seg-btn" data-catalog="services" aria-selected="false">Servicios <span class="seg-count">{len(services)}</span></button>
+</div>
+{panel("runs", run_items, run_chip_defs, "No hay pistas con nombre en los datos de esta estación.", False)}
+{panel("lifts", lift_items, lift_chip_defs, "No hay remontes en los datos de esta estación.", True)}
+{panel("services", svc_items, svc_chip_defs, no_services, True)}
+</section>"""
+
+    # ----- data quality (same figures as the app) -----
+    run_n, lift_n = len(runs) or 1, len(lifts) or 1
+    pct = lambda n, d: f"{fmt(100 * n / d)}%"
+    quality = [
+        ("Pistas con nombre", f"{sum(1 for r in runs if r.get('name'))} / {len(runs)}"),
+        ("Dificultad etiquetada", pct(sum(1 for r in runs if r.get("difficulty")), run_n)),
+        ("Iluminación etiquetada", pct(sum(1 for r in runs if r.get("lit") is not None), run_n)),
+        ("Nieve artificial etiquetada", pct(sum(1 for r in runs if r.get("snowmaking") is not None), run_n)),
+        ("Capacidad de remonte etiquetada", pct(sum(1 for l in lifts if l.get("capacity") is not None), lift_n)),
+        ("Tipo de agarre etiquetado", pct(sum(1 for l in lifts if l.get("detachable") is not None), lift_n)),
+    ]
+    quality_html = ('<section><div class="section-head"><h2>Calidad del dato</h2></div><div class="quality-list">'
+                    + "".join(f'<div class="quality-row"><span class="name">{e(k)}</span><span class="val">{e(v)}</span></div>' for k, v in quality)
+                    + '</div><p class="quality-note">Nieve artificial y vigilancia rara vez están etiquetadas en OpenStreetMap — '
+                      'no significa que no existan, es que casi nadie las mapea todavía.</p></section>')
+
+    # ----- sidebar: map card + nearby stations -----
+    map_card = (f'<section class="map-card"><div class="section-head"><h2>Mapa interactivo</h2></div>'
+                f'<p class="intro">Las pistas y remontes de {e(short)} sobre imagen de satélite, el sentido de cada pista, '
+                f'la pendiente real de cada tramo, los servicios y el tiempo en directo.</p>'
+                f'<a class="cta-block" href="{app_link}">{MAP_ICON} Abrir el mapa de {e(short)}</a></section>')
+    nearby = ctx["nearby"].get(sid) or []
+    nearby_html = ""
+    if nearby:
+        items = "".join(
+            f'<a class="item" href="/estacion/{ctx["slug"][s["id"]]}/"><span class="dot" style="background:var(--accent)"></span>'
+            f'<div class="item-main"><div class="item-name">{e(s["name"])}</div>'
+            f'<div class="item-meta">a {fmt(round(d))} km · {fmt(round(s.get("pisteKm") or 0))} km de pistas</div></div>'
+            f'<span class="item-chevron" aria-hidden="true">›</span></a>' for s, d in nearby)
+        nearby_html = (f'<section><div class="section-head"><h2>Estaciones cercanas</h2></div>'
+                       f'<div class="list-scroll">{items}</div></section>')
+
+    body = f"""{hero}
+<div class="layout">
+<div class="main">
+{intro_html}
+{charts_html}
+{catalog_html}
+{quality_html}
+</div>
+<aside class="sidebar">
+{map_card}
+{nearby_html}
+</aside>
+</div>"""
 
     title = f"{short}: mapa de pistas, remontes y datos | Ski Info"
     desc_bits = []
     if total_m:
-        desc_bits.append(f"{fmt_km(total_m)} de pistas")
-    if named_count:
-        desc_bits.append(f"{fmt_int(named_count)} pistas")
+        desc_bits.append(f"{fmt(round(total_m / 1000))} km de pistas")
+    if run_groups:
+        desc_bits.append(f"{len(run_groups)} pistas")
     if lifts:
-        desc_bits.append(f"{fmt_int(len(lifts))} remontes")
-    description = f"{short}" + (f" ({place_full})" if place_full else "") + ": " + (", ".join(desc_bits) + ". " if desc_bits else "")
+        desc_bits.append(f"{len(lifts)} remontes")
+    description = short + (f" ({place_full})" if place_full else "") + ": " + (", ".join(desc_bits) + ". " if desc_bits else "")
     if lo is not None and hi is not None:
-        description += f"Altitud {fmt_int(lo)}–{fmt_int(hi)} m. "
+        description += f"Altitud {fmt(round(lo))}–{fmt(round(hi))} m. "
     description += "Mapa de pistas interactivo sobre satélite y pendiente real de cada pista."
 
-    jsonld = {"@context": "https://schema.org", "@type": "SkiResort", "name": name, "url": url,
-              "address": {"@type": "PostalAddress", "addressRegion": raw.get("region") or None,
-                          "addressLocality": raw.get("locality") or None, "addressCountry": raw.get("country_code")}}
+    jsonld = {"@context": "https://schema.org", "@type": "SkiResort", "name": name, "url": url}
+    address = {"@type": "PostalAddress", "addressRegion": raw.get("region"), "addressLocality": raw.get("locality"), "addressCountry": cc}
+    jsonld["address"] = {k: v for k, v in address.items() if v}
     if raw.get("latitude") is not None:
         jsonld["geo"] = {"@type": "GeoCoordinates", "latitude": round(raw["latitude"], 5), "longitude": round(raw["longitude"], 5)}
     same_as = [x for x in [site, f"https://www.wikidata.org/wiki/{raw['wikidata_id']}" if raw.get("wikidata_id") else None] if x]
     if same_as:
         jsonld["sameAs"] = same_as
-    jsonld["address"] = {k: v for k, v in jsonld["address"].items() if v}
 
-    return page(title=title, description=description, url=url, body="\n".join(parts), jsonld=jsonld, noindex=not indexable), indexable
+    return page(title=title, description=description, url=url, body=body, body_attrs=f' data-station="{e(sid)}"',
+                jsonld=jsonld, noindex=not indexable, scripts=True), indexable
 
 
 # ---------- country pages ----------
 
+def station_card(href: str, name: str, sub: str, km: float, label: str = "pista", prefix: str = "") -> str:
+    return (f'<a class="station-card" href="{href}"><div class="info"><div class="name">{prefix}{e(name)}</div>'
+            f'<div class="region">{e(sub)}</div></div><div class="stats"><div class="km">{fmt(round(km))} km</div>'
+            f'<div class="km-label">{e(label)}</div></div><span class="chevron" aria-hidden="true">›</span></a>')
+
+
 def country_page(cc: str, stations: list, meta: dict, ctx: dict) -> str:
-    name = meta["countries"].get(cc, cc)
+    name = meta["countries"].get(cc, (cc, ""))[0]
     url = f"{ctx['base_url']}/pais/{ctx['country_slug'][cc]}/"
     total = sum(s.get("pisteKm") or 0 for s in stations)
-    lis = "".join(
-        f'<li><a href="/estacion/{ctx["slug"][s["id"]]}/">{e(s["name"])}</a>'
-        f'<span class="m">{e(s.get("region") or "")}{" · " if s.get("region") else ""}{fmt_int(s.get("pisteKm") or 0)} km</span></li>'
-        for s in stations)
-    body = f"""<header class="hero">
-<nav class="crumbs"><a href="/">Ski Info</a> › <a href="/pais/">Países</a></nav>
+    cards = "".join(station_card(f'/estacion/{ctx["slug"][s["id"]]}/', s["name"], s.get("region") or "", s.get("pisteKm") or 0)
+                    for s in stations)
+    body = f"""<div class="list-header">
+<div class="eyebrow"><a href="/">Ski Info</a> · <a href="/pais/">Países</a></div>
 <h1>Estaciones de esquí en {e(name)}</h1>
-<p class="place">{len(stations)} estaciones · {fmt_int(total)} km de pistas</p>
-<a class="cta" href="/">Abrir Ski Info</a>
-</header>
-<main>
-<section><p>Mapas de pistas interactivos sobre imagen de satélite, perfil de pendiente de cada pista, remontes y servicios de las estaciones de esquí de {e(name)}, ordenadas por kilómetros de pistas.</p>
-<ul class="links">{lis}</ul></section>
-</main>"""
+<p class="list-sub">{len(stations)} estaciones · {fmt(round(total))} km de pistas. Elige una estación para ver todas sus pistas con su perfil de pendiente, sus remontes, servicios y el mapa interactivo sobre satélite.</p>
+</div>
+<div class="station-list">{cards}</div>"""
     return page(title=f"Estaciones de esquí en {name}: mapas de pistas | Ski Info",
                 description=f"Las {len(stations)} estaciones de esquí de {name} con mapa de pistas interactivo, perfil de pendiente, remontes y servicios.",
                 url=url, body=body)
@@ -367,18 +519,18 @@ def country_page(cc: str, stations: list, meta: dict, ctx: dict) -> str:
 
 def countries_index(by_country: dict, meta: dict, ctx: dict) -> str:
     order = sorted(by_country, key=lambda cc: -sum(s.get("pisteKm") or 0 for s in by_country[cc]))
-    lis = "".join(
-        f'<li><a href="/pais/{ctx["country_slug"][cc]}/">{e(meta["countries"].get(cc, cc))}</a>'
-        f'<span class="m">{len(by_country[cc])} estaciones · {fmt_int(sum(s.get("pisteKm") or 0 for s in by_country[cc]))} km</span></li>'
+    cards = "".join(
+        station_card(f'/pais/{ctx["country_slug"][cc]}/', meta["countries"].get(cc, (cc, ""))[0], f"{len(by_country[cc])} estaciones",
+                     sum(s.get("pisteKm") or 0 for s in by_country[cc]), "pista total",
+                     prefix=f'{meta["countries"].get(cc, ("", ""))[1]} ')
         for cc in order)
     n = sum(len(v) for v in by_country.values())
-    body = f"""<header class="hero">
-<nav class="crumbs"><a href="/">Ski Info</a></nav>
+    body = f"""<div class="list-header">
+<div class="eyebrow"><a href="/">Ski Info</a></div>
 <h1>Estaciones de esquí por país</h1>
-<p class="place">{n} estaciones en {len(by_country)} países</p>
-<a class="cta" href="/">Abrir Ski Info</a>
-</header>
-<main><section><ul class="links">{lis}</ul></section></main>"""
+<p class="list-sub">{n} estaciones en {len(by_country)} países, con mapa de pistas interactivo, perfil de pendiente de cada pista, remontes y servicios.</p>
+</div>
+<div class="station-list">{cards}</div>"""
     return page(title="Estaciones de esquí por país: mapas de pistas | Ski Info",
                 description=f"Mapas de pistas interactivos de {n} estaciones de esquí en {len(by_country)} países: pistas, remontes, pendientes y servicios.",
                 url=f"{ctx['base_url']}/pais/", body=body)
@@ -417,14 +569,14 @@ def main() -> None:
         by_country.setdefault(s.get("country") or "ES", []).append(s)
     for lst in by_country.values():
         lst.sort(key=lambda s: -(s.get("pisteKm") or 0))
-    country_slug = {cc: slugify(meta["countries"].get(cc, cc)) for cc in by_country}
+    country_slug = {cc: slugify(meta["countries"].get(cc, (cc, ""))[0]) for cc in by_country}
 
     group_of = {sid: g for g in meta["groups"] for sid in g}
     coords = {s["id"]: (s["lat"], s["lon"]) for s in stations if s.get("lat") is not None}
     nearby = {}
     for sid, c in coords.items():
         dists = sorted((haversine_km(c, oc), oid) for oid, oc in coords.items() if oid != sid)
-        nearby[sid] = [(by_id[oid], d) for d, oid in dists[:6] if d <= 150]
+        nearby[sid] = [(by_id[oid], d) for d, oid in dists[:8] if d <= 150]
 
     ctx = {"base_url": args.base_url.rstrip("/"), "slug": slug, "country_slug": country_slug,
            "by_id": by_id, "group_of": group_of, "nearby": nearby}

@@ -468,6 +468,36 @@
 
   footer.credit { padding: 18px; font-size: 11px; color: var(--text-muted); text-align: center; line-height: 1.6; }
 
+  /* Selected piste (desktop: tapped on the map or picked in the list): drawn
+     on top, thicker, with a light glow; everything else fades back. */
+  #map-svg.has-selection .map-run:not(.run-selected), #map-svg.has-selection .map-lift:not(.lift-selected),
+  #map-svg.has-selection .map-run-halo { opacity: 0.32; }
+  .map-run.run-selected { stroke-width: 5; filter: drop-shadow(0 0 3px rgba(255,255,255,0.95)) drop-shadow(0 0 6px rgba(255,255,255,0.6)); animation: run-pulse 0.9s ease-in-out 2; }
+  .map-lift.lift-selected { stroke-width: 3.6; filter: drop-shadow(0 0 3px rgba(255,255,255,0.95)); }
+  @keyframes run-pulse { 50% { stroke-width: 8; } }
+  @media (prefers-reduced-motion: reduce) { .map-run.run-selected { animation: none; } }
+
+  /* Desktop: fixed panel in the map's bottom-right corner with the selected
+     piste's full profile (mobile keeps the small popup next to the tap). */
+  .map-run-panel {
+    position: absolute; right: 16px; bottom: 16px; z-index: 6; width: 400px; max-width: calc(100% - 32px);
+    max-height: calc(100% - 130px); display: flex; flex-direction: column; /* clears the zoom buttons */
+    background: var(--bg); border: 1px solid var(--border); border-radius: 14px;
+    box-shadow: 0 18px 40px -16px rgba(0,0,0,0.55);
+  }
+  .map-run-panel[hidden] { display: none; }
+  .map-run-panel-head { display: flex; align-items: flex-start; gap: 10px; padding: 12px 10px 10px 14px; border-bottom: 1px solid var(--border); }
+  .map-run-panel-head .dot { width: 12px; height: 12px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+  .map-run-panel-txt { flex: 1; min-width: 0; }
+  .map-run-panel-title { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 700; line-height: 1.1; }
+  .map-run-panel-meta { font-size: 11.5px; color: var(--text-secondary); margin-top: 3px; line-height: 1.4; }
+  .map-run-panel-close { border: none; background: var(--surface-2); color: var(--text-secondary); width: 28px; height: 28px; border-radius: 8px; font-size: 18px; line-height: 1; cursor: pointer; flex-shrink: 0; }
+  .map-run-panel-close:hover { color: var(--text-primary); }
+  .map-run-panel-body { overflow-y: auto; padding: 12px 14px 12px; }
+  .map-run-panel-body .run-profile { border: none; background: none; padding: 0; }
+  .map-run-panel-body:empty { display: none; }
+  .item.run-item.run-active { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+
 
   /* ---------- home ---------- */
   .flag { width: 24px; height: 18px; border-radius: 3px; object-fit: cover; flex-shrink: 0; box-shadow: 0 0 0 1px rgba(0,0,0,0.10); display: inline-block; vertical-align: middle; }
@@ -820,6 +850,17 @@
       </div>
       <div class="map-hint" id="map-hint">Arrastra para mover · pellizco para zoom · gira con dos dedos</div>
       <div class="map-empty" id="map-empty" hidden>No hay geometría de pistas ni remontes para esta estación.</div>
+      <div class="map-run-panel" id="map-run-panel" role="dialog" aria-labelledby="map-run-panel-title" hidden>
+        <div class="map-run-panel-head">
+          <span class="dot" id="map-run-panel-dot"></span>
+          <div class="map-run-panel-txt">
+            <div class="map-run-panel-title" id="map-run-panel-title"></div>
+            <div class="map-run-panel-meta" id="map-run-panel-meta"></div>
+          </div>
+          <button type="button" class="map-run-panel-close" id="map-run-panel-close" aria-label="Cerrar">×</button>
+        </div>
+        <div class="map-run-panel-body" id="map-run-panel-body"></div>
+      </div>
     </div>
     <div class="map-legend" id="map-legend"></div>
    </div>
@@ -1160,6 +1201,77 @@
     mapTapPopup.style.top = top + 'px';
   }
   function hideMapTapPopup() { mapTapPopup.hidden = true; }
+
+  // ---- desktop: selected piste/lift (map highlight + fixed profile panel) ----
+  // highlightFeatures is set up by the map controller (setupMapControlsOnce).
+  var highlightFeatures = function () {};
+  var currentRunGroups = {};   // run name -> group from renderDashboard
+  var selectedMapKey = null;   // 'run:<name>' | feature object for unnamed runs/lifts
+  var runPanel = document.getElementById('map-run-panel');
+  function featuresForRun(name) {
+    return (mapState && mapState.features || []).filter(function (f) { return f.runName === name; });
+  }
+  function markActiveRunItem(name, scroll) {
+    document.querySelectorAll('#runs-list .run-item').forEach(function (it) {
+      var on = name != null && it.getAttribute('data-run') === name;
+      it.classList.toggle('run-active', on);
+      if (on && scroll && it.offsetParent) it.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    });
+  }
+  function showRunPanel(title, meta, color, fillBody) {
+    setText('map-run-panel-title', title);
+    setText('map-run-panel-meta', meta);
+    document.getElementById('map-run-panel-dot').style.background = color;
+    var body = document.getElementById('map-run-panel-body');
+    body.innerHTML = '';
+    if (fillBody) fillBody(body);
+    runPanel.hidden = false;
+    body.scrollTop = 0;
+  }
+  function runGroupMeta(g) {
+    var bits = [DIFF[diffKey(g.difficulty)].label];
+    if (g.length_m) bits.push(fmt(Math.round(g.length_m)) + ' m');
+    if (g.vertical_m) bits.push('desnivel ' + fmt(Math.round(g.vertical_m)) + ' m');
+    if (g.length_m) bits.push('pend. media ' + fmt(100 * g.vertical_m / g.length_m, 1) + '%');
+    if (g.minElev != null && g.maxElev != null) bits.push(fmt(Math.round(g.minElev)) + '–' + fmt(Math.round(g.maxElev)) + ' m alt.');
+    return bits.join(' · ');
+  }
+  function selectRunByName(name, opts) {
+    var g = currentRunGroups[name];
+    if (!g) return;
+    selectedMapKey = 'run:' + name;
+    showRunPanel((g.ref ? g.ref + ' · ' : '') + g.name, runGroupMeta(g), DIFF[diffKey(g.difficulty)].color, function (body) {
+      var wrap = document.createElement('div'); wrap.className = 'run-profile';
+      body.appendChild(wrap);
+      renderRunProfile(wrap, g);
+    });
+    highlightFeatures(featuresForRun(name), opts && opts.pan);
+    markActiveRunItem(name, opts && opts.fromMap);
+  }
+  function selectMapFeature(f, opts) {
+    if (f.runName && currentRunGroups[f.runName]) { selectRunByName(f.runName, opts); return; }
+    selectedMapKey = f;
+    showRunPanel(f.label || (f.isLift ? 'Remonte sin nombre' : 'Pista sin nombre'), f.valueText,
+      f.isLift ? 'var(--map-lift-color)' : DIFF[f.diffKey || 'other'].color,
+      f.geomPart ? function (body) { body.appendChild(buildMapTapPopupContent(null, null, f.geomPart)); } : null);
+    highlightFeatures([f], opts && opts.pan);
+    markActiveRunItem(null);
+  }
+  function clearMapSelection() {
+    selectedMapKey = null;
+    runPanel.hidden = true;
+    highlightFeatures([], false);
+    markActiveRunItem(null);
+  }
+  // After the map is rebuilt (resize), put the highlight back on the new elements.
+  function reapplyMapSelection() {
+    if (typeof selectedMapKey === 'string') highlightFeatures(featuresForRun(selectedMapKey.slice(4)), false);
+    else if (selectedMapKey) clearMapSelection();
+  }
+  document.getElementById('map-run-panel-close').addEventListener('click', clearMapSelection);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !runPanel.hidden) clearMapSelection();
+  });
 
   function wireFocusTooltip(el, label, valueText) {
     el.addEventListener('focus', function () {
@@ -1571,6 +1683,7 @@
     hideMapTapPopup();
     buildMap(currentRaw);
     mapBuiltKey = mapSizeKey();
+    reapplyMapSelection();
   }
 
   function showDashPane(which) {
@@ -1623,6 +1736,8 @@
     currentRaw = null;
     mapBuiltKey = null;
     mapState = null;
+    selectedMapKey = null;
+    runPanel.hidden = true;
     document.getElementById('map-svg').innerHTML = '';
     showDashPane('info');
     showCatalog('runs');
@@ -1932,6 +2047,14 @@
     }
     function handleTap(clientX, clientY) {
       var found = pickFeature(clientX, clientY);
+      if (isDesktopLayout()) {
+        // Desktop: highlight what was clicked and show it in the fixed panel.
+        hideTooltip();
+        hideMapTapPopup();
+        if (found) selectMapFeature(found, { pan: false, fromMap: true });
+        else clearMapSelection();
+        return;
+      }
       if (found) {
         clearActiveFeature();
         activeFeature = found;
@@ -1966,6 +2089,62 @@
       // hover movement means the pointer moved on from wherever it tapped.
       hideMapTapPopup();
     });
+    // ---- selection (desktop): highlight a piste/lift, optionally fly to it ----
+    function animateView(target) {
+      var from = { zoom: mapState.zoom, tx: mapState.tx, ty: mapState.ty }, t0 = null, state = mapState;
+      var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      function step(ts) {
+        if (state !== mapState) return;
+        if (t0 == null) t0 = ts;
+        var k = reduce ? 1 : Math.min(1, (ts - t0) / 450);
+        var e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+        mapState.zoom = from.zoom + (target.zoom - from.zoom) * e;
+        mapState.tx = from.tx + (target.tx - from.tx) * e;
+        mapState.ty = from.ty + (target.ty - from.ty) * e;
+        apply();
+        if (k < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+    // Fit the given content-space points in the part of the map the panel
+    // doesn't cover, keeping the current rotation.
+    function flyToPoints(pts) {
+      if (!pts.length) return;
+      var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      pts.forEach(function (p) {
+        var r = rotateXY(p[0], p[1], mapState.angle);
+        minX = Math.min(minX, r[0]); maxX = Math.max(maxX, r[0]);
+        minY = Math.min(minY, r[1]); maxY = Math.max(maxY, r[1]);
+      });
+      var panel = document.getElementById('map-run-panel');
+      var panelW = panel.hidden ? 0 : panel.offsetWidth + 32;
+      var availW = Math.max(160, mapState.vbW - panelW), availH = mapState.vbH;
+      var zoom = Math.min(availW * 0.7 / Math.max(maxX - minX, 1), availH * 0.7 / Math.max(maxY - minY, 1));
+      zoom = Math.min(Math.max(zoom, MIN_ZOOM), 4);
+      var cx = (minX + maxX) / 2 * zoom, cy = (minY + maxY) / 2 * zoom;
+      var saved = { zoom: mapState.zoom, tx: mapState.tx, ty: mapState.ty };
+      mapState.zoom = zoom;
+      mapState.tx = availW / 2 - cx;
+      mapState.ty = availH / 2 - cy;
+      clamp();
+      var target = { zoom: mapState.zoom, tx: mapState.tx, ty: mapState.ty };
+      mapState.zoom = saved.zoom; mapState.tx = saved.tx; mapState.ty = saved.ty;
+      animateView(target);
+    }
+    highlightFeatures = function (feats, pan) {
+      if (!mapState) return;
+      clearActiveFeature();
+      mapState.svg.querySelectorAll('.run-selected, .lift-selected').forEach(function (el) { el.classList.remove('run-selected', 'lift-selected'); });
+      mapState.svg.classList.toggle('has-selection', feats.length > 0);
+      var pts = [];
+      feats.forEach(function (f) {
+        f.el.classList.add(f.isLift ? 'lift-selected' : 'run-selected');
+        f.el.parentNode.appendChild(f.el); // draw on top
+        pts = pts.concat(f.points);
+      });
+      if (pan && feats.length) flyToPoints(pts);
+    };
+
     svg.addEventListener('pointerleave', function (e) {
       // A touch pointer fires "leave" the moment the finger lifts, which would
       // otherwise immediately hide the tooltip a tap just showed. Only a real
@@ -2196,7 +2375,7 @@
         var valueText = bits.join(' · ');
         wireFocusTooltip(hit, label, valueText);
         var projPts = part.map(project);
-        features.push({ el: pl, hoverClass: 'lift-hovered', points: projPts, label: label, valueText: valueText });
+        features.push({ el: pl, hoverClass: 'lift-hovered', points: projPts, label: label, valueText: valueText, isLift: true });
         // Lifts carry people uphill.
         addDirectionArrow(content, directionArrows, projPts, partFlowSign(part, true));
       });
@@ -2218,7 +2397,7 @@
         var valueText = bits.join(' · ');
         wireFocusTooltip(hit, label, valueText);
         var projPts = part.map(project);
-        features.push({ el: line, hoverClass: 'run-hovered', points: projPts, label: label, valueText: valueText, geomPart: part });
+        features.push({ el: line, hoverClass: 'run-hovered', points: projPts, label: label, valueText: valueText, geomPart: part, runName: r.name || null, diffKey: key });
         // Pistes are skied downhill.
         addDirectionArrow(content, directionArrows, projPts, partFlowSign(part, false));
       });
@@ -2856,12 +3035,13 @@
       return da !== db ? da - db : gb.length_m - ga.length_m;
     });
     setText('runs-count', String(runOrder.length));
+    currentRunGroups = runGroups;
     var runsList = document.getElementById('runs-list');
     if (!runOrder.length) runsList.appendChild(catalogEmpty('No hay pistas con nombre en los datos de esta estación.'));
     runOrder.forEach(function (rname) {
       var g = runGroups[rname];
       var key = diffKey(g.difficulty);
-      var item = document.createElement('div'); item.className = 'item run-item'; item.setAttribute('data-diff', key);
+      var item = document.createElement('div'); item.className = 'item run-item'; item.setAttribute('data-diff', key); item.setAttribute('data-run', rname);
       item.setAttribute('role', 'button'); item.setAttribute('tabindex', '0'); item.setAttribute('aria-expanded', 'false');
       var dot = document.createElement('span'); dot.className = 'dot'; dot.style.background = DIFF[key].color;
       var main = document.createElement('div'); main.className = 'item-main';
@@ -2887,6 +3067,13 @@
       runsList.appendChild(profileEl);
       var profileRendered = false;
       function toggleProfile() {
+        // Desktop: the map is right there, so show the piste on it (lit up,
+        // zoomed to) with its profile in the map panel instead of inline.
+        if (isDesktopLayout()) {
+          if (selectedMapKey === 'run:' + rname) clearMapSelection();
+          else selectRunByName(rname, { pan: true });
+          return;
+        }
         var expanded = item.getAttribute('aria-expanded') === 'true';
         item.setAttribute('aria-expanded', expanded ? 'false' : 'true');
         profileEl.hidden = expanded;

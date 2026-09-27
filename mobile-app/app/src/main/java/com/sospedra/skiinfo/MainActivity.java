@@ -26,9 +26,11 @@ import androidx.browser.customtabs.CustomTabsIntent;
  */
 public class MainActivity extends AppCompatActivity {
 
-    private static final String APP_URL = "https://sospi01.github.io/SKI-APP/";
-    private static final Uri APP_URI = Uri.parse(APP_URL);
-    private static final String APP_PATH = "/SKI-APP";
+    private static final String APP_URL = "https://skiinfoapp.com/";
+    // The site's old GitHub Pages address now redirects to APP_URL; still
+    // treat it as the app's own page in case a link or redirect points there.
+    private static final String LEGACY_HOST = "sospi01.github.io";
+    private static final String LEGACY_PATH = "/SKI-APP";
 
     private WebView webView;
     private ProgressBar progressBar;
@@ -105,11 +107,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private static boolean isAppPage(Uri uri) {
+        String host = uri.getHost();
         String path = uri.getPath();
-        return "https".equals(uri.getScheme())
-                && APP_URI.getHost().equalsIgnoreCase(uri.getHost())
+        if (!"https".equals(uri.getScheme()) || host == null) return false;
+        if (host.equalsIgnoreCase("skiinfoapp.com") || host.equalsIgnoreCase("www.skiinfoapp.com")) return true;
+        return host.equalsIgnoreCase(LEGACY_HOST)
                 && path != null
-                && (path.equals(APP_PATH) || path.startsWith(APP_PATH + "/"));
+                && (path.equals(LEGACY_PATH) || path.startsWith(LEGACY_PATH + "/"));
     }
 
     /**

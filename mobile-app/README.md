@@ -1,7 +1,8 @@
 # Ski Info — app de Android
 
 Envoltorio nativo mínimo (una sola `Activity` con un `WebView`) que carga
-`https://sospi01.github.io/SKI-APP/`. No es un TWA: no necesita verificar
+`https://skiinfoapp.com/` (dominio propio servido por GitHub Pages; la
+dirección antigua `https://sospi01.github.io/SKI-APP/` redirige a él). No es un TWA: no necesita verificar
 ningún dominio (`assetlinks.json`) porque el `WebView` no le pide a Android
 que confíe en el origen web como si fuera la propia app — simplemente
 muestra la página dentro de un componente propio. Toda la lógica (buscador,
@@ -58,4 +59,4 @@ completo y committeado; solo falta que ese workflow lo compile.
   cuestionario de contenido, formulario de seguridad de datos).
 - Subir el `.aab` a una pista (interna / cerrada / producción).
 - La política de privacidad ya está lista en `docs/privacy.html` — su URL
-  pública es `https://sospi01.github.io/SKI-APP/privacy.html`.
+  pública es `https://skiinfoapp.com/privacy.html`.

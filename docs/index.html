@@ -852,7 +852,7 @@
     var SESSION_GAP_MS = 30 * 60 * 1000;
     var FLUSH_EVERY_MS = 10 * 60 * 1000;
     var host = location.hostname;
-    var disabled = !/\.github\.io$/.test(host);
+    var disabled = !/(^|\.)skiinfoapp\.com$|\.github\.io$/.test(host);
     // Android's WebView user agent carries "; wv)" -- that's the Play Store app.
     var platform = /; wv\)/.test(navigator.userAgent) ? 'android' : 'web';
 

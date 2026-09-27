@@ -78,7 +78,7 @@ General, no dirigida específicamente a niños.
 
 ## Política de privacidad (URL)
 ```
-https://sospi01.github.io/SKI-APP/privacy.html
+https://skiinfoapp.com/privacy.html
 ```
 
 ## Correo de contacto del desarrollador

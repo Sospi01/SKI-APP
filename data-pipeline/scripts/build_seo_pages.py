@@ -777,11 +777,12 @@ def main() -> None:
         nearby[sid] = [(by_id[oid], d) for d, oid in dists[:8] if d <= 150]
 
     # Written just before by fetch_snow_forecast.py; optional.
-    snow, snow_date = {}, ""
+    snow, snow_date, snow_updated = {}, "", ""
     snow_path = args.docs / "snow.json"
     if snow_path.exists():
         doc = json.loads(snow_path.read_text(encoding="utf-8"))
         snow = doc.get("stations", {})
+        snow_updated = doc.get("updated", "")
         months = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto",
                   "septiembre", "octubre", "noviembre", "diciembre"]
         y, m, d = (int(x) for x in doc.get("updated", "")[:10].split("-"))
@@ -802,7 +803,7 @@ def main() -> None:
                   country=meta["countries"].get(cc, (cc, ""))[0], region=s.get("region"),
                   slug=slug[s["id"]], lat=s.get("lat") or raw.get("latitude") or 0, lon=s.get("lon") or raw.get("longitude") or 0)
         stats.append(st)
-    guides = build_guides(stats, snow, snow_date, fmt, meta["diff"])
+    guides = build_guides(stats, snow, snow_date, fmt, meta["diff"], snow_updated)
     ctx["ranks"] = station_ranks(guides)
 
     urls = [f"{ctx['base_url']}/", f"{ctx['base_url']}/pais/"]

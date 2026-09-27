@@ -225,6 +225,7 @@ section:last-of-type { border-bottom: none; }
 .guide-method h2, .guide-related h2, .guide-group h2 { font-size: 19px; font-weight: 600; margin-bottom: 8px; }
 .guide-related .chip { text-decoration: none; color: var(--text-secondary); }
 .guide-empty { padding: 10px 0; }
+.guide-stale { font-size: 13px; line-height: 1.5; color: #8a5a00; background: #fff4d6; border: 1px solid #f0d58a; border-radius: 12px; padding: 10px 12px; margin: 0 0 10px; }
 .guide-group { padding: 10px 0 14px; border: none; }
 .guide-cards { display: grid; gap: 8px; }
 .guide-card {

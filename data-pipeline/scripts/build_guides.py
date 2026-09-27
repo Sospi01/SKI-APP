@@ -93,9 +93,11 @@ class Guide:
     kind: str = "station"         # station | run | snow
     rank_label: str = ""          # "Estaciones más grandes de España y Andorra" (for station-page chips)
     empty_text: str = ""
+    updated: str = ""             # ISO date of the data behind it (snow guide)
 
 
-def build_guides(stations: list[dict], snow: dict, snow_date: str, fmt_es, diff_labels: dict) -> list[Guide]:
+def build_guides(stations: list[dict], snow: dict, snow_date: str, fmt_es, diff_labels: dict,
+                 snow_updated: str = "") -> list[Guide]:
     """stations: dicts with id, name (display), cc, country, region, slug, lat, lon + station_stats()."""
     fmt = fmt_es
     real = [s for s in stations if s["km"] >= 3]
@@ -287,7 +289,7 @@ def build_guides(stations: list[dict], snow: dict, snow_date: str, fmt_es, diff_
         intro = (f"Ahora mismo no se esperan nevadas significativas en ninguna estación en los próximos 7 días{when}. "
                  "Esta página se actualiza cada día con la previsión de nieve de más de 1.200 estaciones.")
     guides.append(Guide(
-        slug="donde-nieva-esta-semana", group="Nieve", kind="snow",
+        slug="donde-nieva-esta-semana", group="Nieve", kind="snow", updated=snow_updated[:10],
         title="Dónde va a nevar esta semana: previsión de nieve en las estaciones",
         h1="Dónde va a nevar esta semana",
         intro=intro,
@@ -324,7 +326,16 @@ def item_html(it: Item, pos: int, e, diff_color) -> str:
 def guide_page(g: Guide, guides: list[Guide], page, e, base_url: str) -> str:
     url = f"{base_url}/guias/{g.slug}/"
     items = "".join(item_html(it, i + 1, e, None) for i, it in enumerate(g.items))
-    body_list = (f'<ol class="guide-list">{items}</ol>' if g.items
+    stale = ""
+    if g.updated:
+        # The forecast is refreshed by the daily deploy; if that ever stops,
+        # say how old it is instead of passing it off as this week's.
+        stale = (f'<p class="guide-stale" id="guide-stale" data-updated="{g.updated}" hidden></p>'
+                 '<script>(function(){var el=document.getElementById("guide-stale"),d=el.getAttribute("data-updated");'
+                 'var days=Math.floor((Date.now()-Date.parse(d+"T12:00:00Z"))/864e5);if(days>=2){el.textContent='
+                 '"Atención: esta previsión es del "+new Date(d+"T12:00:00Z").toLocaleDateString("es-ES",{day:"numeric",month:"long"})'
+                 '+" y puede estar desactualizada. En la ficha de cada estación tienes la previsión en directo.";el.hidden=false;}})();</script>')
+    body_list = stale + (f'<ol class="guide-list">{items}</ol>' if g.items
                  else f'<p class="intro guide-empty">{e(g.empty_text or "Ahora mismo no hay estaciones en esta lista.")}</p>')
     related = [x for x in guides if x.slug != g.slug and x.group == g.group][:6]
     related += [x for x in guides if x.slug != g.slug and x.group != g.group and x not in related][: max(0, 8 - len(related))]

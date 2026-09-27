@@ -1,7 +1,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#14345C">
-<title>Ski Info</title>
+<title>Ski Info · Mapas de pistas de estaciones de esquí</title>
+<meta name="description" content="Mapas de pistas interactivos sobre imagen satélite, perfil de pendiente de cada pista, remontes y servicios de más de 1.200 estaciones de esquí en 45 países.">
+<link rel="canonical" href="https://skiinfoapp.com/">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
 
@@ -179,6 +181,7 @@
   .station-card .chevron { color: var(--text-muted); font-size: 20px; flex-shrink: 0; }
   .empty-state { padding: 34px 18px; text-align: center; color: var(--text-muted); font-size: 13.5px; line-height: 1.5; }
   .list-footer { padding: 4px 18px 22px; font-size: 11px; color: var(--text-muted); text-align: center; line-height: 1.6; }
+  .list-footer a { color: var(--text-secondary); }
   .country-card .flag { font-size: 22px; line-height: 1; margin-right: 4px; }
   .country-card .name { display: flex; align-items: center; gap: 8px; }
 
@@ -476,7 +479,7 @@
       <p class="list-sub">Datos reales de OpenStreetMap / OpenSkiMap: pistas, remontes, mapa con imagen satelital. Elige un país y luego una estación.</p>
     </div>
     <div class="station-list" id="country-list"></div>
-    <p class="list-footer">Datos de OpenSkiMap / OpenStreetMap (ODbL) · imágenes Esri, Maxar, Earthstar Geographics</p>
+    <p class="list-footer">Datos de OpenSkiMap / OpenStreetMap (ODbL) · imágenes Esri, Maxar, Earthstar Geographics<br><a href="pais/">Todas las estaciones por país</a> · <a href="privacy.html">Privacidad</a></p>
   </div>
 
   <div class="screen" id="screen-list" hidden>
@@ -3013,5 +3016,16 @@
 
     setText('dashboard-credit', 'Datos de OpenSkiMap / OpenStreetMap, licencia ODbL. ID: ' + (raw.id || '').slice(0, 12) + '…');
   }
+
+  // Deep link from the static station pages (/estacion/<slug>/):
+  // ?estacion=<id> opens that station, &vista=mapa on its map tab.
+  (function openFromUrl() {
+    var params = new URLSearchParams(location.search);
+    var id = params.get('estacion');
+    if (!id || !stationById(id)) return;
+    try { history.replaceState(null, '', location.pathname); } catch (e) {}
+    goToStation(id);
+    if (params.get('vista') === 'mapa') showDashPane('map');
+  })();
 })();
 </script>

@@ -16,3 +16,8 @@ data-pipeline/data/
 .DS_Store
 .vscode/
 .idea/
+
+# SEO pages generated at deploy time by data-pipeline/scripts/build_seo_pages.py
+docs/estacion/
+docs/pais/
+docs/sitemap.xml

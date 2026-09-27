@@ -6,6 +6,8 @@ on:
       - claude/ski-stations-database-rhvohj
     paths:
       - docs/**
+      - data-pipeline/scripts/build_seo_pages.py
+      - data-pipeline/station_slugs.json
       - .github/workflows/deploy-pages.yml
   workflow_dispatch: {}
 
@@ -23,6 +25,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Generate per-station and per-country pages + sitemap
+        run: python3 data-pipeline/scripts/build_seo_pages.py
 
       - uses: actions/configure-pages@v5
         with:

@@ -45,6 +45,12 @@
     });
   }
 
+  document.querySelectorAll('.js-share').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      shareStationLink(btn.getAttribute('data-title'), btn.getAttribute('data-url'));
+    });
+  });
+
   var dataPromise = null;
   function stationData() {
     if (!dataPromise) {

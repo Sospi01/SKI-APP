@@ -1,9 +1,22 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#14345C">
-<title>Ski Info · Mapas de pistas de estaciones de esquí</title>
+<title>Ski Info · Mapas de pistas y previsión de nieve de estaciones de esquí</title>
 <meta name="description" content="Mapas de pistas interactivos sobre imagen satélite, perfil de pendiente de cada pista, remontes y servicios de más de 1.200 estaciones de esquí en 45 países.">
 <link rel="canonical" href="https://skiinfoapp.com/">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Ski Info">
+<meta property="og:title" content="Ski Info · Mapas de pistas y previsión de nieve">
+<meta property="og:description" content="Mapas de pistas sobre satélite, la pendiente real de cada pista y la previsión de nieve de más de 1.200 estaciones de esquí. Gratis y sin registro.">
+<meta property="og:url" content="https://skiinfoapp.com/">
+<meta property="og:image" content="https://skiinfoapp.com/og/ski-info.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="es_ES">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="snow.css">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
@@ -240,6 +253,16 @@
     border: 1px solid rgba(255,255,255,0.4); border-radius: 999px; padding: 4px 10px;
   }
   .hero a.site[hidden] { display: none; }
+  .hero-actions { display: flex; gap: 8px; margin-top: 12px; }
+  .hero-action {
+    flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 8px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.38);
+    background: rgba(255,255,255,0.12); color: #fff; font: inherit; font-size: 13px; font-weight: 600;
+    text-decoration: none; cursor: pointer;
+  }
+  .hero-action:hover { background: rgba(255,255,255,0.22); }
+  .hero-action[hidden] { display: none; }
+  .hero-action svg { width: 16px; height: 16px; }
 
   section { padding: 20px 18px; border-bottom: 1px solid var(--border); }
   section:last-of-type { border-bottom: none; }
@@ -578,7 +601,7 @@
       display: flex; align-items: center; gap: 9px; text-decoration: none; color: var(--text-primary);
       font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 23px; letter-spacing: 0.3px;
     }
-    .site-brand svg { width: 26px; height: 26px; color: var(--accent); }
+    .site-brand img { width: 30px; height: 30px; border-radius: 8px; }
     .site-nav { display: flex; gap: 22px; }
     .site-nav a { color: var(--text-secondary); text-decoration: none; font-size: 14px; font-weight: 500; }
     .site-nav a:hover { color: var(--accent); }
@@ -632,7 +655,7 @@
 
 <div class="app" id="app">
   <header class="site-header">
-    <a class="site-brand js-home" href="./"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 19.5l6.5-11 3.5 5.5 2.5-3.5 6.5 9z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M7.2 11.6l1.8-1.1 1.7 1" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Ski Info</a>
+    <a class="site-brand js-home" href="./"><img src="favicon.svg" alt="" width="30" height="30">Ski Info</a>
     <nav class="site-nav" aria-label="Principal">
       <a class="js-home" href="./">Países</a>
       <a href="pais/">Todas las estaciones</a>
@@ -770,6 +793,10 @@
           <div class="hero-stat"><div class="v" id="k-temp">–</div><div class="k" id="k-weather-desc">Tiempo</div></div>
           <div class="hero-stat"><div class="v" id="k-wind">–</div><div class="k">Viento</div></div>
         </div>
+        <div class="hero-actions">
+          <a class="hero-action" id="h-directions" href="#" target="_blank" rel="noopener" hidden><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.2c-3 0-5.4 2.4-5.4 5.4C4.6 11.7 10 17.8 10 17.8s5.4-6.1 5.4-10.2c0-3-2.4-5.4-5.4-5.4z" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="10" cy="7.5" r="1.9" fill="currentColor"/></svg>Cómo llegar</a>
+          <button type="button" class="hero-action" id="h-share"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="14.5" cy="4.5" r="2.3" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="5.5" cy="10" r="2.3" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="14.5" cy="15.5" r="2.3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7.5 8.9l5-3.2M7.5 11.1l5 3.2" stroke="currentColor" stroke-width="1.6"/></svg>Compartir</button>
+        </div>
         <p class="hero-weather-note" id="weather-note" hidden>Tiempo en la base · Open-Meteo · <span id="weather-updated"></span></p>
         <div class="hero-domain" id="domain-section" hidden>
           <div class="hero-domain-title" id="domain-title"></div>
@@ -884,6 +911,7 @@
 
 <script src="profile.js"></script>
 <script src="snow.js"></script>
+<script src="station-actions.js"></script>
 <script>
 (function () {
   "use strict";
@@ -1330,6 +1358,7 @@
     LB: { name: 'Líbano', flag: '🇱🇧' }
   };
   var currentCountry = null;
+  var HOME_TITLE = document.title;
 
   // Ski areas that OpenSkiMap/OpenStreetMap map as separate entries but whose
   // runs or lifts physically come within 500m of each other -- detected
@@ -1792,6 +1821,7 @@
       hideMapTapPopup();
       screenDashboard.hidden = true;
       document.getElementById('app').classList.remove('dash-mode');
+      document.title = HOME_TITLE;
       screenList.hidden = false;
     });
   });
@@ -2959,6 +2989,12 @@
     if (raw.websites && raw.websites.length) { siteLink.href = raw.websites[0]; siteLink.hidden = false; }
     else { siteLink.hidden = true; }
 
+    var dirLink = document.getElementById('h-directions');
+    var dirUrl = stationDirectionsUrl(raw);
+    dirLink.hidden = !dirUrl;
+    if (dirUrl) dirLink.href = dirUrl;
+    document.title = (raw.name || 'Estación') + ' · Ski Info';
+
     var bookingQuery = bookingSearchQuery(raw);
     if (bookingQuery) {
       var bookingLink = document.getElementById('booking-link');
@@ -3232,6 +3268,22 @@
     setText('dashboard-credit', 'Datos de OpenSkiMap / OpenStreetMap, licencia ODbL. ID: ' + (raw.id || '').slice(0, 12) + '…');
   }
 
+  // "Compartir": the station's own page (/estacion/<slug>/) is the link to
+  // share -- it has the preview image and opens straight into its content.
+  var slugsPromise = null;
+  document.getElementById('h-share').addEventListener('click', function () {
+    var raw = currentRaw;
+    if (!raw) return;
+    if (!slugsPromise) {
+      slugsPromise = fetch('slugs.json').then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { slugsPromise = null; return {}; });
+    }
+    slugsPromise.then(function (slugs) {
+      var slug = slugs[raw.id];
+      var url = slug ? 'https://skiinfoapp.com/estacion/' + slug + '/' : 'https://skiinfoapp.com/?estacion=' + raw.id;
+      shareStationLink(raw.name || 'Estación de esquí', url);
+    });
+  });
+
   function isDesktopLayout() { return window.matchMedia('(min-width: 1000px)').matches; }
 
   // Site header (desktop): brand and "Países" go back to the country list.
@@ -3245,6 +3297,7 @@
       screenCountryMap.hidden = true;
       screenCountry.hidden = false;
       document.getElementById('app').classList.remove('dash-mode');
+      document.title = HOME_TITLE;
       window.scrollTo(0, 0);
     });
   });

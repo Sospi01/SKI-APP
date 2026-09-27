@@ -42,6 +42,11 @@ PARENS = re.compile(r"\s*[(（][^)）]*[)）]")
 PEAKS_SVG = ('<svg class="peaks" viewBox="0 0 400 140" preserveAspectRatio="none" aria-hidden="true">'
              '<polygon points="0,140 0,90 60,40 110,80 170,20 230,75 290,35 340,85 400,55 400,140" fill="rgba(255,255,255,0.14)"/>'
              '<polygon points="0,140 0,110 90,60 150,95 210,50 270,100 330,65 400,100 400,140" fill="rgba(255,255,255,0.20)"/></svg>')
+PIN_ICON = ('<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.2c-3 0-5.4 2.4-5.4 5.4C4.6 11.7 10 17.8 10 17.8s5.4-6.1 5.4-10.2c0-3-2.4-5.4-5.4-5.4z" '
+            'fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="10" cy="7.5" r="1.9" fill="currentColor"/></svg>')
+SHARE_ICON = ('<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="14.5" cy="4.5" r="2.3" fill="none" stroke="currentColor" stroke-width="1.6"/>'
+              '<circle cx="5.5" cy="10" r="2.3" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="14.5" cy="15.5" r="2.3" fill="none" stroke="currentColor" stroke-width="1.6"/>'
+              '<path d="M7.5 8.9l5-3.2M7.5 11.1l5 3.2" stroke="currentColor" stroke-width="1.6"/></svg>')
 MAP_ICON = ('<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6.5l5.5-2.5 6 2.5 5.5-2.5v13.5l-5.5 2.5-6-2.5-5.5 2.5z" '
             'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>'
             '<line x1="9" y1="4" x2="9" y2="17.5" stroke="currentColor" stroke-width="1.6"/>'
@@ -143,6 +148,23 @@ def haversine_km(a: tuple, b: tuple) -> float:
     return 2 * 6371 * math.asin(math.sqrt(h))
 
 
+def base_location(raw: dict):
+    """Where "Cómo llegar" should point: the lowest lift end (the base area, where
+    the car park usually is) -- the station's centre is often up the mountain.
+    Mirrors baseLocation() in docs/station-actions.js."""
+    best = None
+    for l in raw.get("lifts") or []:
+        for part in l.get("geom") or []:
+            for p in (part[0], part[-1]) if part else ():
+                if len(p) > 2 and p[2] is not None and (best is None or p[2] < best[2]):
+                    best = p
+    if best:
+        return best[1], best[0]
+    if raw.get("latitude") is not None:
+        return raw["latitude"], raw["longitude"]
+    return None
+
+
 def e(text) -> str:
     return html.escape(str(text if text is not None else ""), quote=True)
 
@@ -160,12 +182,14 @@ def pill(text: str) -> str:
 # ---------- page shell ----------
 
 def page(*, title: str, description: str, url: str, body: str, body_attrs: str = "",
-         jsonld: dict | None = None, noindex: bool = False, scripts: bool = False) -> str:
+         jsonld: dict | None = None, noindex: bool = False, scripts: bool = False,
+         image: str = "/og/ski-info.jpg", base_url: str = "https://skiinfoapp.com") -> str:
     head_extra = '<meta name="robots" content="noindex">\n' if noindex else ""
     if jsonld:
         head_extra += ('<script type="application/ld+json">'
                        + json.dumps(jsonld, ensure_ascii=False).replace("</", "<\\/") + "</script>\n")
-    tail = ('<script src="/profile.js"></script>\n<script src="/snow.js"></script>\n<script src="/static-pages.js"></script>\n'
+    tail = ('<script src="/profile.js"></script>\n<script src="/snow.js"></script>\n'
+            '<script src="/station-actions.js"></script>\n<script src="/static-pages.js"></script>\n'
             if scripts else "")
     if scripts:
         head_extra = '<link rel="stylesheet" href="/snow.css">\n' + head_extra
@@ -182,7 +206,15 @@ def page(*, title: str, description: str, url: str, body: str, body_attrs: str =
 <meta property="og:title" content="{e(title)}">
 <meta property="og:description" content="{e(description)}">
 <meta property="og:url" content="{e(url)}">
+<meta property="og:image" content="{e(base_url + image)}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="es_ES">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#14345C">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
@@ -269,6 +301,9 @@ def station_page(raw: dict, meta: dict, ctx: dict) -> tuple[str, bool]:
                            '<p class="hero-domain-note">Detectado por proximidad geográfica; los km de cada una pueden solaparse:</p>'
                            f'<div class="chips">{links}</div></div>')
     country_slug = ctx["country_slug"].get(cc)
+    base_pt = base_location(raw)
+    directions_html = (f'<a class="hero-action" href="https://www.google.com/maps/dir/?api=1&amp;destination={base_pt[0]:.5f},{base_pt[1]:.5f}" '
+                       f'target="_blank" rel="noopener">{PIN_ICON} Cómo llegar</a>' if base_pt else "")
     back = (f'<a class="back-btn" href="/pais/{country_slug}/"><span class="chev">‹</span> Estaciones de {e(country_name)}</a>'
             if country_slug else '<a class="back-btn" href="/pais/"><span class="chev">‹</span> Países</a>')
     hero = f"""<div class="topbar">{back}<a class="back-btn" href="/">Ski Info</a></div>
@@ -278,7 +313,10 @@ def station_page(raw: dict, meta: dict, ctx: dict) -> tuple[str, bool]:
 <div class="place">{e(place)}</div>
 <div class="hero-stats">{stats_html}</div>
 {domain_html}
+<div class="hero-cta-row">
 <a class="hero-cta" href="{app_link}">{MAP_ICON} Abrir el mapa interactivo de pistas</a>
+<div class="hero-actions">{directions_html}<button type="button" class="hero-action js-share" data-url="{e(url)}" data-title="{e(short)}">{SHARE_ICON} Compartir</button></div>
+</div>
 </div></div>"""
 
     # ----- intro text (what search engines read first) -----
@@ -491,7 +529,7 @@ def station_page(raw: dict, meta: dict, ctx: dict) -> tuple[str, bool]:
 </aside>
 </div>"""
 
-    title = f"{short}: mapa de pistas, remontes y datos | Ski Info"
+    title = f"{short}: mapa de pistas, previsión de nieve y remontes | Ski Info"
     desc_bits = []
     if total_m:
         desc_bits.append(f"{fmt(round(total_m / 1000))} km de pistas")
@@ -502,19 +540,21 @@ def station_page(raw: dict, meta: dict, ctx: dict) -> tuple[str, bool]:
     description = short + (f" ({place_full})" if place_full else "") + ": " + (", ".join(desc_bits) + ". " if desc_bits else "")
     if lo is not None and hi is not None:
         description += f"Altitud {fmt(round(lo))}–{fmt(round(hi))} m. "
-    description += "Mapa de pistas interactivo sobre satélite y pendiente real de cada pista."
+    description += "Previsión de nieve a 7 días, mapa de pistas interactivo sobre satélite y pendiente real de cada pista."
 
     jsonld = {"@context": "https://schema.org", "@type": "SkiResort", "name": name, "url": url}
     address = {"@type": "PostalAddress", "addressRegion": raw.get("region"), "addressLocality": raw.get("locality"), "addressCountry": cc}
     jsonld["address"] = {k: v for k, v in address.items() if v}
     if raw.get("latitude") is not None:
         jsonld["geo"] = {"@type": "GeoCoordinates", "latitude": round(raw["latitude"], 5), "longitude": round(raw["longitude"], 5)}
+    jsonld["image"] = f"{base}/og/{ctx['slug'][sid]}.jpg"
     same_as = [x for x in [site, f"https://www.wikidata.org/wiki/{raw['wikidata_id']}" if raw.get("wikidata_id") else None] if x]
     if same_as:
         jsonld["sameAs"] = same_as
 
     return page(title=title, description=description, url=url, body=body, body_attrs=f' data-station="{e(sid)}"',
-                jsonld=jsonld, noindex=not indexable, scripts=True), indexable
+                jsonld=jsonld, noindex=not indexable, scripts=True,
+                image=f"/og/{ctx['slug'][sid]}.jpg", base_url=base), indexable
 
 
 # ---------- country pages ----------
@@ -588,6 +628,9 @@ def main() -> None:
                 break
     if args.write_slugs:
         SLUGS_PATH.write_text(json.dumps(dict(sorted(slug.items())), indent=0, ensure_ascii=False) + "\n")
+
+    # id -> slug, for the app's share button and build_share_images.py.
+    (args.docs / "slugs.json").write_text(json.dumps(slug, separators=(",", ":")), encoding="utf-8")
 
     by_country: dict[str, list] = {}
     for s in stations:

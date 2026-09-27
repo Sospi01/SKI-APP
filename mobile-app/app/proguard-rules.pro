@@ -1,1 +1,4 @@
-# Nothing app-specific to keep; WebView + a single Activity need no special rules.
+# The WebView calls the share bridge by name (MainActivity.ShareBridge).
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}

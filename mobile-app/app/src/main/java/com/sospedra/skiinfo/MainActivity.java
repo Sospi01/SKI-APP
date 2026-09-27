@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -52,6 +53,10 @@ public class MainActivity extends AppCompatActivity {
         settings.setLoadWithOverviewMode(true);
         settings.setUseWideViewPort(true);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        // Lets the site's "Compartir" button open Android's share sheet
+        // (docs/station-actions.js looks for window.SkiInfoAndroid). Only the
+        // app's own pages ever load here; everything else opens externally.
+        webView.addJavascriptInterface(new ShareBridge(), "SkiInfoAndroid");
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -103,6 +108,23 @@ public class MainActivity extends AppCompatActivity {
             webView.restoreState(savedInstanceState);
         } else {
             webView.loadUrl(APP_URL);
+        }
+    }
+
+    private class ShareBridge {
+        @JavascriptInterface
+        public void share(String text, String url) {
+            if (url == null || !url.startsWith("https://")) return;
+            Intent send = new Intent(Intent.ACTION_SEND);
+            send.setType("text/plain");
+            send.putExtra(Intent.EXTRA_TEXT, (text == null || text.isEmpty() ? "" : text + "\n") + url);
+            runOnUiThread(() -> {
+                try {
+                    startActivity(Intent.createChooser(send, "Compartir"));
+                } catch (ActivityNotFoundException ignored) {
+                    // No app can share text: nothing sensible to do.
+                }
+            });
         }
     }
 

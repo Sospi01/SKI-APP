@@ -8,6 +8,8 @@ on:
       - docs/**
       - data-pipeline/scripts/build_seo_pages.py
       - data-pipeline/scripts/fetch_snow_forecast.py
+      - data-pipeline/scripts/build_share_images.py
+      - data-pipeline/fonts/**
       - data-pipeline/station_slugs.json
       - .github/workflows/deploy-pages.yml
   # Daily rebuild so the snow forecast (home ranking + station pages) stays fresh.
@@ -35,6 +37,25 @@ jobs:
 
       - name: Generate per-station and per-country pages + sitemap
         run: python3 data-pipeline/scripts/build_seo_pages.py
+
+      # The share images only change when station data, slugs, fonts or the
+      # script do (~3 min to regenerate all), so reuse them across deploys.
+      - id: og-cache
+        uses: actions/cache@v4
+        with:
+          path: docs/og
+          key: og-${{ hashFiles('docs/data/**', 'data-pipeline/station_slugs.json', 'data-pipeline/scripts/build_share_images.py', 'data-pipeline/fonts/**', 'docs/icons/icon-512.png') }}
+
+      - uses: actions/setup-python@v5
+        if: steps.og-cache.outputs.cache-hit != 'true'
+        with:
+          python-version: '3.12'
+
+      - name: Social share preview images (Open Graph)
+        if: steps.og-cache.outputs.cache-hit != 'true'
+        run: |
+          python -m pip install --quiet pillow
+          python data-pipeline/scripts/build_share_images.py
 
       - uses: actions/configure-pages@v5
         with:

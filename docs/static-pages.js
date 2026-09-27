@@ -4,6 +4,9 @@
 // is fully readable without this script -- it only adds the app's behaviour.
 (function () {
   var stationId = document.body.getAttribute('data-station');
+  if (window.SkiTrack && stationId) {
+    SkiTrack.station(stationId, document.body.getAttribute('data-name'), document.body.getAttribute('data-country'));
+  }
 
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker.register('/sw.js').catch(function () {});

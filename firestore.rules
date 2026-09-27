@@ -24,12 +24,13 @@ service cloud.firestore {
       allow delete: if isOwner();
       allow create: if
         request.resource.data.keys().hasOnly(
-          ['ts', 'exp', 'type', 'uid', 'sid', 'platform', 'isNew', 'lang', 'station', 'name', 'country', 'secs'])
+          ['ts', 'exp', 'type', 'uid', 'sid', 'platform', 'isNew', 'lang', 'station', 'name', 'country', 'secs',
+           'src', 'ref', 'lp'])
         && request.resource.data.ts == request.time
         && request.resource.data.exp is timestamp
         && request.resource.data.exp > request.time + duration.value(390, 'd')
         && request.resource.data.exp < request.time + duration.value(400, 'd')
-        && request.resource.data.type in ['open', 'station', 'map', 'booking', 'time']
+        && request.resource.data.type in ['open', 'station', 'map', 'booking', 'time', 'page']
         && request.resource.data.uid is string && request.resource.data.uid.size() <= 40
         && request.resource.data.sid is string && request.resource.data.sid.size() <= 40
         && request.resource.data.platform in ['android', 'web']
@@ -39,7 +40,10 @@ service cloud.firestore {
         && optString(request.resource.data, 'lang', 10)
         && optString(request.resource.data, 'station', 64)
         && optString(request.resource.data, 'name', 200)
-        && optString(request.resource.data, 'country', 4);
+        && optString(request.resource.data, 'country', 4)
+        && optString(request.resource.data, 'src', 40)
+        && optString(request.resource.data, 'ref', 120)
+        && optString(request.resource.data, 'lp', 120);
     }
   }
 }

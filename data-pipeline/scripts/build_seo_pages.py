@@ -188,9 +188,12 @@ def page(*, title: str, description: str, url: str, body: str, body_attrs: str =
     if jsonld:
         head_extra += ('<script type="application/ld+json">'
                        + json.dumps(jsonld, ensure_ascii=False).replace("</", "<\\/") + "</script>\n")
+    # Stats on every page; station pages report a station view (static-pages.js),
+    # the rest a page view.
     tail = ('<script src="/profile.js"></script>\n<script src="/snow.js"></script>\n'
-            '<script src="/station-actions.js"></script>\n<script src="/static-pages.js"></script>\n'
-            if scripts else "")
+            '<script src="/station-actions.js"></script>\n<script src="/track.js"></script>\n'
+            '<script src="/static-pages.js"></script>\n'
+            if scripts else '<script src="/track.js"></script>\n<script>window.SkiTrack && SkiTrack.page();</script>\n')
     if scripts:
         head_extra = '<link rel="stylesheet" href="/snow.css">\n' + head_extra
     return f"""<!doctype html>
@@ -563,7 +566,8 @@ def station_page(raw: dict, meta: dict, ctx: dict) -> tuple[str, bool]:
     if same_as:
         jsonld["sameAs"] = same_as
 
-    return page(title=title, description=description, url=url, body=body, body_attrs=f' data-station="{e(sid)}"',
+    return page(title=title, description=description, url=url, body=body,
+                body_attrs=f' data-station="{e(sid)}" data-name="{e(name)}" data-country="{e(cc or "")}"',
                 jsonld=jsonld, noindex=not indexable, scripts=True,
                 image=f"/og/{ctx['slug'][sid]}.jpg", base_url=base), indexable
 

@@ -212,6 +212,18 @@
     </section>
 
     <section class="card">
+      <div class="card-head"><h2>De dónde vienen</h2><span class="sub">visitas por procedencia</span></div>
+      <table class="grid" id="sources"></table>
+      <div class="card-head" style="margin-top:14px"><h2 style="font-size:15px">Páginas de entrada</h2><span class="sub">últimos 30 días</span></div>
+      <div class="list" id="landing"></div>
+      <div class="card-head" style="margin-top:14px"><h2 style="font-size:15px">Webs que te enlazan</h2><span class="sub">últimos 30 días</span></div>
+      <div class="list" id="referrers"></div>
+      <div class="card-head" style="margin-top:14px"><h2 style="font-size:15px">Guías y páginas vistas</h2><span class="sub">últimos 30 días</span></div>
+      <div class="list" id="pages"></div>
+      <p class="note">Qué buscó cada persona en Google no se puede saber desde la web (Google no lo comparte): míralo en <strong>Search Console → Rendimiento → Consultas</strong>. Para saber qué publicación te trae visitas, añade <strong>?ref=nombre</strong> al enlace que compartas (p. ej. skiinfoapp.com/app/?ref=nevasport): aparecerá aquí como «Enlace marcado: nevasport».</p>
+    </section>
+
+    <section class="card">
       <div class="card-head"><h2>Booking</h2><span class="sub">últimos 30 días</span></div>
       <table class="grid" id="booking-summary"></table>
       <div class="card-head" style="margin-top:14px"><h2 style="font-size:15px">Embudo hasta Booking</h2><span class="sub">% sobre usuarios activos</span></div>
@@ -304,7 +316,8 @@ function compact(id, d) {
   return {
     id, t: d.ts.toMillis(), y: d.type, u: d.uid, s: d.sid, p: d.platform,
     st: d.station || undefined, n: d.name || undefined, c: d.country || undefined,
-    sec: d.secs != null ? Number(d.secs) : undefined, nw: d.isNew || undefined
+    sec: d.secs != null ? Number(d.secs) : undefined, nw: d.isNew || undefined,
+    src: d.src || undefined, ref: d.ref || undefined, lp: d.lp || undefined
   };
 }
 
@@ -626,9 +639,60 @@ function render() {
   ).join('') : '<div class="empty">Todavía no hay estaciones vistas.</div>';
 
   renderUsers(m);
+  renderSources();
 
   $('footer').innerHTML = fmtN(m.eventCount) + ' eventos en este dispositivo' + (m.since ? ' · desde el ' + fmtDateTime(m.since) : '') +
     '<br>Actualizado ' + new Date(m.now).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+}
+
+// ---------- where visits come from ----------
+const SOURCE_LABELS = {
+  google: 'Google', bing: 'Bing', duckduckgo: 'DuckDuckGo', yahoo: 'Yahoo', ecosia: 'Ecosia', qwant: 'Qwant',
+  facebook: 'Facebook', instagram: 'Instagram', x: 'X (Twitter)', reddit: 'Reddit', nevasport: 'Nevasport',
+  whatsapp: 'WhatsApp', telegram: 'Telegram', gmail: 'Gmail', linkedin: 'LinkedIn', tiktok: 'TikTok', youtube: 'YouTube',
+  app: 'App Android', pwa: 'Web instalada (icono en el móvil)', directo: 'Directo (escrita, favorito o app sin datos)',
+  reanudada: 'Vuelve tras una pausa', interna: 'Desde la propia web', web: 'Otra web'
+};
+function sourceLabel(src) {
+  if (!src) return 'Sin dato (antes de medirlo)';
+  if (src.indexOf('tag:') === 0) return 'Enlace marcado: ' + src.slice(4);
+  if (src.indexOf('app:') === 0) return 'App ' + src.slice(4);
+  return SOURCE_LABELS[src] || src;
+}
+function renderSources() {
+  const now = Date.now();
+  const ev = events.filter((e) => !hidden.has(e.u));
+  const from = { hoy: startOfDay(now), d7: startOfDay(now, 6), d30: startOfDay(now, 29) };
+  const counts = new Map();
+  const landing = new Map(), refs = new Map(), pages = new Map();
+  for (const e of ev) {
+    if (e.t < from.d30) continue;
+    if (e.y === 'open') {
+      const key = sourceLabel(e.src);
+      let c = counts.get(key);
+      if (!c) { c = { hoy: 0, d7: 0, d30: 0 }; counts.set(key, c); }
+      c.d30++;
+      if (e.t >= from.d7) c.d7++;
+      if (e.t >= from.hoy) c.hoy++;
+      if (e.lp) landing.set(e.lp, (landing.get(e.lp) || 0) + 1);
+      if (e.ref && e.src !== 'interna') refs.set(e.ref, (refs.get(e.ref) || 0) + 1);
+    } else if (e.y === 'page' && e.lp) {
+      pages.set(e.lp, (pages.get(e.lp) || 0) + 1);
+    }
+  }
+  const rows = [...counts.entries()].sort((a, b) => b[1].d30 - a[1].d30 || b[1].d7 - a[1].d7);
+  tableRows($('sources'), ['', 'Hoy', '7 días', '30 días'],
+    rows.length ? rows.map(([k, c]) => [k, fmtN(c.hoy), fmtN(c.d7), fmtN(c.d30)]) : [['Todavía no hay visitas', '', '', '']]);
+  const list = (el, map, empty, label) => {
+    const top = [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12);
+    el.innerHTML = top.length ? top.map(([k, n]) =>
+      '<div class="row"><span class="name">' + esc(label ? label(k) : k) + '</span><span class="nums">' + fmtN(n) + '</span></div>').join('')
+      : '<div class="empty">' + esc(empty) + '</div>';
+  };
+  const pathLabel = (p) => p === '/' ? 'Portada (/)' : decodeURIComponent(p);
+  list($('landing'), landing, 'Aún sin datos: se registra desde esta versión.', pathLabel);
+  list($('referrers'), refs, 'Todavía ninguna web externa te ha enviado visitas.');
+  list($('pages'), pages, 'Aún sin datos: se registra desde esta versión.', pathLabel);
 }
 
 function renderUsers(m) {
@@ -694,7 +758,13 @@ function demoEvents() {
         let t = startOfDay(now, d) + (8 + rnd() * 14) * 3600000;
         if (t > now) t = now - rnd() * 3600000;
         const sid = 's' + u + '_' + d + '_' + s;
-        out.push({ id: sid + 'o', t, y: 'open', u: uid, s: sid, p: platform, nw: first || undefined });
+        const srcs = ['google', 'google', 'google', 'directo', 'whatsapp', 'facebook', 'tag:nevasport', 'web', 'reddit'];
+        const src = platform === 'android' ? 'app' : srcs[Math.floor(rnd() * srcs.length)];
+        const lps = ['/', '/estacion/baqueira-beret/', '/guias/pistas-mas-empinadas-espana-andorra/', '/app/', '/estacion/formigal/'];
+        out.push({ id: sid + 'o', t, y: 'open', u: uid, s: sid, p: platform, nw: first || undefined, src,
+          ref: src === 'google' ? 'google.com' : src === 'web' ? 'blogdeesqui.es' : src === 'reddit' ? 'reddit.com' : undefined,
+          lp: platform === 'android' ? '/' : lps[Math.floor(rnd() * lps.length)] });
+        if (platform !== 'android' && rnd() < 0.3) out.push({ id: sid + 'p', t: t + 2000, y: 'page', u: uid, s: sid, p: platform, lp: '/guias/estaciones-de-esqui-cerca-de-madrid/' });
         first = false;
         const views = 1 + Math.floor(rnd() * 4);
         for (let v = 0; v < views; v++) {

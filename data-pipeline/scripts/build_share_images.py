@@ -172,9 +172,15 @@ def left_column(img: Image.Image, title: str, sub: str, stats: list[str], width:
     d.text((60 * SS, 560 * SS), "skiinfoapp.com", font=font(PLEX_B, 24), fill=(255, 255, 255, 230))
 
 
-def finish(img: Image.Image, out: Path) -> None:
+def finish(img: Image.Image, out: Path, thumb: bool = False) -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
     img.resize((W, H), Image.LANCZOS).save(out, "JPEG", quality=84, optimize=True, progressive=True)
+    if thumb:
+        # Just the map panel, for the guide/ranking lists (/og/thumb/<slug>.jpg).
+        t = out.parent / "thumb" / out.name
+        t.parent.mkdir(parents=True, exist_ok=True)
+        img.crop((646 * SS, 42 * SS, 1158 * SS, 588 * SS)).resize((144, 154), Image.LANCZOS).save(
+            t, "JPEG", quality=82, optimize=True)
 
 
 def station_image(raw: dict, meta: dict, out: Path) -> None:
@@ -207,7 +213,7 @@ def station_image(raw: dict, meta: dict, out: Path) -> None:
     left_column(img, name, place, stats, 540)
     if not has_map:
         paste_logo(img, 827, 240, 150)
-    finish(img, out)
+    finish(img, out, thumb=True)
 
 
 def home_image(stations: list, out: Path) -> None:

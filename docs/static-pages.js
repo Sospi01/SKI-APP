@@ -5,6 +5,10 @@
 (function () {
   var stationId = document.body.getAttribute('data-station');
 
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    navigator.serviceWorker.register('/sw.js').catch(function () {});
+  }
+
   document.querySelectorAll('.seg-btn').forEach(function (btn) {
     btn.addEventListener('click', function () {
       var which = btn.getAttribute('data-catalog');

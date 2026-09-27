@@ -9,6 +9,7 @@ on:
       - data-pipeline/scripts/build_seo_pages.py
       - data-pipeline/scripts/fetch_snow_forecast.py
       - data-pipeline/scripts/build_share_images.py
+      - data-pipeline/scripts/build_guides.py
       - data-pipeline/fonts/**
       - data-pipeline/station_slugs.json
       - .github/workflows/deploy-pages.yml

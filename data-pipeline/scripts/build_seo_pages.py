@@ -215,6 +215,9 @@ def page(*, title: str, description: str, url: str, body: str, body_attrs: str =
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ski Info">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
@@ -224,7 +227,7 @@ def page(*, title: str, description: str, url: str, body: str, body_attrs: str =
 <div class="app">
 {body}
 <footer class="credit">
-<a href="/">Ski Info</a> · <a href="/pais/">Estaciones por país</a> · <a href="/privacy.html">Privacidad</a><br>
+<a href="/">Ski Info</a> · <a href="/pais/">Estaciones por país</a> · <a href="/guias/">Guías y rankings</a> · <a href="/privacy.html">Privacidad</a><br>
 Datos de OpenSkiMap / OpenStreetMap, licencia ODbL.
 </footer>
 </div>
@@ -482,6 +485,13 @@ def station_page(raw: dict, meta: dict, ctx: dict) -> tuple[str, bool]:
                 f'<p class="intro">Las pistas y remontes de {e(short)} sobre imagen de satélite, el sentido de cada pista, '
                 f'la pendiente real de cada tramo, los servicios y el tiempo en directo.</p>'
                 f'<a class="cta-block" href="{app_link}">{MAP_ICON} Abrir el mapa de {e(short)}</a></section>')
+    ranks = ctx["ranks"].get(sid) or []
+    ranks_html = ""
+    if ranks:
+        ranks_html = ('<section><div class="section-head"><h2>En los rankings</h2></div><div class="rank-list">'
+                      + "".join(f'<a class="rank-link" href="{href}"><span class="rank-medal">★</span>{e(label)}</a>'
+                                for label, href in ranks[:8])
+                      + '</div></section>')
     nearby = ctx["nearby"].get(sid) or []
     nearby_html = ""
     if nearby:
@@ -525,6 +535,7 @@ def station_page(raw: dict, meta: dict, ctx: dict) -> tuple[str, bool]:
 </div>
 <aside class="sidebar">
 {map_card}
+{ranks_html}
 {nearby_html}
 </aside>
 </div>"""
@@ -660,7 +671,23 @@ def main() -> None:
     ctx = {"base_url": args.base_url.rstrip("/"), "slug": slug, "country_slug": country_slug,
            "by_id": by_id, "group_of": group_of, "nearby": nearby, "snow": snow, "snow_date": snow_date}
 
+    # First pass: the numbers the guides/rankings need, so station pages can
+    # link to the rankings they appear in.
+    from build_guides import build_guides, station_ranks, station_stats, write_all
+    stats = []
+    for s in stations:
+        raw = json.loads((args.docs / "data" / f"{s['id']}.json").read_text(encoding="utf-8"))
+        cc = s.get("country") or "ES"
+        st = station_stats(raw, is_downhill)
+        st.update(id=s["id"], name=short_name(s["name"]) or s["name"], cc=cc,
+                  country=meta["countries"].get(cc, (cc, ""))[0], region=s.get("region"),
+                  slug=slug[s["id"]], lat=s.get("lat") or raw.get("latitude") or 0, lon=s.get("lon") or raw.get("longitude") or 0)
+        stats.append(st)
+    guides = build_guides(stats, snow, snow_date, fmt, meta["diff"])
+    ctx["ranks"] = station_ranks(guides)
+
     urls = [f"{ctx['base_url']}/", f"{ctx['base_url']}/pais/"]
+    urls += write_all(args.docs, guides, page, e, ctx["base_url"])
     for s in stations:
         raw = json.loads((args.docs / "data" / f"{s['id']}.json").read_text(encoding="utf-8"))
         html_text, indexable = station_page(raw, meta, ctx)
@@ -682,7 +709,7 @@ def main() -> None:
     sitemap += [f"  <url><loc>{html.escape(u)}</loc></url>" for u in urls]
     sitemap.append("</urlset>")
     (args.docs / "sitemap.xml").write_text("\n".join(sitemap) + "\n", encoding="utf-8")
-    print(f"{len(stations)} station pages, {len(by_country)} country pages, {len(urls)} URLs in sitemap")
+    print(f"{len(stations)} station pages, {len(by_country)} country pages, {len(guides)} guides, {len(urls)} URLs in sitemap")
 
 
 if __name__ == "__main__":

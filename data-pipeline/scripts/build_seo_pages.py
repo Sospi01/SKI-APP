@@ -227,7 +227,7 @@ def page(*, title: str, description: str, url: str, body: str, body_attrs: str =
 <div class="app">
 {body}
 <footer class="credit">
-<a href="/">Ski Info</a> · <a href="/pais/">Estaciones por país</a> · <a href="/guias/">Guías y rankings</a> · <a href="/privacy.html">Privacidad</a><br>
+<a href="/">Ski Info</a> · <a href="/pais/">Estaciones por país</a> · <a href="/guias/">Guías y rankings</a> · <a href="/app/">App para el móvil</a> · <a href="/privacy.html">Privacidad</a><br>
 Datos de OpenSkiMap / OpenStreetMap, licencia ODbL.
 </footer>
 </div>
@@ -612,6 +612,121 @@ def countries_index(by_country: dict, meta: dict, ctx: dict) -> str:
                 url=f"{ctx['base_url']}/pais/", body=body)
 
 
+# ---------- /app: how to get Ski Info on your phone ----------
+
+# Set to True once the app is in production on Google Play (the listing is
+# not public while it's in closed testing).
+PLAY_STORE_LIVE = False
+PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.sospedra.skiinfo"
+
+IOS_SHARE = ('<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 12.5V2.8M6.6 6 10 2.6 13.4 6" fill="none" stroke="currentColor" '
+             'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 8.5H5v9h10v-9h-1.5" fill="none" '
+             'stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>')
+IOS_ADD = ('<svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="3" width="14" height="14" rx="3.5" fill="none" stroke="currentColor" '
+           'stroke-width="1.6"/><path d="M10 6.5v7M6.5 10h7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>')
+
+
+def phone(inner: str) -> str:
+    """A tiny phone mock-up (SVG) for the iPhone install steps."""
+    return ('<svg class="phone" viewBox="0 0 120 200" aria-hidden="true">'
+            '<rect x="3" y="3" width="114" height="194" rx="18" fill="var(--bg)" stroke="var(--text-muted)" stroke-width="2"/>'
+            '<rect x="44" y="9" width="32" height="6" rx="3" fill="var(--text-muted)" opacity=".5"/>' + inner + '</svg>')
+
+
+def app_page(ctx: dict, n_stations: int) -> str:
+    safari_bar = phone(
+        '<rect x="12" y="24" width="96" height="120" rx="6" fill="var(--hero-2)" opacity=".85"/>'
+        '<path d="M12 110 40 74 58 96 74 80 108 116V144H12Z" fill="#fff" opacity=".85"/>'
+        '<rect x="3" y="160" width="114" height="37" rx="0" fill="var(--surface-2)"/>'
+        '<g stroke="var(--text-muted)" stroke-width="2" fill="none" stroke-linecap="round"><path d="M20 178l-5-5 5-5M36 168l5 5-5 5"/>'
+        '<rect x="86" y="170" width="10" height="10" rx="2"/><rect x="99" y="167" width="10" height="10" rx="2"/></g>'
+        '<circle cx="60" cy="176" r="13" fill="none" stroke="var(--accent)" stroke-width="2.5"/>'
+        '<g stroke="var(--accent)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">'
+        '<path d="M60 178v-11M56 170.5l4-4 4 4"/><path d="M55.5 173h-2v10h13v-10h-2"/></g>')
+    share_sheet = phone(
+        '<rect x="3" y="3" width="114" height="194" rx="18" fill="#000" opacity=".25"/>'
+        '<rect x="8" y="70" width="104" height="124" rx="12" fill="var(--surface-2)"/>'
+        '<g fill="var(--text-muted)" opacity=".45"><rect x="18" y="84" width="60" height="6" rx="3"/><rect x="18" y="104" width="46" height="6" rx="3"/></g>'
+        '<rect x="12" y="120" width="96" height="24" rx="6" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/>'
+        '<text x="18" y="136" font-size="8.5" font-weight="700" fill="var(--text-primary)" font-family="IBM Plex Sans, sans-serif">Añadir a inicio</text>'
+        '<g transform="translate(88 124)" stroke="var(--accent)" stroke-width="1.6" fill="none"><rect x="1" y="1" width="14" height="14" rx="3.5"/>'
+        '<path d="M8 4.5v7M4.5 8h7" stroke-linecap="round"/></g>'
+        '<g fill="var(--text-muted)" opacity=".45"><rect x="18" y="156" width="54" height="6" rx="3"/><rect x="18" y="176" width="40" height="6" rx="3"/></g>')
+    home_screen = phone(
+        '<rect x="3" y="3" width="114" height="194" rx="18" fill="url(#hs)"/>'
+        '<defs><linearGradient id="hs" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8fb3d9"/><stop offset="1" stop-color="#3c6ea8"/></linearGradient></defs>'
+        '<g fill="#fff" opacity=".35"><rect x="16" y="30" width="18" height="18" rx="5"/><rect x="40" y="30" width="18" height="18" rx="5"/>'
+        '<rect x="64" y="30" width="18" height="18" rx="5"/><rect x="16" y="62" width="18" height="18" rx="5"/><rect x="40" y="62" width="18" height="18" rx="5"/></g>'
+        '<image href="/icons/icon-192.png" x="61" y="59" width="24" height="24"/>'
+        '<rect x="58" y="56" width="30" height="30" rx="8" fill="none" stroke="#fff" stroke-width="2"/>'
+        '<text x="73" y="96" font-size="7" fill="#fff" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-weight="600">Ski Info</text>')
+
+    if PLAY_STORE_LIVE:
+        play_html = (f'<a class="store-badge" href="{PLAY_STORE_URL}" target="_blank" rel="noopener">'
+                     '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 2.8v18.4c0 .4.4.6.7.4l16-9.2c.3-.2.3-.6 0-.8l-16-9.2c-.3-.2-.7 0-.7.4z" fill="currentColor"/></svg>'
+                     '<span><small>Disponible en</small>Google Play</span></a>')
+    else:
+        play_html = ('<span class="store-badge soon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 2.8v18.4c0 .4.4.6.7.4l16-9.2c.3-.2.3-.6 0-.8l-16-9.2c-.3-.2-.7 0-.7.4z" fill="currentColor"/></svg>'
+                     '<span><small>Muy pronto en</small>Google Play</span></span>'
+                     '<p class="app-note">La app está en fase de pruebas. Mientras tanto puedes usar Ski Info desde Chrome e instalarla: '
+                     'menú <b>⋮</b> → <b>Añadir a pantalla de inicio</b> (o <b>Instalar aplicación</b>).</p>')
+
+    hundreds = f"{n_stations // 100 * 100:,}".replace(",", ".")
+    body = f"""<div class="app-hero">{PEAKS_SVG}<div class="app-hero-inner">
+<div class="eyebrow app-eyebrow"><a href="/">Ski Info</a> · App</div>
+<img class="app-logo" src="/icons/icon-192.png" alt="" width="84" height="84">
+<h1>Ski Info en tu móvil</h1>
+<p>Los mapas de pistas, la pendiente de cada pista y la previsión de nieve de {hundreds}+ estaciones, siempre a mano. Gratis y sin registro.</p>
+</div></div>
+<div class="app-wrap">
+<div class="app-benefits">
+<div><b>Se abre como una app</b><span>Con su icono en la pantalla de inicio, a pantalla completa.</span></div>
+<div><b>Funciona con poca cobertura</b><span>Las estaciones que ya hayas consultado se abren aunque no tengas señal en pistas.</span></div>
+<div><b>Siempre actualizada</b><span>Sin actualizaciones que descargar: siempre la última versión.</span></div>
+</div>
+
+<section class="app-card" id="app-android">
+<h2><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9h10v8a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 7 17z M8.5 8a3.5 3.5 0 0 1 7 0z M9 5l-1-1.6M15 5l1-1.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>Android</h2>
+<p class="app-inapp" hidden>Ya estás usando la app de Ski Info. ¡Gracias!</p>
+<div class="app-android-body">{play_html}</div>
+</section>
+
+<section class="app-card" id="app-ios">
+<h2><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10.5 18.5h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>iPhone y iPad</h2>
+<p class="app-lead">No hace falta App Store: se instala desde <b>Safari</b> en tres pasos.</p>
+<ol class="ios-steps">
+<li>{safari_bar}<span class="step-n">1</span><span>Abre <b>skiinfoapp.com</b> en Safari y pulsa el botón <b>Compartir</b> <i class="ico">{IOS_SHARE}</i> de la barra de abajo.</span></li>
+<li>{share_sheet}<span class="step-n">2</span><span>Desliza hacia abajo y pulsa <b>Añadir a pantalla de inicio</b> <i class="ico">{IOS_ADD}</i>.</span></li>
+<li>{home_screen}<span class="step-n">3</span><span>Pulsa <b>Añadir</b>. Ski Info aparecerá en tu pantalla de inicio como cualquier otra app.</span></li>
+</ol>
+<p class="app-note">Si usas Chrome en el iPhone, el botón Compartir está arriba, junto a la barra de direcciones.</p>
+</section>
+
+<section class="app-card" id="app-desktop">
+<h2><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4.5" width="18" height="12" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8.5 20h7M12 16.5V20" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>En el ordenador</h2>
+<p class="app-lead">No hace falta instalar nada: entra en <a href="/">skiinfoapp.com</a>. En Chrome o Edge también puedes instalarla con el icono <b>Instalar</b> que aparece a la derecha de la barra de direcciones.</p>
+</section>
+</div>
+<script>
+(function () {{
+  var ua = navigator.userAgent || '';
+  var ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var android = /Android/.test(ua);
+  var wrap = document.querySelector('.app-wrap');
+  var first = ios ? 'app-ios' : android ? 'app-android' : null;
+  if (first) wrap.insertBefore(document.getElementById(first), wrap.querySelector('.app-card'));
+  if (window.SkiInfoAndroid || /; wv\)/.test(ua)) {{
+    document.querySelector('.app-inapp').hidden = false;
+    document.querySelector('.app-android-body').hidden = true;
+  }}
+}})();
+</script>"""
+    return page(title="Descarga Ski Info: app de mapas de pistas y nieve para Android y iPhone",
+                description="Instala Ski Info en tu móvil: mapas de pistas, pendiente de cada pista y previsión de nieve de "
+                            f"{hundreds}+ estaciones de esquí. Android y iPhone, gratis y sin registro.",
+                url=f"{ctx['base_url']}/app/", body=body, base_url=ctx["base_url"])
+
+
 # ---------- main ----------
 
 def main() -> None:
@@ -703,6 +818,9 @@ def main() -> None:
         out.write_text(country_page(cc, lst, meta, ctx), encoding="utf-8")
         urls.append(f"{ctx['base_url']}/pais/{country_slug[cc]}/")
     (args.docs / "pais" / "index.html").write_text(countries_index(by_country, meta, ctx), encoding="utf-8")
+    (args.docs / "app").mkdir(exist_ok=True)
+    (args.docs / "app" / "index.html").write_text(app_page(ctx, len(stations)), encoding="utf-8")
+    urls.append(f"{ctx['base_url']}/app/")
 
     sitemap = ['<?xml version="1.0" encoding="UTF-8"?>',
                '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']

@@ -116,6 +116,8 @@
   .chart .baseline { stroke: var(--text-muted); stroke-width: 1; opacity: 0.5; }
   .chart .bar-hit { fill: transparent; cursor: pointer; }
   .chart .bar.active { opacity: 0.75; }
+  .legend { display: flex; gap: 14px; font-size: 11.5px; color: var(--text-secondary); margin-bottom: 6px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
   details.data { margin-top: 6px; font-size: 12px; color: var(--text-muted); }
   details.data summary { cursor: pointer; }
   details.data table { width: 100%; border-collapse: collapse; margin-top: 6px; font-variant-numeric: tabular-nums; }
@@ -196,6 +198,14 @@
     <section class="card">
       <div class="card-head"><h2>Usuarios activos por día</h2><span class="sub">últimos 30 días</span></div>
       <div class="chart" id="chart-users"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>Web o app</h2><span class="sub">de dónde vienen las visitas</span></div>
+      <table class="grid" id="platform-split"></table>
+      <div class="card-head" style="margin-top:14px"><h2 style="font-size:15px">Visitas por día</h2><span class="sub">últimos 30 días</span></div>
+      <div class="chart" id="chart-platform"></div>
+      <p class="note">Una visita es una sesión: se abre la web o la app y se usa sin parar más de 30 minutos. "App" es la app Android de Google Play; "Web" es cualquier navegador (ordenador o móvil).</p>
     </section>
 
     <section class="card">
@@ -327,17 +337,23 @@ function compute(now) {
   function windowStats(from) {
     const users = new Set(), sessions = new Set(), viewUsers = new Set(), mapUsers = new Set(), bookUsers = new Set();
     let newUsers = 0, views = 0, maps = 0, bookings = 0;
+    // Same counts split by where the visit came from: the Android app or a browser.
+    const by = { app: plat(), web: plat() };
     for (const e of ev) {
       if (e.t < from) continue;
       users.add(e.u); sessions.add(e.s);
+      const b = by[e.p === 'android' ? 'app' : 'web'];
+      b.users.add(e.u); b.sessions.add(e.s);
+      if (e.y === 'booking') b.bookings++;
       if (e.y === 'open' && e.nw) newUsers++;
       else if (e.y === 'station') { views++; viewUsers.add(e.u); }
       else if (e.y === 'map') { maps++; mapUsers.add(e.u); }
       else if (e.y === 'booking') { bookings++; bookUsers.add(e.u); }
     }
     return { users: users.size, sessions: sessions.size, newUsers, views, maps, bookings,
-      viewUsers: viewUsers.size, mapUsers: mapUsers.size, bookUsers: bookUsers.size };
+      viewUsers: viewUsers.size, mapUsers: mapUsers.size, bookUsers: bookUsers.size, by };
   }
+  function plat() { return { users: new Set(), sessions: new Set(), bookings: 0 }; }
   const w = {};
   for (const k in windows) w[k] = windowStats(windows[k]);
 
@@ -359,7 +375,7 @@ function compute(now) {
   const days = [];
   for (let i = 29; i >= 0; i--) {
     const from = startOfDay(now, i);
-    days.push({ from, users: new Set(), sessions: new Set(), bookings: 0, views: 0 });
+    days.push({ from, users: new Set(), sessions: new Set(), appSessions: new Set(), webSessions: new Set(), bookings: 0, views: 0 });
   }
   const dayIndex = (t) => { for (let i = days.length - 1; i >= 0; i--) if (t >= days[i].from) return i; return -1; };
   const perUser = new Map(), perSession = new Map(), perStation = new Map();
@@ -369,6 +385,7 @@ function compute(now) {
     if (di >= 0) {
       const d = days[di];
       d.users.add(e.u); d.sessions.add(e.s);
+      (e.p === 'android' ? d.appSessions : d.webSessions).add(e.s);
       if (e.y === 'booking') d.bookings++;
       if (e.y === 'station') d.views++;
     }
@@ -439,7 +456,12 @@ function hbars(el, items, color) {
 }
 
 const tip = $('tip');
-function showTip(x, y, html) { tip.innerHTML = html; tip.style.left = x + 'px'; tip.style.top = y + 'px'; tip.hidden = false; }
+function showTip(x, y, html) {
+  tip.innerHTML = html; tip.style.top = y + 'px'; tip.hidden = false;
+  // Centered on x (see .tip transform) but kept inside the window.
+  const half = tip.offsetWidth / 2, margin = 8;
+  tip.style.left = Math.max(margin + half, Math.min(x, window.innerWidth - margin - half)) + 'px';
+}
 function hideTip() { tip.hidden = true; }
 document.addEventListener('scroll', hideTip, { passive: true });
 
@@ -449,11 +471,14 @@ function niceMax(v) {
   for (const m of [1, 2, 2.5, 5, 10]) if (m * p >= v) return m * p;
   return 10 * p;
 }
-// Single-series daily bar chart (identity is in the card title, so no legend);
-// every bar has a full-height hit area with a tooltip, and a data table follows.
-function barChart(el, days, valueOf, color, unit) {
+// Daily bar chart. `series` is [{ label, color, valueOf }]; with more than one
+// they're stacked and a legend is added (a single series is named by the card
+// title). Every bar has a full-height hit area with a tooltip, and a data
+// table follows.
+function barChart(el, days, series, unit) {
   const W = 340, H = 150, padL = 26, padR = 4, padT = 8, padB = 20;
-  const values = days.map(valueOf);
+  const perSeries = series.map((se) => days.map(se.valueOf));
+  const values = days.map((_, i) => perSeries.reduce((a, v) => a + v[i], 0));
   const max = niceMax(Math.max(...values, 0));
   const plotW = W - padL - padR, plotH = H - padT - padB;
   const slot = plotW / days.length, gap = 2, bw = Math.max(1, slot - gap);
@@ -465,30 +490,46 @@ function barChart(el, days, valueOf, color, unit) {
     svg += '<text class="axis-label" x="' + (padL - 5) + '" y="' + (gy + 3) + '" text-anchor="end">' + fmtN(g) + '</text>';
   });
   days.forEach((d, i) => {
-    const v = values[i], x = padL + i * slot + gap / 2;
-    if (v > 0) {
-      const top = y(v), h = padT + plotH - top, r = Math.min(4, bw / 2, h);
-      svg += '<path class="bar" data-i="' + i + '" fill="' + color + '" d="M' + x + ',' + (padT + plotH) + 'V' + (top + r) + 'Q' + x + ',' + top + ' ' + (x + r) + ',' + top +
-        'H' + (x + bw - r) + 'Q' + (x + bw) + ',' + top + ' ' + (x + bw) + ',' + (top + r) + 'V' + (padT + plotH) + 'Z"/>';
-    }
+    const x = padL + i * slot + gap / 2;
+    let acc = 0;
+    const lastSeries = perSeries.map((v) => v[i] > 0).lastIndexOf(true);
+    perSeries.forEach((vals, si) => {
+      const v = vals[i];
+      if (!(v > 0)) return;
+      const bottom = y(acc), top = y(acc + v);
+      acc += v;
+      // Only the topmost segment gets rounded corners; 1px gap between segments.
+      const r = si === lastSeries ? Math.min(4, bw / 2, bottom - top) : 0;
+      const b = si > 0 && acc > v ? bottom - 1 : bottom;
+      svg += '<path class="bar" data-i="' + i + '" fill="' + series[si].color + '" d="M' + x + ',' + b + 'V' + (top + r) + 'Q' + x + ',' + top + ' ' + (x + r) + ',' + top +
+        'H' + (x + bw - r) + 'Q' + (x + bw) + ',' + top + ' ' + (x + bw) + ',' + (top + r) + 'V' + b + 'Z"/>';
+    });
     if ((days.length - 1 - i) % 7 === 0) {
       svg += '<text class="axis-label" x="' + (x + bw / 2) + '" y="' + (H - 5) + '" text-anchor="middle">' + new Date(d.from).getDate() + '</text>';
     }
     svg += '<rect class="bar-hit" data-i="' + i + '" x="' + (padL + i * slot) + '" y="' + padT + '" width="' + slot + '" height="' + plotH + '"/>';
   });
   svg += '</svg>';
-  const table = '<details class="data"><summary>Ver datos</summary><table><tr><th>Día</th><th>' + esc(unit) + '</th></tr>' +
-    days.slice().reverse().map((d, i) => '<tr><td>' + fmtDate(d.from) + '</td><td>' + fmtN(values[days.length - 1 - i]) + '</td></tr>').join('') + '</table></details>';
-  el.innerHTML = svg + table;
+  const multi = series.length > 1;
+  const legend = multi ? '<div class="legend">' + series.map((se) =>
+    '<span><i style="background:' + se.color + '"></i>' + esc(se.label) + '</span>').join('') + '</div>' : '';
+  const cols = multi ? series.map((se) => se.label).concat(['Total']) : [unit];
+  const table = '<details class="data"><summary>Ver datos</summary><table><tr><th>Día</th>' + cols.map((c) => '<th>' + esc(c) + '</th>').join('') + '</tr>' +
+    days.map((d, i) => i).reverse().map((i) => '<tr><td>' + fmtDate(days[i].from) + '</td>' +
+      (multi ? perSeries.map((v) => v[i]).concat([values[i]]) : [values[i]]).map((v) => '<td>' + fmtN(v) + '</td>').join('') + '</tr>').join('') +
+    '</table></details>';
+  el.innerHTML = legend + svg + table;
   el.querySelectorAll('.bar-hit').forEach((hit) => {
     const i = Number(hit.getAttribute('data-i'));
     const onEnter = (e) => {
       el.querySelectorAll('.bar.active').forEach((b) => b.classList.remove('active'));
-      const bar = el.querySelector('.bar[data-i="' + i + '"]');
-      if (bar) bar.classList.add('active');
+      const bars = el.querySelectorAll('.bar[data-i="' + i + '"]');
+      bars.forEach((b) => b.classList.add('active'));
+      const top = bars.length ? Math.min(...[...bars].map((b) => b.getBoundingClientRect().top)) : null;
       const r = hit.getBoundingClientRect();
       const label = new Date(days[i].from).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
-      showTip(r.left + r.width / 2, (bar ? bar.getBoundingClientRect().top : r.bottom), esc(label) + ' · <strong>' + fmtN(values[i]) + '</strong> ' + esc(unit));
+      const detail = multi ? '<br>' + series.map((se, si) => esc(se.label) + ': ' + fmtN(perSeries[si][i])).join(' · ') : '';
+      showTip(r.left + r.width / 2, top != null ? top : r.bottom, esc(label) + ' · <strong>' + fmtN(values[i]) + '</strong> ' + esc(unit) + detail);
     };
     hit.addEventListener('pointerenter', onEnter);
     hit.addEventListener('pointerdown', onEnter);
@@ -502,7 +543,7 @@ function render() {
   const { w } = m;
   $('k-now').textContent = fmtN(m.nowUsers);
   $('k-today').textContent = fmtN(w.hoy.users);
-  $('k-today-d').textContent = 'ayer: ' + fmtN(m.yesterday.users);
+  $('k-today-d').textContent = 'app ' + fmtN(w.hoy.by.app.users.size) + ' · web ' + fmtN(w.hoy.by.web.users.size) + ' · ayer ' + fmtN(m.yesterday.users);
   $('k-book').textContent = fmtN(w.hoy.bookings);
   $('k-book-d').textContent = 'ayer: ' + fmtN(m.yesterday.bookings);
   $('k-total').textContent = fmtN(m.totalUsers);
@@ -517,8 +558,12 @@ function render() {
     ['Clics en Booking', fmtN(w.hoy.bookings), fmtN(w.d7.bookings), fmtN(w.d30.bookings)]
   ]);
 
-  barChart($('chart-users'), m.days, (d) => d.users.size, 'var(--series-1)', 'usuarios');
-  barChart($('chart-booking'), m.days, (d) => d.bookings, 'var(--series-2)', 'clics');
+  barChart($('chart-users'), m.days, [{ valueOf: (d) => d.users.size, color: 'var(--series-1)' }], 'usuarios');
+  barChart($('chart-booking'), m.days, [{ valueOf: (d) => d.bookings, color: 'var(--series-2)' }], 'clics');
+  barChart($('chart-platform'), m.days, [
+    { label: 'App Android', valueOf: (d) => d.appSessions.size, color: 'var(--series-1)' },
+    { label: 'Web', valueOf: (d) => d.webSessions.size, color: 'var(--series-2)' }
+  ], 'visitas');
 
   tableRows($('booking-summary'), ['', 'Hoy', '7 días', '30 días'], [
     ['Clics en Booking', fmtN(w.hoy.bookings), fmtN(w.d7.bookings), fmtN(w.d30.bookings)],
@@ -532,6 +577,20 @@ function render() {
     { label: 'Abren una ficha de estación', value: w.d30.viewUsers, text: fmtN(w.d30.viewUsers) + ' · ' + fmtPct(w.d30.viewUsers / a) },
     { label: 'Abren el mapa', value: w.d30.mapUsers, text: fmtN(w.d30.mapUsers) + ' · ' + fmtPct(w.d30.mapUsers / a) },
     { label: 'Pulsan Booking', value: w.d30.bookUsers, text: fmtN(w.d30.bookUsers) + ' · ' + fmtPct(w.d30.bookUsers / a) }
+  ]);
+
+  const split = (k, f) => [w.hoy, w.d7, w.d30].map((x) => f(x.by[k]));
+  const appShare = (f) => [w.hoy, w.d7, w.d30].map((x) => fmtPct(f(x.by.app) / (f(x.by.app) + f(x.by.web))));
+  const n = (f) => (x) => fmtN(f(x));
+  const ses = (x) => x.sessions.size, usr = (x) => x.users.size;
+  tableRows($('platform-split'), ['', 'Hoy', '7 días', '30 días'], [
+    ['Visitas desde la app'].concat(split('app', n(ses))),
+    ['Visitas desde la web'].concat(split('web', n(ses))),
+    ['% en la app'].concat(appShare(ses)),
+    ['Usuarios en la app'].concat(split('app', n(usr))),
+    ['Usuarios en la web'].concat(split('web', n(usr))),
+    ['Booking desde la app'].concat(split('app', n((x) => x.bookings))),
+    ['Booking desde la web'].concat(split('web', n((x) => x.bookings)))
   ]);
 
   $('since-sub').textContent = m.since ? 'desde el ' + fmtDate(m.since) : '';

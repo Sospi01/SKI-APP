@@ -37,7 +37,7 @@ jobs:
         run: python3 data-pipeline/scripts/fetch_snow_forecast.py
 
       - name: Generate per-station and per-country pages + sitemap
-        run: python3 data-pipeline/scripts/build_seo_pages.py
+        run: python3 data-pipeline/scripts/build_seo_pages.py --inject-home
 
       # The share images only change when station data, slugs, fonts or the
       # script do (~3 min to regenerate all), so reuse them across deploys.

@@ -66,10 +66,16 @@ def js_block(src: str, var: str) -> str:
     return src[start:end]
 
 
+def read_app_sources(docs: Path) -> str:
+    """index.html plus the station catalogue it loads (docs/stations.js)."""
+    return (docs / "index.html").read_text(encoding="utf-8") + "\n" + (docs / "stations.js").read_text(encoding="utf-8")
+
+
 def load_app_metadata(index_html: str) -> dict:
+    """The app's own tables; pass read_app_sources() (index.html + stations.js)."""
     lines = index_html.splitlines()
-    stations_line = next(l for l in lines if l.startswith("  var STATIONS = "))
-    groups_line = next(l for l in lines if l.startswith("  var STATION_GROUPS = "))
+    stations_line = next(l for l in lines if l.lstrip().startswith("var STATIONS = "))
+    groups_line = next(l for l in lines if l.lstrip().startswith("var STATION_GROUPS = "))
     pairs = lambda var: dict(re.findall(r'"?([\w+-]+)"?:\s*"([^"]+)"', js_block(index_html, var)))
     return {
         "stations": json.loads(stations_line.split(" = ", 1)[1].rstrip(";")),
@@ -181,6 +187,11 @@ def pill(text: str) -> str:
 
 # ---------- page shell ----------
 
+# Self-hosted @font-face rules, inlined into every page (one request fewer).
+FONT_FACES = "\n".join(l for l in (REPO / "docs" / "fonts.css").read_text(encoding="utf-8").splitlines()
+                       if l.startswith("@font-face"))
+
+
 def page(*, title: str, description: str, url: str, body: str, body_attrs: str = "",
          jsonld: dict | None = None, noindex: bool = False, scripts: bool = False,
          image: str = "/og/ski-info.jpg", base_url: str = "https://skiinfoapp.com") -> str:
@@ -190,12 +201,16 @@ def page(*, title: str, description: str, url: str, body: str, body_attrs: str =
                        + json.dumps(jsonld, ensure_ascii=False).replace("</", "<\\/") + "</script>\n")
     # Stats on every page; station pages report a station view (static-pages.js),
     # the rest a page view.
-    tail = ('<script src="/profile.js"></script>\n<script src="/snow.js"></script>\n'
-            '<script src="/station-actions.js"></script>\n<script src="/track.js"></script>\n'
-            '<script src="/static-pages.js"></script>\n'
-            if scripts else '<script src="/track.js"></script>\n<script>window.SkiTrack && SkiTrack.page();</script>\n')
+    # Deferred: they run in order once the page is parsed, without holding up
+    # the first paint. track.js with data-page reports a plain page view.
+    tail = ('<script defer src="/profile.js"></script>\n<script defer src="/snow.js"></script>\n'
+            '<script defer src="/station-actions.js"></script>\n<script defer src="/track.js"></script>\n'
+            '<script defer src="/static-pages.js"></script>\n'
+            if scripts else '<script defer src="/track.js" data-page></script>\n')
     if scripts:
-        head_extra = '<link rel="stylesheet" href="/snow.css">\n' + head_extra
+        # Not needed for the first screen: load it without blocking the paint.
+        head_extra = ('<link rel="stylesheet" href="/snow.css" media="print" onload="this.media=\'all\'">\n'
+                      '<noscript><link rel="stylesheet" href="/snow.css"></noscript>\n' + head_extra)
     return f"""<!doctype html>
 <html lang="es">
 <head>
@@ -221,9 +236,10 @@ def page(*, title: str, description: str, url: str, body: str, body_attrs: str =
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Ski Info">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<link rel="preload" href="/fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/ibm-plex-sans-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/barlow-condensed-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+<style>{FONT_FACES}</style>
 <link rel="stylesheet" href="/static-pages.css">
 {head_extra}</head>
 <body{body_attrs}>
@@ -731,6 +747,38 @@ def app_page(ctx: dict, n_stations: int) -> str:
                 url=f"{ctx['base_url']}/app/", body=body, base_url=ctx["base_url"])
 
 
+# ---------- home-page data inlined into the app ----------
+
+HOME_EUROPE = {"ES", "FR", "AT", "IT", "CH", "AD", "DE", "SI", "NO", "SE", "FI", "PL", "CZ", "SK", "BG", "RO", "GE", "BA",
+               "RS", "ME", "IS", "GB", "LI", "MK", "HR", "RU", "TR", "GR", "UA", "AM", "AZ"}
+HOME_GUIDES = ["donde-nieva-esta-semana", "estaciones-mas-grandes-espana-andorra", "estaciones-para-principiantes-espana-andorra",
+               "pistas-mas-empinadas-espana-andorra", "estaciones-de-esqui-cerca-de-madrid", "estaciones-de-esqui-cerca-de-barcelona"]
+
+
+def inject_home_data(index_path: Path, snow_doc: dict | None, stations: list, guides_index: list) -> None:
+    """Fill the app's <script id="home-data"> placeholder (docs/index.html) with
+    the home page's snow ranking and featured guides, so they render with the
+    page instead of arriving later and pushing content down. Only the stations
+    that can make any zone's top list are included (the page ranks them)."""
+    data = {"guides": [g for slug in HOME_GUIDES for g in guides_index if g["slug"] == slug]}
+    if snow_doc and snow_doc.get("stations"):
+        cc_of = {s["id"]: s.get("country") or "ES" for s in stations}
+        ranked = sorted(((sum(v or 0 for v in f.get("sf") or []), sid) for sid, f in snow_doc["stations"].items()
+                         if sid in cc_of), reverse=True)
+        keep = set()
+        for zone in (lambda cc: True, lambda cc: cc in HOME_EUROPE, lambda cc: cc in {"ES", "AD"}):
+            keep.update([sid for _, sid in ranked if zone(cc_of[sid])][:30])
+        data["snow"] = {"updated": snow_doc.get("updated"),
+                        "stations": {sid: snow_doc["stations"][sid] for sid in keep}}
+    html_text = index_path.read_text(encoding="utf-8")
+    placeholder = re.compile(r'(<script id="home-data" type="application/json">).*?(</script>)', re.DOTALL)
+    payload = json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+    new_text, n = placeholder.subn(lambda m: m.group(1) + payload + m.group(2), html_text, count=1)
+    if n != 1:
+        raise SystemExit(f"home-data placeholder not found in {index_path}")
+    index_path.write_text(new_text, encoding="utf-8")
+
+
 # ---------- main ----------
 
 def main() -> None:
@@ -738,9 +786,11 @@ def main() -> None:
     ap.add_argument("--docs", type=Path, default=REPO / "docs")
     ap.add_argument("--base-url", default="https://skiinfoapp.com")
     ap.add_argument("--write-slugs", action="store_true", help="persist slugs for new stations")
+    ap.add_argument("--inject-home", action="store_true",
+                    help="inline the home page's data into docs/index.html (deploy only: rewrites a committed file)")
     args = ap.parse_args()
 
-    meta = load_app_metadata((args.docs / "index.html").read_text(encoding="utf-8"))
+    meta = load_app_metadata(read_app_sources(args.docs))
     stations = meta["stations"]
     by_id = {s["id"]: s for s in stations}
 
@@ -832,6 +882,11 @@ def main() -> None:
     sitemap += [f"  <url><loc>{html.escape(u)}</loc></url>" for u in urls]
     sitemap.append("</urlset>")
     (args.docs / "sitemap.xml").write_text("\n".join(sitemap) + "\n", encoding="utf-8")
+    if args.inject_home:
+        guides_index = json.loads((args.docs / "guias.json").read_text(encoding="utf-8"))
+        snow_doc = json.loads((args.docs / "snow.json").read_text(encoding="utf-8")) if (args.docs / "snow.json").exists() else None
+        inject_home_data(args.docs / "index.html", snow_doc, stations, guides_index)
+
     print(f"{len(stations)} station pages, {len(by_country)} country pages, {len(guides)} guides, {len(urls)} URLs in sitemap")
 
 

@@ -158,11 +158,14 @@ var SkiTrack = (function () {
   }, FLUSH_EVERY_MS);
 
   function stationFields(id, name, country) { return { station: id, name: name, country: country }; }
-  return {
+  var api = {
     station: function (id, name, country) { send('station', stationFields(id, name, country)); },
     map: function (id, name, country) { send('map', stationFields(id, name, country)); },
     booking: function (id, name, country) { send('booking', stationFields(id, name, country)); },
     // Any other page (guides, countries, /app): which one, for the stats.
     page: function () { send('page', { lp: location.pathname }); }
   };
+  // <script src="/track.js" data-page>: a plain page view (guides, countries...).
+  if (document.currentScript && document.currentScript.hasAttribute('data-page')) api.page();
+  return api;
 })();

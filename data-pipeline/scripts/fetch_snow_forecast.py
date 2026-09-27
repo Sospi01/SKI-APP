@@ -41,9 +41,9 @@ DAILY = "snowfall_sum"
 
 
 def load_stations() -> list[dict]:
-    html = (DOCS / "index.html").read_text(encoding="utf-8")
-    line = next(l for l in html.splitlines() if l.startswith("  var STATIONS = "))
-    stations = json.loads(re.sub(r"^  var STATIONS = |;\s*$", "", line))
+    src = (DOCS / "stations.js").read_text(encoding="utf-8")
+    line = next(l for l in src.splitlines() if l.startswith("var STATIONS = "))
+    stations = json.loads(re.sub(r"^var STATIONS = |;\s*$", "", line))
     for s in stations:
         try:
             raw = json.loads((DOCS / "data" / f"{s['id']}.json").read_text(encoding="utf-8"))

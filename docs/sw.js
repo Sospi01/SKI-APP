@@ -3,7 +3,7 @@
 // straight away) and falls back to the last copy when offline; the stations
 // you've opened (their data files) stay available. Other sites (weather,
 // satellite tiles, stats) are left alone.
-var VERSION = 'v2';
+var VERSION = 'v4';
 var SHELL = 'skiinfo-shell-' + VERSION;
 var PAGES = 'skiinfo-pages-' + VERSION;
 var DATA = 'skiinfo-data-' + VERSION;
@@ -12,7 +12,7 @@ var LIMITS = {};
 LIMITS[PAGES] = 80;
 LIMITS[DATA] = 40;      // station data files can be large
 LIMITS[ASSETS] = 300;
-var SHELL_FILES = ['/', '/profile.js', '/snow.js', '/snow.css', '/station-actions.js', '/track.js',
+var SHELL_FILES = ['/', '/fonts.css', '/stations.js', '/profile.js', '/snow.js', '/snow.css', '/station-actions.js', '/track.js',
   '/static-pages.css', '/static-pages.js', '/favicon.svg', '/icons/icon-192.png', '/manifest.webmanifest'];
 
 self.addEventListener('install', function (event) {
@@ -78,7 +78,7 @@ self.addEventListener('fetch', function (event) {
     event.respondWith(networkFirst(request, PAGES, '/'));
   } else if (/^\/(data\/.*|snow|guias|slugs)\.json$/.test(url.pathname)) {
     event.respondWith(networkFirst(request, DATA));
-  } else if (/^\/(flags|icons|og\/thumb)\//.test(url.pathname)) {
+  } else if (/^\/(flags|icons|fonts|og\/thumb)\//.test(url.pathname)) {
     event.respondWith(cacheFirst(request, ASSETS));
   } else {
     event.respondWith(networkFirst(request, ASSETS));

@@ -22,7 +22,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from build_seo_pages import fmt, is_downhill, latin_name, load_app_metadata, short_name  # noqa: E402
+from build_seo_pages import fmt, is_downhill, latin_name, load_app_metadata, read_app_sources, short_name  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[2]
 DOCS = REPO / "docs"
@@ -264,7 +264,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--only", nargs="*", help="only these station slugs (for testing)")
     args = ap.parse_args()
-    meta = load_app_metadata((DOCS / "index.html").read_text(encoding="utf-8"))
+    meta = load_app_metadata(read_app_sources(DOCS))
     slugs = json.loads((DOCS / "slugs.json").read_text(encoding="utf-8"))
     out_dir = DOCS / "og"
     home_image(meta["stations"], out_dir / "ski-info.jpg")

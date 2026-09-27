@@ -468,9 +468,66 @@
   .map-tap-popup .run-profile-steepest { font-size: 10.5px; margin-top: 6px; }
 
   footer.credit { padding: 18px; font-size: 11px; color: var(--text-muted); text-align: center; line-height: 1.6; }
+
+  /* ---------- desktop: a regular website layout ---------- */
+  .site-header { display: none; }
+  @media (min-width: 1000px) {
+    body { padding-block: 0; }
+    .app {
+      max-width: none; min-height: 100vh; border: none; border-radius: 0; box-shadow: none;
+      background: var(--page);
+    }
+    .site-header {
+      display: flex; align-items: center; gap: 32px; height: 60px; padding: 0 32px;
+      background: var(--bg); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 25;
+    }
+    .site-brand {
+      display: flex; align-items: center; gap: 9px; text-decoration: none; color: var(--text-primary);
+      font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 23px; letter-spacing: 0.3px;
+    }
+    .site-brand svg { width: 26px; height: 26px; color: var(--accent); }
+    .site-nav { display: flex; gap: 22px; }
+    .site-nav a { color: var(--text-secondary); text-decoration: none; font-size: 14px; font-weight: 500; }
+    .site-nav a:hover { color: var(--accent); }
+
+    /* country + station lists: wide, centered, card grid */
+    #screen-country, #screen-list, #screen-country-map { max-width: 1232px; margin: 0 auto; padding: 0 16px; }
+    #screen-country .list-header, #screen-list .list-header, #screen-country-map .list-header { padding: 34px 16px 18px; }
+    .list-header h1 { font-size: 42px; }
+    .list-sub { max-width: 760px; font-size: 14.5px; }
+    .search-box { max-width: 520px; }
+    .station-list {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 12px; padding: 6px 16px 32px;
+    }
+    .station-card { background: var(--bg); }
+    #screen-list .topbar, #screen-country-map .topbar { padding: 18px 16px 0; }
+    #screen-country-map section { max-width: 1200px; margin: 0 auto; padding-top: 0; }
+    #screen-country-map .list-header { padding-bottom: 14px; }
+
+    /* station: info panel on the left, map filling the rest -- both at once */
+    .app.dash-mode { background: var(--bg); }
+    #screen-dashboard:not([hidden]) {
+      display: grid; grid-template-columns: 460px minmax(0, 1fr); height: calc(100vh - 60px);
+    }
+    #pane-info, #pane-info[hidden] {
+      display: block; grid-column: 1; grid-row: 1; min-height: 0; overflow-y: auto;
+      border-right: 1px solid var(--border); background: var(--bg);
+    }
+    #pane-map, #pane-map[hidden] { display: flex; grid-column: 2; grid-row: 1; height: auto; min-height: 0; }
+    .map-topbar { display: none; }
+    .map-pane .map-viewport { border-width: 0; }
+    .dash-tabbar { display: none; }
+  }
 </style>
 
 <div class="app" id="app">
+  <header class="site-header">
+    <a class="site-brand js-home" href="./"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 19.5l6.5-11 3.5 5.5 2.5-3.5 6.5 9z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M7.2 11.6l1.8-1.1 1.7 1" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Ski Info</a>
+    <nav class="site-nav" aria-label="Principal">
+      <a class="js-home" href="./">Países</a>
+      <a href="pais/">Todas las estaciones</a>
+    </nav>
+  </header>
 
   <div class="screen" id="screen-country">
     <div class="list-header">
@@ -1243,7 +1300,9 @@
     return currentRaw.id + '|' + mapViewportEl.clientWidth + 'x' + mapViewportEl.clientHeight;
   }
   function ensureMapBuilt() {
-    if (!currentRaw || paneMap.hidden) return;
+    // Measured rather than checking paneMap.hidden: on desktop the map pane is
+    // always shown next to the info pane, whatever the (hidden) tab state says.
+    if (!currentRaw || !mapViewportEl.clientWidth || !mapViewportEl.clientHeight) return;
     if (mapSizeKey() === mapBuiltKey) return;
     hideTooltip();
     hideMapTapPopup();
@@ -1335,6 +1394,7 @@
           raw.weather = weather;
           renderDashboard(raw);
           track.station(raw);
+          if (isDesktopLayout()) track.map(raw);
         });
       })
       .catch(function (err) {
@@ -1803,7 +1863,9 @@
       if (totalH / totalW < targetAspect) padY += (totalW * targetAspect - totalH) / 2;
       else padX += (totalH / targetAspect - totalW) / 2;
     }
-    var vbW = 400, scale = vbW / (projW + padX * 2), vbH = (projH + padY * 2) * scale;
+    // One viewBox unit per CSS pixel, so markers, arrows and labels (sized in
+    // viewBox units) look the same on a phone as on a wide desktop map.
+    var vbW = viewportEl.clientWidth || 400, scale = vbW / (projW + padX * 2), vbH = (projH + padY * 2) * scale;
 
     function project(pt) { return [((pt[0] - lonMin) * cos + padX) * scale, ((latMax - pt[1]) + padY) * scale]; }
     function partToPoints(part) { return part.map(project).map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' '); }
@@ -2056,16 +2118,27 @@
     var cos = Math.cos((latMin + latMax) / 2 * Math.PI / 180);
     var projW = Math.max((lonMax - lonMin) * cos, 0.01), projH = Math.max(latMax - latMin, 0.01);
     var pad = Math.max(projW, projH) * 0.16 + 0.02;
-    var vbW = 400, scale = vbW / (projW + pad * 2), vbH = (projH + pad * 2) * scale;
+    var padX = pad, padY = pad;
+    var vbW = viewport.clientWidth || 400;
+    // On desktop, fit the map to the height left in the window (widening the
+    // padding on one axis to that shape) instead of letting a tall country
+    // run off the bottom of the screen.
+    if (isDesktopLayout()) {
+      var availH = Math.max(360, window.innerHeight - viewport.getBoundingClientRect().top - 24);
+      var targetAspect = availH / vbW, totalW = projW + pad * 2, totalH = projH + pad * 2;
+      if (totalH / totalW < targetAspect) padY += (totalW * targetAspect - totalH) / 2;
+      else padX += (totalH / targetAspect - totalW) / 2;
+    }
+    var scale = vbW / (projW + padX * 2), vbH = (projH + padY * 2) * scale;
 
-    function project(lon, lat) { return [((lon - lonMin) * cos + pad) * scale, ((latMax - lat) + pad) * scale]; }
+    function project(lon, lat) { return [((lon - lonMin) * cos + padX) * scale, ((latMax - lat) + padY) * scale]; }
 
     svg.setAttribute('viewBox', '0 0 ' + vbW.toFixed(1) + ' ' + vbH.toFixed(1));
     var content = document.createElementNS(SVGNS, 'g');
     svg.appendChild(content);
 
-    var lonMinP = lonMin - pad / cos, lonMaxP = lonMax + pad / cos;
-    var latMinP = latMin - pad, latMaxP = latMax + pad;
+    var lonMinP = lonMin - padX / cos, lonMaxP = lonMax + padX / cos;
+    var latMinP = latMin - padY, latMaxP = latMax + padY;
     var tileZoom = pickCountryTileZoom(lonMinP, lonMaxP, latMinP, latMaxP);
     var grid = tileGridAt(lonMinP, lonMaxP, latMinP, latMaxP, tileZoom);
     for (var ty = grid.yt0; ty <= grid.yt1; ty++) {
@@ -2701,6 +2774,23 @@
 
     setText('dashboard-credit', 'Datos de OpenSkiMap / OpenStreetMap, licencia ODbL. ID: ' + (raw.id || '').slice(0, 12) + '…');
   }
+
+  function isDesktopLayout() { return window.matchMedia('(min-width: 1000px)').matches; }
+
+  // Site header (desktop): brand and "Países" go back to the country list.
+  Array.prototype.forEach.call(document.querySelectorAll('.js-home'), function (a) {
+    a.addEventListener('click', function (ev) {
+      ev.preventDefault();
+      hideTooltip();
+      hideMapTapPopup();
+      screenDashboard.hidden = true;
+      screenList.hidden = true;
+      screenCountryMap.hidden = true;
+      screenCountry.hidden = false;
+      document.getElementById('app').classList.remove('dash-mode');
+      window.scrollTo(0, 0);
+    });
+  });
 
   // Deep link from the static station pages (/estacion/<slug>/):
   // ?estacion=<id> opens that station, &vista=mapa on its map tab.

@@ -106,6 +106,16 @@ def latin_name(name: str, keep_parens: bool) -> str:
     return ""
 
 
+def display_name(name: str) -> str:
+    """The name to show: OSM's own unless it starts in another script, then
+    its first Latin-script form ("ニセコユナイテッド, Niseko United" -> "Niseko
+    United"). Mirrors displayName() in docs/index.html."""
+    first = (name or "").split(",")[0]
+    if not name or LATIN.search(PARENS.sub("", first)):
+        return name
+    return latin_name(name, keep_parens=True) or name
+
+
 def strip_generic(text: str) -> str:
     text = GENERIC_PREFIX.sub("", text)
     prev = None
@@ -472,7 +482,7 @@ def station_page(raw: dict, meta: dict, ctx: dict, lang: str = "es") -> tuple[st
     slug = ctx["slug"][sid]
     cc = raw.get("country_code")
     country_name = meta["countries"].get(cc, (cc or "", ""))[0]
-    name = raw.get("name") or tx["resort"]
+    name = display_name(raw.get("name")) or tx["resort"]
     short = short_name(name) or name
     place = ", ".join(p for p in [raw.get("locality"), raw.get("region")] if p) or country_name
     place_full = ", ".join(p for p in [raw.get("locality"), raw.get("region"), country_name] if p)
@@ -1131,6 +1141,9 @@ def main() -> None:
 
     # id -> slug, for the app's share button and build_share_images.py.
     (args.docs / "slugs.json").write_text(json.dumps(slug, separators=(",", ":")), encoding="utf-8")
+    # Slugs are settled: from here on names are only shown.
+    for s in stations:
+        s["name"] = display_name(s["name"])
 
     by_country: dict[str, list] = {}
     for s in stations:

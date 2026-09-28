@@ -1028,6 +1028,27 @@
     ? { home: '/en/', station: '/en/resort/', countries: '/en/country/', guides: '/en/guides/', app: '/en/app/' }
     : { home: '/', station: '/estacion/', countries: '/pais/', guides: '/guias/', app: '/app/' };
 
+  // OpenStreetMap names often start in the local script ("ニセコユナイテッド,
+  // Niseko United", "Абзаково (Abzakovo)"): show their first Latin-script
+  // form instead. Mirrors display_name() in build_seo_pages.py; the original
+  // stays searchable (localName).
+  var LATIN_RE = /[A-Za-zÀ-ɏ]/, PARENS_RE = /\s*[(（][^)）]*[)）]/g;
+  function displayName(name) {
+    if (!name) return name;
+    var parts = name.split(',').map(function (p) { return p.trim(); });
+    if (LATIN_RE.test(parts[0].replace(PARENS_RE, ''))) return name;
+    for (var i = 0; i < parts.length; i++) {
+      if (LATIN_RE.test(parts[i].replace(PARENS_RE, ''))) return parts[i];
+      var inside = parts[i].match(/[(（][^)）]*[)）]/g) || [];
+      for (var j = 0; j < inside.length; j++) {
+        var t = inside[j].slice(1, -1).trim();
+        if (LATIN_RE.test(t)) return t;
+      }
+    }
+    return name;
+  }
+  STATIONS.forEach(function (s) { s.localName = s.name; s.name = displayName(s.name); });
+
   var DIFF = {
     novice:       { label: "Verde",  color: "var(--diff-novice)" },
     easy:         { label: "Azul",   color: "var(--diff-easy)" },
@@ -1579,7 +1600,7 @@
     var box = document.getElementById('global-search-results');
     var active = -1, results = [];
     var index = STATIONS.map(function (s) {
-      return { s: s, key: normalize(s.name + ' ' + (s.region || '') + ' ' + countryName(s.country || 'ES')), name: normalize(s.name) };
+      return { s: s, key: normalize(s.name + ' ' + s.localName + ' ' + (s.region || '') + ' ' + countryName(s.country || 'ES')), name: normalize(s.name) };
     });
     function setActive(i) {
       var items = box.querySelectorAll('.home-result');
@@ -1875,6 +1896,7 @@
           return !r.uses || r.uses.split(',').indexOf('downhill') !== -1;
         });
         raw.runs.forEach(function (r) { r.difficulty = shownDifficulty(r.difficulty, raw.run_convention); });
+        raw.name = displayName(raw.name);
         // Live weather + 7-day snow forecast straight from the browser
         // (Open-Meteo via snow.js): no pipeline, always up to date.
         var weatherFetch = (raw.latitude != null && raw.longitude != null)

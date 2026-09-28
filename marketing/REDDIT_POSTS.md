@@ -25,7 +25,7 @@ visitas.
 ## Orden recomendado
 1. r/OpenStreetMap (el público más amable con este tipo de proyectos, buen
    primer test)
-2. r/skiing (el post principal, con los datos de pendientes)
+2. r/skiing (el post principal: "he hecho esta web, ¿qué os parece?")
 3. r/SideProject
 4. Foros en español (Nevasport, grupos de esquí)
 5. r/snowboarding **cuando lleguen las primeras nevadas fuertes**
@@ -34,6 +34,47 @@ visitas.
 ---
 
 ## 1. r/skiing (post principal)
+
+Tipo: **post de imagen** si el subreddit lo permite, con una captura de
+una estación conocida con una pista seleccionada y su perfil visible.
+Pon el texto de abajo como primer comentario. Si no se pueden subir
+imágenes, haz un post de texto con el mismo contenido.
+
+**Título:**
+```
+I built a free piste map site that lets you analyse a ski resort run by run. Looking for honest feedback
+```
+
+**Texto:**
+```
+Hi all! I've been working on a side project and I'd love some feedback from people who actually ski.
+
+Most piste maps tell you a run is red or black and that's it. I wanted to know what each run is really like before getting there, so I built a site that breaks every resort down run by run:
+
+- Tap any run to see its elevation profile section by section: length, vertical, average gradient and the steepest pitch
+- Lifts with type, capacity, ride time and whether they have a bubble or heated seats
+- Filter runs by difficulty, night skiing and tree runs
+- 7-day snow forecast and current weather for each resort
+- Rankings, e.g. the steepest runs in the Alps or the biggest resorts in North America
+
+It covers 1,276 resorts in 45 countries, using OpenStreetMap data plus an elevation model. It's free and there's no account.
+
+A good one to try: Mayrhofen, then tap Harakiri and look at its profile
+https://skiinfoapp.com/en/resort/mayrhofen-hippach/?ref=reddit-skiing
+
+Or look up your home mountain: https://skiinfoapp.com/en/?ref=reddit-skiing
+
+What I'd love to know:
+1. Is the run-by-run info actually useful when you're planning a trip or a day?
+2. What's missing that you'd want to see for each run or resort?
+3. Anything that looks wrong at your resort? The data comes from OpenStreetMap, so some resorts are mapped better than others.
+
+Thanks for taking a look!
+```
+
+### 1b. Alternativa para r/skiing: post con datos
+Si el primero no encaja con las normas del subreddit, o para publicarlo
+unas semanas después:
 
 Tipo: post de texto.
 
@@ -157,6 +198,40 @@ Each resort page also has the piste map and the gradient of every run. It's my o
 ---
 
 ## 5. Foros en español (Nevasport, grupos de Telegram / WhatsApp de esquí)
+
+**Título:**
+```
+He hecho una web gratuita para analizar las estaciones de esquí pista a pista, ¿qué os parece?
+```
+
+**Texto:**
+```
+Hola a todos. Llevo un tiempo con un proyecto personal y me gustaría saber qué opináis los que esquiáis de verdad.
+
+Casi todos los mapas de pistas te dicen si una pista es roja o negra y poco más. Yo quería saber cómo es cada pista antes de llegar, así que he hecho una web que analiza cada estación pista a pista:
+
+- Tocas cualquier pista y ves su perfil tramo a tramo: longitud, desnivel, pendiente media y el tramo más empinado
+- Remontes con tipo, capacidad, duración del trayecto y si tienen burbuja o asientos calefactados
+- Filtros de pistas por dificultad, nocturnas y de bosque
+- Previsión de nieve a 7 días y tiempo actual de cada estación
+- Rankings, como las pistas más empinadas de España o las estaciones más grandes de los Pirineos
+
+Tiene 1.276 estaciones de 45 países, con datos de OpenStreetMap y un modelo de elevación. Es gratis y sin registro.
+
+Para probarla, por ejemplo Baqueira: tocad Pasarells, que sale como la pista más empinada de España (51 % de media)
+https://skiinfoapp.com/estacion/baqueira-beret/?ref=nevasport
+
+O buscad vuestra estación: https://skiinfoapp.com/?ref=nevasport
+
+Me encantaría saber:
+1. ¿Os resulta útil ver la información pista a pista para preparar un viaje o un día de esquí?
+2. ¿Qué echáis en falta de cada pista o estación?
+3. ¿Veis algo mal en vuestra estación? Los datos vienen de OpenStreetMap y algunas están mejor mapeadas que otras.
+
+¡Gracias por echarle un ojo!
+```
+
+### 5b. Alternativa en español: post con datos
 
 **Título:**
 ```

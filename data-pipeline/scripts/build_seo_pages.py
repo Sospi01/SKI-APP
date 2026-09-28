@@ -1,12 +1,13 @@
 """Generate static, crawlable pages for search engines from the app's data.
 
 The web app (docs/index.html) renders every station client-side from one URL,
-so search engines only ever see a single page. This script writes, in Spanish
-and in English, one plain HTML page per station (/estacion/<slug>/,
-/en/resort/<slug>/), one per country (/pais/<slug>/, /en/country/<slug>/), the
-country indexes, the guides (build_guides.py), /app/ and /en/app/, the English
-copy of the app itself (/en/, see build_english_app) and sitemap.xml with
-hreflang alternates. English text comes from docs/i18n/en.js. Station pages carry the same content
+so search engines only ever see a single page. This script writes, in each of
+the site's languages (LOC: Spanish, English, French, German, Italian), one plain
+HTML page per station (/estacion/<slug>/, /en/resort/<slug>/...), one per
+country, the country indexes, the guides (build_guides.py), the /app page, the
+app's own copy in every language but Spanish (/en/, /fr/..., see
+build_localized_app) and sitemap.xml with hreflang alternates. The app's
+dictionaries are docs/i18n/<lang>.js; page text is in TX here and page_texts.py. Station pages carry the same content
 and components as the app's Info tab (styled by docs/static-pages.css, made
 interactive by docs/static-pages.js + docs/profile.js) and link into the
 interactive map via /?estacion=<id>&vista=mapa.
@@ -27,6 +28,8 @@ import unicodedata
 from pathlib import Path
 
 from build_guides import shown_difficulty
+from guide_texts import PATHS as GUIDE_PATHS
+from page_texts import APP_HEAD as MORE_APP_HEAD, APP_TX as MORE_APP_TX, DATE_FMT, MONTHS, TX as MORE_TX
 
 REPO = Path(__file__).resolve().parents[2]
 SLUGS_PATH = REPO / "data-pipeline" / "station_slugs.json"
@@ -158,14 +161,24 @@ def fmt_en(n: float, d: int = 0) -> str:
     return f"{n:,.{d}f}"
 
 
-FMT = {"es": fmt, "en": fmt_en}
+def fmt_de(n: float, d: int = 0) -> str:
+    """German and Italian format: "." thousands from 1.000 up, decimal comma."""
+    return f"{n:,.{d}f}".replace(",", "\0").replace(".", ",").replace("\0", ".")
+
+
+def fmt_fr(n: float, d: int = 0) -> str:
+    """French format: narrow no-break space for thousands, decimal comma."""
+    return f"{n:,.{d}f}".replace(",", "\u202f").replace(".", ",")
+
+
+FMT = {"es": fmt, "en": fmt_en, "fr": fmt_fr, "de": fmt_de, "it": fmt_de}
 
 
 def format_coord(lat, lon, lang: str = "es") -> str:
     if lat is None or lon is None:
         return "–"
     f = FMT[lang]
-    west = "O" if lang == "es" else "W"
+    west = "W" if lang in ("en", "de") else "O"
     return f"{f(abs(lat), 2)}°{'N' if lat >= 0 else 'S'} {f(abs(lon), 2)}°{'E' if lon >= 0 else west}"
 
 
@@ -214,10 +227,18 @@ LOC = {
            "app": "/app/", "og_dir": "/og/"},
     "en": {"html": "en", "og": "en_GB", "home": "/en/", "station": "/en/resort/", "countries": "/en/country/",
            "guides": "/en/guides/", "app": "/en/app/", "og_dir": "/og/en/"},
+    # These three reuse the English share images (their own would double the site's size).
+    "fr": {"html": "fr", "og": "fr_FR", "home": "/fr/", "station": "/fr/station/", "countries": "/fr/pays/",
+           "guides": "/fr/guides/", "app": "/fr/app/", "og_dir": "/og/en/"},
+    "de": {"html": "de", "og": "de_DE", "home": "/de/", "station": "/de/skigebiet/", "countries": "/de/land/",
+           "guides": "/de/ratgeber/", "app": "/de/app/", "og_dir": "/og/en/"},
+    "it": {"html": "it", "og": "it_IT", "home": "/it/", "station": "/it/stazione/", "countries": "/it/paese/",
+           "guides": "/it/guide/", "app": "/it/app/", "og_dir": "/og/en/"},
 }
-OTHER = {"es": "en", "en": "es"}
+LANG_NAMES = {"es": "Español", "en": "English", "fr": "Français", "de": "Deutsch", "it": "Italiano"}
 
-# Page text. Spanish is the original wording of the site; English mirrors it.
+# Page text. Spanish is the original wording of the site; English mirrors it
+# (French, German and Italian are in page_texts.py).
 TX = {
     "es": {
         "resort": "Estación de esquí", "official_site": "Web oficial ↗", "altitude": "Altitud", "vertical": "Desnivel",
@@ -270,8 +291,7 @@ TX = {
         "ci_desc": "Mapas de pistas interactivos de {0} estaciones de esquí en {1} países: pistas, remontes, pendientes y servicios.",
         # footer / language
         "f_countries": "Estaciones por país", "f_guides": "Guías y rankings", "f_app": "App para el móvil", "f_privacy": "Privacidad",
-        "f_data": 'Datos © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">colaboradores de OpenStreetMap</a> (ODbL), vía OpenSkiMap.', "lang_name": "English",
-        "hint": "Esta página también está en español.", "hint_cta": "Ver en español", "close": "Cerrar",
+        "f_data": 'Datos © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">colaboradores de OpenStreetMap</a> (ODbL), vía OpenSkiMap.',
     },
     "en": {
         "resort": "Ski resort", "official_site": "Official website ↗", "altitude": "Altitude", "vertical": "Vertical",
@@ -322,21 +342,21 @@ TX = {
         "ci_title": "Ski resorts by country: piste maps | Ski Info",
         "ci_desc": "Interactive piste maps of {0} ski resorts in {1} countries: runs, lifts, gradients and services.",
         "f_countries": "Resorts by country", "f_guides": "Guides & rankings", "f_app": "Mobile app", "f_privacy": "Privacy",
-        "f_data": 'Data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a> (ODbL), via OpenSkiMap.', "lang_name": "Español",
-        "hint": "This page is also available in English.", "hint_cta": "View in English", "close": "Close",
+        "f_data": 'Data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a> (ODbL), via OpenSkiMap.',
     },
 }
+TX.update(MORE_TX)
 
 
-def load_i18n(docs: Path) -> dict:
-    """docs/i18n/en.js: 'window.SKI_I18N = {json};' shared with the browser."""
-    src = (docs / "i18n" / "en.js").read_text(encoding="utf-8")
+def load_i18n(docs: Path, lang: str = "en") -> dict:
+    """docs/i18n/<lang>.js: 'window.SKI_I18N = {json};' shared with the browser."""
+    src = (docs / "i18n" / f"{lang}.js").read_text(encoding="utf-8")
     marker = "window.SKI_I18N ="
     return json.loads(src[src.index(marker) + len(marker):].strip().rstrip(";"))
 
 
 def localized_meta(meta: dict, i18n: dict) -> dict:
-    """The app tables with English labels (station list and groups unchanged)."""
+    """The app tables with the dictionary's labels (station list and groups unchanged)."""
     tb = i18n["tables"]
     out = dict(meta)
     out["diff"] = {k: tb["diff"].get(k, v) for k, v in meta["diff"].items()}
@@ -354,30 +374,6 @@ def localized_meta(meta: dict, i18n: dict) -> dict:
 # Self-hosted @font-face rules, inlined into every page (one request fewer).
 FONT_FACES = "\n".join(l for l in (REPO / "docs" / "fonts.css").read_text(encoding="utf-8").splitlines()
                        if l.startswith("@font-face"))
-
-
-def lang_hint_html(lang: str, alternates: dict) -> str:
-    """Offers the page in the reader's language when the browser says it's the
-    other one; never redirects. Clicking a language link remembers the choice
-    (the app's home page follows it)."""
-    other = OTHER[lang]
-    alt = alternates.get(other)
-    if alt:
-        alt = re.sub(r"^https?://[^/]+", "", alt)  # same-site link
-    tx = TX[other]
-    hint = ""
-    if alt:
-        hint = (f'<div class="lang-hint" id="lang-hint" lang="{other}" hidden><span>{e(tx["hint"])}</span>'
-                f'<a class="lang-link" data-lang="{other}" hreflang="{other}" href="{e(alt)}">{e(tx["hint_cta"])}</a>'
-                f'<button type="button" aria-label="{e(tx["close"])}">×</button></div>')
-    return hint + ("<script>(function(){var h=document.getElementById('lang-hint');"
-                   "document.addEventListener('click',function(ev){var a=ev.target.closest&&ev.target.closest('.lang-link');"
-                   "if(a){try{localStorage.setItem('si_lang',a.getAttribute('data-lang'));}catch(e){}}});"
-                   "if(!h)return;var b=(navigator.language||'').slice(0,2).toLowerCase();var hisp=/^(es|ca|gl|eu)$/.test(b);"
-                   f"var show={'!hisp' if lang == 'es' else 'hisp'};"
-                   "try{if(localStorage.getItem('si_lang_hint'))show=false;}catch(e){}"
-                   "if(!show)return;h.hidden=false;h.querySelector('button').addEventListener('click',function(){"
-                   "h.hidden=true;try{localStorage.setItem('si_lang_hint','1');}catch(e){}});})();</script>")
 
 
 def page(*, title: str, description: str, url: str, body: str, body_attrs: str = "",
@@ -398,17 +394,21 @@ def page(*, title: str, description: str, url: str, body: str, body_attrs: str =
     # Deferred: they run in order once the page is parsed, without holding up
     # the first paint. Station pages report a station view (static-pages.js);
     # track.js with data-page reports a plain page view.
-    i18n = ('<script defer src="/i18n/en.js"></script>\n' if lang == "en" else "") + '<script defer src="/i18n.js"></script>\n'
+    i18n = (f'<script defer src="/i18n/{lang}.js"></script>\n' if lang != "es" else "") + '<script defer src="/i18n.js"></script>\n'
     tail = (i18n + '<script defer src="/profile.js"></script>\n<script defer src="/snow.js"></script>\n'
             '<script defer src="/station-actions.js"></script>\n<script defer src="/track.js"></script>\n'
             '<script defer src="/static-pages.js"></script>\n'
             if scripts else '<script defer src="/track.js" data-page></script>\n')
+    # The "also in your language" bar and remembering a language choice.
+    tail += '<script defer src="/lang.js"></script>\n'
     if scripts:
         # Not needed for the first screen: load it without blocking the paint.
         head_extra = ('<link rel="stylesheet" href="/snow.css" media="print" onload="this.media=\'all\'">\n'
                       '<noscript><link rel="stylesheet" href="/snow.css"></noscript>\n' + head_extra)
-    other = OTHER[lang]
-    lang_href = re.sub(r"^https?://[^/]+", "", alternates.get(other) or LOC[other]["home"])
+    lang_links = " · ".join(
+        f'<a class="lang-link" data-lang="{l}" hreflang="{l}" lang="{l}" '
+        f'href="{e(re.sub(r"^https?://[^/]+", "", alternates.get(l) or LOC[l]["home"]))}">{LANG_NAMES[l]}</a>'
+        for l in LOC if l != lang)
     return f"""<!doctype html>
 <html lang="{loc['html']}">
 <head>
@@ -444,11 +444,11 @@ def page(*, title: str, description: str, url: str, body: str, body_attrs: str =
 <div class="app">
 {body}
 <footer class="credit">
-<a href="{loc['home']}">Ski Info</a> · <a href="{loc['countries']}">{tx['f_countries']}</a> · <a href="{loc['guides']}">{tx['f_guides']}</a> · <a href="{loc['app']}">{tx['f_app']}</a> · <a href="/privacy.html">{tx['f_privacy']}</a> · <a class="lang-link" data-lang="{other}" hreflang="{other}" lang="{other}" href="{e(lang_href)}">{tx['lang_name']}</a><br>
+<a href="{loc['home']}">Ski Info</a> · <a href="{loc['countries']}">{tx['f_countries']}</a> · <a href="{loc['guides']}">{tx['f_guides']}</a> · <a href="{loc['app']}">{tx['f_app']}</a> · <a href="/privacy.html">{tx['f_privacy']}</a><br>
+<span class="lang-links">{lang_links}</span><br>
 {tx['f_data']}
 </footer>
 </div>
-{lang_hint_html(lang, alternates)}
 {tail}</body>
 </html>
 """
@@ -896,6 +896,7 @@ APP_TX = {
            "desc": "Install Ski Info on your phone: piste maps, the gradient of every run and snow forecasts for "
                    "{0}+ ski resorts. Android and iPhone, free, no sign-up."},
 }
+APP_TX.update(MORE_APP_TX)
 
 
 def phone(inner: str) -> str:
@@ -943,7 +944,8 @@ def app_page(ctx: dict, n_stations: int, lang: str = "es") -> str:
         play_html = (f'<span class="store-badge soon">{play_icon}<span><small>{at["soon"]}</small>Google Play</span></span>'
                      f'<p class="app-note">{at["soon_note"]}</p>')
 
-    hundreds = FMT[lang](n_stations // 100 * 100) if lang == "en" else f"{n_stations // 100 * 100:,}".replace(",", ".")
+    # Always grouped ("1.200"): Spanish only groups from 10.000 up.
+    hundreds = f"{n_stations // 100 * 100:,}".replace(",", ".") if lang == "es" else FMT[lang](n_stations // 100 * 100)
     body = f"""<div class="app-hero">{PEAKS_SVG}<div class="app-hero-inner">
 <div class="eyebrow app-eyebrow"><a href="{loc['home']}">Ski Info</a> · App</div>
 <img class="app-logo" src="/icons/icon-192.png" alt="" width="84" height="84">
@@ -1007,6 +1009,14 @@ HOME_GUIDES = {
            "pistas-mas-empinadas-espana-andorra", "estaciones-de-esqui-cerca-de-madrid", "estaciones-de-esqui-cerca-de-barcelona"],
     "en": ["where-it-will-snow-this-week", "biggest-ski-resorts-in-the-alps", "best-ski-resorts-for-beginners-in-the-alps",
            "steepest-ski-runs-in-the-alps", "biggest-ski-resorts-in-north-america", "ski-resorts-near-geneva"],
+    "fr": ["ou-va-t-il-neiger-cette-semaine", "plus-grandes-stations-de-ski-des-alpes",
+           "meilleures-stations-de-ski-pour-debutants-dans-les-alpes", "pistes-de-ski-les-plus-raides-des-alpes",
+           "stations-de-ski-pres-de-paris", "stations-de-ski-pres-de-lyon"],
+    "de": ["wo-schneit-es-diese-woche", "groesste-skigebiete-der-alpen", "beste-skigebiete-fuer-anfaenger-in-den-alpen",
+           "steilste-pisten-der-alpen", "skigebiete-in-der-naehe-von-muenchen", "skigebiete-in-der-naehe-von-zuerich"],
+    "it": ["dove-nevichera-questa-settimana", "stazioni-sciistiche-piu-grandi-delle-alpi",
+           "migliori-stazioni-sciistiche-per-principianti-nelle-alpi", "piste-da-sci-piu-ripide-delle-alpi",
+           "stazioni-sciistiche-vicino-a-milano", "stazioni-sciistiche-vicino-a-torino"],
 }
 
 
@@ -1036,48 +1046,53 @@ def fill_home_data(html_text: str, payload: str) -> str:
     return new_text
 
 
-# ---------- the English copy of the app (/en/) ----------
+# ---------- the app's copy in each language (/en/, /fr/, /de/, /it/) ----------
 
-EN_APP_HEAD = {
-    "title": "Ski Info · Piste maps and snow forecasts for ski resorts",
-    "description": "Interactive piste maps on satellite imagery, the gradient profile of every run, lifts, services and 7-day "
-                   "snow forecasts for over 1,200 ski resorts in 45 countries.",
-    "og_title": "Ski Info · Piste maps and snow forecasts",
-    "og_description": "Piste maps on satellite imagery, the real gradient of every run and the snow forecast for over 1,200 ski "
-                      "resorts. Free, no sign-up.",
+APP_HEAD = {
+    "en": {"title": "Ski Info · Piste maps and snow forecasts for ski resorts",
+           "description": "Interactive piste maps on satellite imagery, the gradient profile of every run, lifts, services and 7-day "
+                          "snow forecasts for over 1,200 ski resorts in 45 countries.",
+           "og_title": "Ski Info · Piste maps and snow forecasts",
+           "og_description": "Piste maps on satellite imagery, the real gradient of every run and the snow forecast for over 1,200 ski "
+                             "resorts. Free, no sign-up."},
+    **MORE_APP_HEAD,
 }
-EN_LINKS = {'href="/pais/"': 'href="/en/country/"', 'href="/guias/"': 'href="/en/guides/"', 'href="/app/"': 'href="/en/app/"'}
-# Text nodes that are the same in both languages (brand, symbols, numbers...).
-SAME_IN_BOTH = {"Ski Info", "Info", "Freeride", "–", "+", "×", "›", "‹", "1.200+", "Android", "Español"}
+# Text nodes that are the same in every language (brand, symbols, numbers, language names...).
+SAME_IN_BOTH = {"Ski Info", "Info", "Freeride", "–", "+", "×", "›", "‹", "1.200+", "Android"} | set(LANG_NAMES.values())
+# "1.200+" in the home's title, per language.
+HUNDREDS = {"en": "1,200+", "fr": "1\u00a0200+"}
 
 
-def build_english_app(index_html: str, i18n: dict, base_url: str) -> str:
-    """docs/en/index.html from docs/index.html: English head, the markup's
-    text and attributes translated from the dictionary, English links, and
-    docs/i18n/en.js loaded before the scripts (whose own strings go through
-    T()). Fails if any visible Spanish text would be left untranslated."""
-    ui = i18n["ui"]
+def build_localized_app(index_html: str, i18n: dict, lang: str, base_url: str) -> str:
+    """docs/<lang>/index.html from docs/index.html: the language's head, the
+    markup's text and attributes translated from its dictionary, its links, and
+    docs/i18n/<lang>.js loaded before the scripts (whose own strings go
+    through T()). Fails if any visible Spanish text would be left untranslated."""
+    ui, head_tx, loc = i18n["ui"], APP_HEAD[lang], LOC[lang]
     s = index_html
-    s = s.replace('<html lang="es">', '<html lang="en">', 1)
+    s = s.replace('<html lang="es">', f'<html lang="{lang}">', 1)
     head_end = s.index("</head>") if "</head>" in s else s.index("<style>")
     head, rest = s[:head_end], s[head_end:]
-    head = re.sub(r"<title>.*?</title>", f"<title>{html.escape(EN_APP_HEAD['title'])}</title>", head, count=1)
-    head = re.sub(r'(<meta name="description" content=")[^"]*', lambda m: m.group(1) + html.escape(EN_APP_HEAD["description"]), head, count=1)
-    head = head.replace(f'<link rel="canonical" href="{base_url}/">', f'<link rel="canonical" href="{base_url}/en/">', 1)
-    head = re.sub(r'(<meta property="og:title" content=")[^"]*', lambda m: m.group(1) + html.escape(EN_APP_HEAD["og_title"]), head, count=1)
-    head = re.sub(r'(<meta property="og:description" content=")[^"]*', lambda m: m.group(1) + html.escape(EN_APP_HEAD["og_description"]), head, count=1)
-    head = head.replace(f'<meta property="og:url" content="{base_url}/">', f'<meta property="og:url" content="{base_url}/en/">', 1)
-    head = head.replace(f'content="{base_url}/og/ski-info.jpg"', f'content="{base_url}/og/en/ski-info.jpg"', 1)
-    head = head.replace('<meta property="og:locale" content="es_ES">', '<meta property="og:locale" content="en_GB">', 1)
-    # The Spanish home's "remembered English" redirect must not run here.
+    head = re.sub(r"<title>.*?</title>", f"<title>{html.escape(head_tx['title'])}</title>", head, count=1)
+    head = re.sub(r'(<meta name="description" content=")[^"]*', lambda m: m.group(1) + html.escape(head_tx["description"]), head, count=1)
+    head = head.replace(f'<link rel="canonical" href="{base_url}/">', f'<link rel="canonical" href="{base_url}{loc["home"]}">', 1)
+    head = re.sub(r'(<meta property="og:title" content=")[^"]*', lambda m: m.group(1) + html.escape(head_tx["og_title"]), head, count=1)
+    head = re.sub(r'(<meta property="og:description" content=")[^"]*', lambda m: m.group(1) + html.escape(head_tx["og_description"]), head, count=1)
+    head = head.replace(f'<meta property="og:url" content="{base_url}/">', f'<meta property="og:url" content="{base_url}{loc["home"]}">', 1)
+    head = head.replace(f'content="{base_url}/og/ski-info.jpg"', f'content="{base_url}{loc["og_dir"]}ski-info.jpg"', 1)
+    head = head.replace('<meta property="og:locale" content="es_ES">', f'<meta property="og:locale" content="{loc["og"]}">', 1)
+    # The Spanish home's "remembered language" redirect must not run here.
     head = re.sub(r"<script id=\"lang-redirect\">.*?</script>\n?", "", head, flags=re.DOTALL)
     s = head + rest
 
     start, end = s.index('<div class="app"'), s.index('<script id="home-data"')
     markup = s[start:end]
     missing = []
-    markup = markup.replace('<a class="lang-link" href="/en/" hreflang="en" lang="en">English</a>',
-                            '<a class="lang-link" data-lang="es" href="/" hreflang="es" lang="es">Español</a>')
+    links = " · ".join(f'<a class="lang-link" data-lang="{l}" href="{LOC[l]["home"]}" hreflang="{l}" lang="{l}">{LANG_NAMES[l]}</a>'
+                       for l in LOC if l != lang)
+    markup, n = re.subn(r'<span class="lang-links">.*?</span>', f'<span class="lang-links">{links}</span>', markup, count=1, flags=re.DOTALL)
+    if n != 1:
+        raise SystemExit("language links (<span class=\"lang-links\">) not found in index.html")
 
     def tr_text(m):
         raw = m.group(1)
@@ -1098,14 +1113,21 @@ def build_english_app(index_html: str, i18n: dict, base_url: str) -> str:
             missing.append(t)
         return m.group(0)
     markup = re.sub(r'(placeholder|aria-label|title)="([^"]+)"', tr_attr, markup)
-    for a, b in EN_LINKS.items():
-        markup = markup.replace(a, b)
-    markup = markup.replace('<span id="home-station-count">1.200+</span>', '<span id="home-station-count">1,200+</span>')
+    for page_key, es_path in (("countries", "/pais/"), ("guides", "/guias/"), ("app", "/app/")):
+        markup = markup.replace(f'href="{es_path}"', f'href="{loc[page_key]}"')
+    if lang in HUNDREDS:
+        markup = markup.replace('<span id="home-station-count">1.200+</span>', f'<span id="home-station-count">{HUNDREDS[lang]}</span>')
     if missing:
-        raise SystemExit("untranslated text in the app markup (add it to docs/i18n/en.js): " + "; ".join(sorted(set(missing))))
+        raise SystemExit(f"untranslated text in the app markup (add it to docs/i18n/{lang}.js): " + "; ".join(sorted(set(missing))))
     s = s[:start] + markup + s[end:]
-    s = s.replace('<script src="/i18n.js"></script>', '<script src="/i18n/en.js"></script>\n<script src="/i18n.js"></script>', 1)
+    s = s.replace('<script src="/i18n.js"></script>', f'<script src="/i18n/{lang}.js"></script>\n<script src="/i18n.js"></script>', 1)
     return s
+
+
+def country_slugify(name: str, lang: str) -> str:
+    if lang == "de":  # German readers write umlauts out: Österreich -> oesterreich
+        name = name.translate(str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "Ä": "Ae", "Ö": "Oe", "Ü": "Ue", "ß": "ss"}))
+    return slugify(name)
 
 
 # ---------- main ----------
@@ -1121,8 +1143,8 @@ def main() -> None:
     base_url = args.base_url.rstrip("/")
 
     meta_es = load_app_metadata(read_app_sources(args.docs))
-    i18n = load_i18n(args.docs)
-    metas = {"es": meta_es, "en": localized_meta(meta_es, i18n)}
+    i18n = {l: load_i18n(args.docs, l) for l in LOC if l != "es"}
+    metas = {"es": meta_es, **{l: localized_meta(meta_es, d) for l, d in i18n.items()}}
     stations = meta_es["stations"]
     by_id = {s["id"]: s for s in stations}
 
@@ -1152,7 +1174,8 @@ def main() -> None:
         by_country.setdefault(s.get("country") or "ES", []).append(s)
     for lst in by_country.values():
         lst.sort(key=lambda s: -(s.get("pisteKm") or 0))
-    country_slug = {lang: {cc: slugify(metas[lang]["countries"].get(cc, (cc, ""))[0]) for cc in by_country} for lang in LOC}
+    country_slug = {lang: {cc: country_slugify(metas[lang]["countries"].get(cc, (cc, ""))[0], lang) for cc in by_country}
+                    for lang in LOC}
 
     group_of = {sid: g for g in meta_es["groups"] for sid in g}
     coords = {s["id"]: (s["lat"], s["lon"]) for s in stations if s.get("lat") is not None}
@@ -1163,7 +1186,7 @@ def main() -> None:
 
     # Written just before by fetch_snow_forecast.py; optional.
     snow, snow_updated, snow_doc = {}, "", None
-    snow_date = {"es": "", "en": ""}
+    snow_date = {l: "" for l in LOC}
     snow_path = args.docs / "snow.json"
     if snow_path.exists():
         snow_doc = json.loads(snow_path.read_text(encoding="utf-8"))
@@ -1174,7 +1197,8 @@ def main() -> None:
         months_en = ["January", "February", "March", "April", "May", "June", "July", "August",
                      "September", "October", "November", "December"]
         y, m, d = (int(x) for x in snow_updated[:10].split("-"))
-        snow_date = {"es": f"{d} de {months_es[m - 1]}", "en": f"{d} {months_en[m - 1]}"}
+        snow_date = {"es": f"{d} de {months_es[m - 1]}", "en": f"{d} {months_en[m - 1]}",
+                     **{l: DATE_FMT[l].format(d=d, m=MONTHS[l][m - 1]) for l in MONTHS}}
 
     ctx = {"base_url": base_url, "slug": slug, "country_slug": country_slug,
            "by_id": by_id, "group_of": group_of, "nearby": nearby, "snow": snow, "snow_date": snow_date}
@@ -1243,21 +1267,22 @@ def main() -> None:
     sitemap.append("</urlset>")
     (args.docs / "sitemap.xml").write_text("\n".join(sitemap) + "\n", encoding="utf-8")
 
-    # The English app (/en/) is generated from the Spanish one before the
-    # latter gets its own home data inlined.
+    # The app's copies (/en/, /fr/...) are generated from the Spanish one before
+    # the latter gets its own home data inlined.
     index_path = args.docs / "index.html"
     index_html = index_path.read_text(encoding="utf-8")
-    en_app = build_english_app(index_html, i18n, base_url)
-    if args.inject_home:
-        for lang, text in (("en", en_app), ("es", index_html)):
-            guides_index = json.loads((args.docs / ("guias.json" if lang == "es" else "en/guides.json")).read_text(encoding="utf-8"))
-            filled = fill_home_data(text, home_data_json(snow_doc, stations, guides_index, lang))
-            if lang == "en":
-                en_app = filled
-            else:
-                index_path.write_text(filled, encoding="utf-8")
-    (args.docs / "en").mkdir(exist_ok=True)
-    (args.docs / "en" / "index.html").write_text(en_app, encoding="utf-8")
+    apps = {l: build_localized_app(index_html, i18n[l], l, base_url) for l in LOC if l != "es"}
+    apps["es"] = index_html
+    for lang, text in apps.items():
+        if args.inject_home:
+            guides_index = json.loads((args.docs / GUIDE_PATHS[lang]["index_json"]).read_text(encoding="utf-8"))
+            text = fill_home_data(text, home_data_json(snow_doc, stations, guides_index, lang))
+        if lang == "es":
+            if args.inject_home:
+                index_path.write_text(text, encoding="utf-8")
+            continue
+        (args.docs / lang).mkdir(exist_ok=True)
+        (args.docs / lang / "index.html").write_text(text, encoding="utf-8")
 
     print(f"{len(stations)} stations x {len(LOC)} languages, {len(by_country)} countries, "
           f"{sum(len(g) for g in guides.values())} guides, {len(entries)} URLs in sitemap")

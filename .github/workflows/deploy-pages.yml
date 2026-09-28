@@ -45,7 +45,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: docs/og
-          key: og-${{ hashFiles('docs/data/**', 'data-pipeline/station_slugs.json', 'data-pipeline/scripts/build_share_images.py', 'data-pipeline/fonts/**', 'docs/icons/icon-512.png') }}
+          key: og-v2-${{ hashFiles('docs/data/**', 'data-pipeline/station_slugs.json', 'data-pipeline/scripts/build_share_images.py', 'data-pipeline/fonts/**', 'docs/icons/icon-512.png', 'docs/i18n/en.js') }}
 
       - uses: actions/setup-python@v5
         if: steps.og-cache.outputs.cache-hit != 'true'

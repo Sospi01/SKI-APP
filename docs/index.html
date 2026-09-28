@@ -6,10 +6,17 @@
 <title>Ski Info · Mapas de pistas y previsión de nieve de estaciones de esquí</title>
 <meta name="description" content="Mapas de pistas interactivos sobre imagen satélite, perfil de pendiente de cada pista, remontes y servicios de más de 1.200 estaciones de esquí en 45 países.">
 <link rel="canonical" href="https://skiinfoapp.com/">
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="manifest" href="manifest.webmanifest">
+<link rel="alternate" hreflang="es" href="https://skiinfoapp.com/">
+<link rel="alternate" hreflang="en" href="https://skiinfoapp.com/en/">
+<link rel="alternate" hreflang="x-default" href="https://skiinfoapp.com/en/">
+<!-- Someone who chose English (a language link) gets the English app from the
+     Spanish home too. Only an explicit choice: nothing is inferred, so search
+     engines and first visits always see the page they asked for. -->
+<script id="lang-redirect">try{if(location.pathname==='/'&&localStorage.getItem('si_lang')==='en')location.replace('/en/'+location.search+location.hash);}catch(e){}</script>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Ski Info">
@@ -517,6 +524,17 @@
 
   footer.credit { padding: 18px; font-size: 11px; color: var(--text-muted); text-align: center; line-height: 1.6; }
 
+  /* "Also available in English/Spanish" (see langHint) */
+  .lang-hint {
+    position: fixed; top: 10px; left: 12px; right: 12px; z-index: 45; max-width: 460px; margin: 0 auto;
+    display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 14px; font-size: 13px;
+    background: var(--bg); color: var(--text-primary); border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: 0 14px 30px -14px rgba(0,0,0,0.45);
+  }
+  .lang-hint span { flex: 1; min-width: 0; }
+  .lang-hint a { font-weight: 700; color: var(--accent); text-decoration: none; white-space: nowrap; }
+  .lang-hint button { border: none; background: var(--surface-2); color: var(--text-secondary); width: 26px; height: 26px; border-radius: 7px; font-size: 16px; cursor: pointer; }
+
   /* iPhone "add to home screen" hint (see setupInstallHint) */
   .install-hint {
     position: fixed; left: 12px; right: 12px; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 40;
@@ -718,12 +736,12 @@
 
 <div class="app" id="app">
   <header class="site-header">
-    <a class="site-brand js-home" href="./"><img src="favicon.svg" alt="" width="30" height="30">Ski Info</a>
+    <a class="site-brand js-home" href="./"><img src="/favicon.svg" alt="" width="30" height="30">Ski Info</a>
     <nav class="site-nav" aria-label="Principal">
       <a class="js-home" href="./">Países</a>
-      <a href="pais/">Todas las estaciones</a>
-      <a href="guias/">Guías y rankings</a>
-      <a href="app/">App para el móvil</a>
+      <a href="/pais/">Todas las estaciones</a>
+      <a href="/guias/">Guías y rankings</a>
+      <a href="/app/">App para el móvil</a>
     </nav>
   </header>
 
@@ -747,7 +765,7 @@
           <div class="home-stat"><div class="v" id="home-stat-countries">–</div><div class="k">países</div></div>
           <div class="home-stat"><div class="v" id="home-stat-km">–</div><div class="k">km de pistas</div></div>
         </div>
-        <a class="home-app-link" id="home-app-link" href="app/"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10.5 18.5h3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>Llévate Ski Info en el móvil ›</a>
+        <a class="home-app-link" id="home-app-link" href="/app/"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10.5 18.5h3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>Llévate Ski Info en el móvil ›</a>
       </div>
     </div>
 
@@ -767,7 +785,7 @@
     </div>
 
     <div class="home-section" id="guides-section" hidden>
-      <div class="home-section-head"><h2>Guías y rankings</h2><a class="sub home-more" href="guias/">Ver todas las guías ›</a></div>
+      <div class="home-section-head"><h2>Guías y rankings</h2><a class="sub home-more" href="/guias/">Ver todas las guías ›</a></div>
       <div class="guide-cards" id="guide-cards"></div>
     </div>
 
@@ -782,7 +800,7 @@
       <div class="home-feature"><div class="home-feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 2.5v1.6M9 13.9v1.6M2.5 9h1.6M3.4 3.4l1.1 1.1M13.5 4.5l1.1-1.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M10 19.5h8a3 3 0 0 0 .3-6 4.5 4.5 0 0 0-8.4 1.6A2.3 2.3 0 0 0 10 19.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div><h3>Nieve y tiempo</h3><p>Nevadas previstas para los próximos 7 días, temperatura en cota alta y en la base, isoterma de 0 °C y viento.</p></div>
     </div>
 
-    <p class="list-footer">Datos de OpenSkiMap / OpenStreetMap (ODbL) · imágenes Esri, Maxar, Earthstar Geographics<br><a href="pais/">Todas las estaciones por país</a> · <a href="guias/">Guías y rankings</a> · <a href="app/">App para el móvil</a> · <a href="privacy.html">Privacidad</a></p>
+    <p class="list-footer">Datos de OpenSkiMap / OpenStreetMap (ODbL) · imágenes Esri, Maxar, Earthstar Geographics<br><a href="/pais/">Todas las estaciones por país</a> · <a href="/guias/">Guías y rankings</a> · <a href="/app/">App para el móvil</a> · <a href="/privacy.html">Privacidad</a> · <a class="lang-link" href="/en/" hreflang="en" lang="en">English</a></p>
   </div>
 
   <div class="screen" id="screen-list" hidden>
@@ -978,7 +996,7 @@
 </div>
 
 <div class="install-hint" id="install-hint" role="dialog" aria-label="Instalar Ski Info" hidden>
-  <img src="icons/icon-192.png" alt="" width="44" height="44">
+  <img src="/icons/icon-192.png" alt="" width="44" height="44">
   <div class="install-hint-txt">
     <strong>Instala Ski Info en tu iPhone</strong>
     <span>Pulsa <svg viewBox="0 0 20 20" aria-label="Compartir"><path d="M10 12.5V2.8M6.6 6 10 2.6 13.4 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 8.5H5v9h10v-9h-1.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg> y luego «Añadir a pantalla de inicio». Se abre como una app y funciona con poca cobertura.</span>
@@ -993,14 +1011,22 @@
      with the rest of the page instead of jumping in later. null = fetch it. -->
 <script id="home-data" type="application/json">null</script>
 <script src="/stations.js"></script>
-<script src="profile.js"></script>
-<script src="snow.js"></script>
-<script src="station-actions.js"></script>
-<script src="track.js"></script>
+<script src="/i18n.js"></script>
+<script src="/profile.js"></script>
+<script src="/snow.js"></script>
+<script src="/station-actions.js"></script>
+<script src="/track.js"></script>
 <script>
 (function () {
   "use strict";
 
+  // Language (docs/i18n.js). Spanish is the source; the English copy served at
+  // /en/ is generated from this file at deploy time (build_seo_pages.py) and
+  // loads docs/i18n/en.js, which T() and localizeTable() read.
+  var LANG = SKI_LANG, LOCALE = SKI_LOCALE;
+  var PATHS = LANG === 'en'
+    ? { home: '/en/', station: '/en/resort/', countries: '/en/country/', guides: '/en/guides/', app: '/en/app/' }
+    : { home: '/', station: '/estacion/', countries: '/pais/', guides: '/guias/', app: '/app/' };
 
   var DIFF = {
     novice:       { label: "Verde",  color: "var(--diff-novice)" },
@@ -1080,7 +1106,7 @@
     return { sunrise: fromJulian(Jrise), sunset: fromJulian(Jset) };
   }
   function formatLocalTime(date) {
-    return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Madrid' });
+    return date.toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Madrid' });
   }
 
 
@@ -1167,14 +1193,14 @@
   var GENERIC_RESORT_WORDS_PREFIX = /^(estaci[oó]n? (d'|de )?esqu[ií]( (y|i) (de )?(monta[ñn]a|muntanya))?|estaci[oó]n? (invernal|de muntanya)( y de monta[ñn]a)?|station (de ski|du)|centro (de )?ski|ski center|ski centre|skigebiet)( del?)?\s+/i;
   var GENERIC_RESORT_WORDS_SUFFIX = /\s+(ski resort|ski area|mountain resort|ski centre|ski center|skiarea|ski bowl|resort)$/i;
   function bookingUrl(raw) {
-    var dest = 'https://www.booking.com/searchresults.html?ss=' + encodeURIComponent(bookingSearchQuery(raw));
+    var dest = 'https://www.booking.com/searchresults.html?ss=' + encodeURIComponent(bookingSearchQuery(raw)) + '&lang=' + (LANG === 'en' ? 'en-gb' : 'es');
     return AFFILIATE.bookingDeepLinkPrefix ? AFFILIATE.bookingDeepLinkPrefix + encodeURIComponent(dest) : dest;
   }
 
   function fmt(n, d) {
     if (n == null || isNaN(n)) return "–";
     n = n + 0; // -0 would print as "-0"
-    return n.toLocaleString('es-ES', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
+    return n.toLocaleString(LOCALE, { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
   }
   function setText(id, text) { var el = document.getElementById(id); if (el) el.textContent = text; }
   function diffKey(d) { return d && DIFF[d] ? d : "other"; }
@@ -1249,9 +1275,9 @@
   function runGroupMeta(g) {
     var bits = [DIFF[diffKey(g.difficulty)].label];
     if (g.length_m) bits.push(fmt(Math.round(g.length_m)) + ' m');
-    if (g.vertical_m) bits.push('desnivel ' + fmt(Math.round(g.vertical_m)) + ' m');
-    if (g.length_m) bits.push('pend. media ' + fmt(100 * g.vertical_m / g.length_m, 1) + '%');
-    if (g.minElev != null && g.maxElev != null) bits.push(fmt(Math.round(g.minElev)) + '–' + fmt(Math.round(g.maxElev)) + ' m alt.');
+    if (g.vertical_m) bits.push(T('desnivel {0} m', fmt(Math.round(g.vertical_m))));
+    if (g.length_m) bits.push(T('pend. media {0}%', fmt(100 * g.vertical_m / g.length_m, 1)));
+    if (g.minElev != null && g.maxElev != null) bits.push(T('{0} m alt.', fmt(Math.round(g.minElev)) + '–' + fmt(Math.round(g.maxElev))));
     return bits.join(' · ');
   }
   function selectRunByName(name, opts) {
@@ -1269,7 +1295,7 @@
   function selectMapFeature(f, opts) {
     if (f.runName && currentRunGroups[f.runName]) { selectRunByName(f.runName, opts); return; }
     selectedMapKey = f;
-    showRunPanel(f.label || (f.isLift ? 'Remonte sin nombre' : 'Pista sin nombre'), f.valueText,
+    showRunPanel(f.label || (f.isLift ? T('Remonte sin nombre') : T('Pista sin nombre')), f.valueText,
       f.isLift ? 'var(--map-lift-color)' : DIFF[f.diffKey || 'other'].color,
       f.geomPart ? function (body) { body.appendChild(buildMapTapPopupContent(null, null, f.geomPart)); } : null);
     highlightFeatures([f], opts && opts.pan);
@@ -1348,6 +1374,14 @@
     LB: { name: 'Líbano', flag: '🇱🇧' }
   };
   var currentCountry = null;
+  // English labels for the lookup tables above (no-op in Spanish).
+  localizeTable(DIFF, 'diff', 'label');
+  localizeTable(LIFT_TYPE, 'lift_type');
+  localizeTable(ACTIVITY, 'activity');
+  localizeTable(STATUS, 'status');
+  localizeTable(GROOMING, 'grooming');
+  localizeTable(SERVICE_CATEGORIES, 'services', 'label');
+  localizeTable(COUNTRY_META, 'countries', 'name');
   var HOME_TITLE = document.title;
 
   function findGroupFor(id) {
@@ -1374,7 +1408,7 @@
   // SVG flags (docs/flags, from flag-icons, MIT): emoji flags don't render on
   // Windows, where they show up as two plain letters.
   function flagImg(cc) {
-    return '<img class="flag" src="flags/' + String(cc || 'ES').toLowerCase() + '.svg" alt="" width="24" height="18" loading="lazy">';
+    return '<img class="flag" src="/flags/' + String(cc || 'ES').toLowerCase() + '.svg" alt="" width="24" height="18" loading="lazy">';
   }
   function countryName(cc) { return (COUNTRY_META[cc] || { name: cc }).name; }
 
@@ -1417,12 +1451,12 @@
       var name = document.createElement('div'); name.className = 'name';
       name.innerHTML = flagImg(cc) + '<span>' + meta.name + '</span>';
       var region = document.createElement('div'); region.className = 'region';
-      region.textContent = agg.count + (agg.count === 1 ? ' estación' : ' estaciones');
+      region.textContent = T(agg.count === 1 ? '{0} estación' : '{0} estaciones', agg.count);
       info.appendChild(name); info.appendChild(region);
 
       var stats = document.createElement('div'); stats.className = 'stats';
       var km = document.createElement('div'); km.className = 'km'; km.textContent = fmt(Math.round(agg.km)) + ' km';
-      var kmLabel = document.createElement('div'); kmLabel.className = 'km-label'; kmLabel.textContent = 'pista total';
+      var kmLabel = document.createElement('div'); kmLabel.className = 'km-label'; kmLabel.textContent = T('pista total');
       stats.appendChild(km); stats.appendChild(kmLabel);
 
       var chevron = document.createElement('span'); chevron.className = 'chevron'; chevron.textContent = '›';
@@ -1438,7 +1472,7 @@
   function setActiveCountry(cc) {
     currentCountry = cc;
     var meta = COUNTRY_META[cc] || { name: cc };
-    setText('country-list-title', 'Estaciones de ' + meta.name);
+    setText('country-list-title', T('Estaciones de {0}', meta.name));
     document.getElementById('search-input').value = '';
     renderStationList('');
   }
@@ -1474,23 +1508,29 @@
   // A handful of the generated guides (data-pipeline/scripts/build_guides.py
   // writes guias.json at deploy time); hidden if the file isn't there.
   function renderHomeGuides() {
-    var FEATURED = ['donde-nieva-esta-semana', 'estaciones-mas-grandes-espana-andorra', 'estaciones-para-principiantes-espana-andorra',
-      'pistas-mas-empinadas-espana-andorra', 'estaciones-de-esqui-cerca-de-madrid', 'estaciones-de-esqui-cerca-de-barcelona'];
+    // Same selection as HOME_GUIDES in build_seo_pages.py (used when the data isn't inlined).
+    var FEATURED = LANG === 'en'
+      ? ['where-it-will-snow-this-week', 'biggest-ski-resorts-in-the-alps', 'best-ski-resorts-for-beginners-in-the-alps',
+         'steepest-ski-runs-in-the-alps', 'biggest-ski-resorts-in-north-america', 'ski-resorts-near-geneva']
+      : ['donde-nieva-esta-semana', 'estaciones-mas-grandes-espana-andorra', 'estaciones-para-principiantes-espana-andorra',
+         'pistas-mas-empinadas-espana-andorra', 'estaciones-de-esqui-cerca-de-madrid', 'estaciones-de-esqui-cerca-de-barcelona'];
     if (HOME_DATA && HOME_DATA.guides) { fill(HOME_DATA.guides); return; }
-    fetch('guias.json').then(function (r) { return r.ok ? r.json() : null; }).then(fill).catch(function () {});
+    fetch(LANG === 'en' ? '/en/guides.json' : '/guias.json').then(function (r) { return r.ok ? r.json() : null; }).then(fill).catch(function () {});
     function fill(list) {
       if (!list) return;
       var box = document.getElementById('guide-cards');
-      FEATURED.forEach(function (slug) {
+      // The inlined list (HOME_DATA) is already the featured selection, in order.
+      var slugs = list === (HOME_DATA && HOME_DATA.guides) ? list.map(function (x) { return x.slug; }) : FEATURED;
+      slugs.forEach(function (slug) {
         var g = list.filter(function (x) { return x.slug === slug; })[0];
         if (!g) return;
         var a = document.createElement('a');
         a.className = 'guide-card';
-        a.href = 'guias/' + g.slug + '/';
-        a.innerHTML = (g.thumb ? '<img src="og/thumb/' + encodeURIComponent(g.thumb) + '.jpg" alt="" width="52" height="56" loading="lazy">' : '')
+        a.href = PATHS.guides + g.slug + '/';
+        a.innerHTML = (g.thumb ? '<img src="/og/thumb/' + encodeURIComponent(g.thumb) + '.jpg" alt="" width="52" height="56" loading="lazy">' : '')
           + '<span><span class="guide-card-title"></span><span class="guide-card-sub"></span></span>';
         a.querySelector('.guide-card-title').textContent = g.title;
-        a.querySelector('.guide-card-sub').textContent = g.top ? 'N.º 1: ' + g.top : '';
+        a.querySelector('.guide-card-sub').textContent = g.top ? T('N.º 1: {0}', g.top) : '';
         box.appendChild(a);
       });
       document.getElementById('guides-section').hidden = !box.children.length;
@@ -1502,7 +1542,7 @@
     STATIONS.forEach(function (s) { totalKm += s.pisteKm || 0; countries[s.country || 'ES'] = true; });
     var nStations = STATIONS.length;
     // Always group thousands ("1.276"): es-ES only does it from 10.000 up.
-    var big = function (n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); };
+    var big = function (n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, LANG === 'en' ? ',' : '.'); };
     var countText = big(Math.floor(nStations / 100) * 100) + '+';
     var countEl = document.getElementById('home-station-count');
     if (countEl.textContent !== countText) countEl.textContent = countText;
@@ -1511,11 +1551,12 @@
     setText('home-stat-km', big(Math.floor(totalKm / 1000) * 1000) + '+');
 
     var featured = document.getElementById('featured-list');
-    STATIONS.filter(function (s) { return s.country === 'ES' || s.country === 'AD'; })
+    var featuredCountries = LANG === 'en' ? ['FR', 'CH', 'AT', 'IT'] : ['ES', 'AD'];
+    STATIONS.filter(function (s) { return featuredCountries.indexOf(s.country) !== -1; })
       .sort(function (a, b) { return (b.pisteKm || 0) - (a.pisteKm || 0); })
       .slice(0, 6)
       .forEach(function (s) {
-        featured.appendChild(homeStationCard(s, fmt(Math.round(s.pisteKm || 0)) + ' km', 'pista'));
+        featured.appendChild(homeStationCard(s, fmt(Math.round(s.pisteKm || 0)) + ' km', T('pista')));
       });
   }
 
@@ -1547,7 +1588,7 @@
         return pa - pb || (b.s.pisteKm || 0) - (a.s.pisteKm || 0);
       }).slice(0, 8).map(function (e) { return e.s; });
       if (!results.length) {
-        box.innerHTML = '<div class="home-empty">Ninguna estación coincide con tu búsqueda.</div>';
+        box.innerHTML = '<div class="home-empty">' + T('Ninguna estación coincide con tu búsqueda.') + '</div>';
       }
       results.forEach(function (s, i) {
         var b = document.createElement('button');
@@ -1605,7 +1646,7 @@
         return true;
       }).filter(function (r) { return r.total >= 1; }).slice(0, 8);
       if (!picked.length) {
-        listEl.innerHTML = '<div class="empty-state">No se esperan nevadas significativas en los próximos días en esta zona.</div>';
+        listEl.innerHTML = '<div class="empty-state">' + T('No se esperan nevadas significativas en los próximos días en esta zona.') + '</div>';
         return;
       }
       var maxDay = Math.max.apply(null, picked.map(function (r) { return Math.max.apply(null, r.sf); }).concat([5]));
@@ -1613,7 +1654,7 @@
         var spark = '<span class="snow-spark" aria-hidden="true">' + r.sf.map(function (v) {
           return v > 0.05 ? '<i style="height:' + Math.max(8, v / maxDay * 100) + '%"></i>' : '<i class="z"></i>';
         }).join('') + '</span>';
-        var card = homeStationCard(r.s, snowFmt(Math.round(r.total)) + ' cm', 'en 7 días', '<span class="rank">' + (i + 1) + '</span>');
+        var card = homeStationCard(r.s, snowFmt(Math.round(r.total)) + ' cm', T('en 7 días'), '<span class="rank">' + (i + 1) + '</span>');
         card.insertBefore(document.createRange().createContextualFragment(spark), card.querySelector('.stats'));
         listEl.appendChild(card);
       });
@@ -1626,7 +1667,7 @@
       });
     });
     if (HOME_DATA && HOME_DATA.snow) applySnow(HOME_DATA.snow);
-    else fetch('snow.json').then(function (r) { return r.ok ? r.json() : null; }).then(applySnow).catch(function () {});
+    else fetch('/snow.json').then(function (r) { return r.ok ? r.json() : null; }).then(applySnow).catch(function () {});
     function applySnow(doc) {
       if (!doc || !doc.stations) return;
       var today = new Date();
@@ -1641,11 +1682,11 @@
       if (!rows.length) return;
       rows.sort(function (a, b) { return b.total - a.total; });
       var upd = new Date(doc.updated);
-      setText('snow-rank-sub', 'previsión en cota alta · ' + upd.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }));
+      setText('snow-rank-sub', T('previsión en cota alta · {0}', upd.toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' })));
       // Start on the zone closest to home that actually has snow coming.
       var iberia = rows.some(function (r) { return (r.s.country === 'ES' || r.s.country === 'AD') && r.total >= 5; });
       var europe = rows.some(function (r) { return EUROPE.indexOf(r.s.country) !== -1 && r.total >= 5; });
-      zone = iberia ? 'iberia' : europe ? 'europe' : 'world';
+      zone = iberia && LANG !== 'en' ? 'iberia' : europe ? 'europe' : 'world';
       document.querySelectorAll('#snow-rank-chips .chip').forEach(function (c) { c.setAttribute('aria-pressed', c.getAttribute('data-zone') === zone ? 'true' : 'false'); });
       render();
       section.hidden = false;
@@ -1665,7 +1706,7 @@
     if (!matches.length) {
       var empty = document.createElement('div');
       empty.className = 'empty-state';
-      empty.textContent = 'Ninguna estación coincide con "' + filter + '".';
+      empty.textContent = T('Ninguna estación coincide con "{0}".', filter);
       listEl.appendChild(empty);
       return;
     }
@@ -1682,7 +1723,7 @@
 
       var stats = document.createElement('div'); stats.className = 'stats';
       var km = document.createElement('div'); km.className = 'km'; km.textContent = s.pisteKm != null ? fmt(Math.round(s.pisteKm)) + ' km' : '–';
-      var kmLabel = document.createElement('div'); kmLabel.className = 'km-label'; kmLabel.textContent = 'pista';
+      var kmLabel = document.createElement('div'); kmLabel.className = 'km-label'; kmLabel.textContent = T('pista');
       stats.appendChild(km); stats.appendChild(kmLabel);
 
       var chevron = document.createElement('span'); chevron.className = 'chevron'; chevron.textContent = '›';
@@ -1702,7 +1743,7 @@
 
   function showCountryMapScreen() {
     var meta = COUNTRY_META[currentCountry] || { name: currentCountry || '' };
-    setText('country-map-title', 'Mapa de ' + meta.name);
+    setText('country-map-title', T('Mapa de {0}', meta.name));
     var stations = STATIONS.filter(function (s) { return (s.country || 'ES') === currentCountry; });
     screenList.hidden = true;
     screenCountryMap.hidden = false;
@@ -1798,7 +1839,7 @@
     showCatalog('runs');
     document.getElementById('app').scrollTop = 0;
     window.scrollTo(0, 0);
-    setText('h-name', 'Cargando…');
+    setText('h-name', T('Cargando…'));
     setText('h-place', '');
     setText('map-station-name', '');
     ['runs-count', 'lifts-count', 'services-count'].forEach(function (elId) { setText(elId, ''); });
@@ -1808,7 +1849,7 @@
     document.getElementById('trip-section').hidden = true;
     document.getElementById('snow-section').hidden = true;
 
-    fetch('data/' + id + '.json')
+    fetch('/data/' + id + '.json')
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(function (raw) {
         // Some ski areas (notably Nordic-heavy ones in Germany/Scandinavia) bundle
@@ -1836,8 +1877,8 @@
       })
       .catch(function (err) {
         if (token !== loadToken) return;
-        setText('h-name', 'No se pudo cargar');
-        setText('h-place', 'Vuelve a la lista e inténtalo de nuevo.');
+        setText('h-name', T('No se pudo cargar'));
+        setText('h-place', T('Vuelve a la lista e inténtalo de nuevo.'));
         console.error(err);
       });
   }
@@ -2418,16 +2459,16 @@
           content.appendChild(dot);
           liftStationDots.push(dot);
         });
-        var label = l.name || 'Remonte sin nombre';
+        var label = l.name || T('Remonte sin nombre');
         // Duration and seats-per-chair are what someone taps a lift on the
         // map to find out, so they lead; type/length/etc. follow as detail.
         var bits = [];
         var lDuration = formatDuration(l.duration_s);
-        if (lDuration) bits.push(lDuration + ' de trayecto');
-        if (l.occupancy) bits.push(l.occupancy + ' plazas');
+        if (lDuration) bits.push(T('{0} de trayecto', lDuration));
+        if (l.occupancy) bits.push(T('{0} plazas', l.occupancy));
         bits.push(LIFT_TYPE[l.lift_type] || l.lift_type);
         if (l.length_m) bits.push(fmt(Math.round(l.length_m)) + ' m');
-        if (l.vertical_m) bits.push('desnivel ' + fmt(Math.round(l.vertical_m)) + ' m');
+        if (l.vertical_m) bits.push(T('desnivel {0} m', fmt(Math.round(l.vertical_m))));
         if (l.capacity) bits.push(fmt(l.capacity) + ' p/h');
         var valueText = bits.join(' · ');
         wireFocusTooltip(hit, label, valueText);
@@ -2450,7 +2491,7 @@
         var label = r.name || null;
         var bits = [DIFF[key].label];
         if (r.length_m) bits.push(fmt(Math.round(r.length_m)) + ' m');
-        if (r.avg_pitch_percent != null) bits.push(fmt(r.avg_pitch_percent, 0) + '% pend. media');
+        if (r.avg_pitch_percent != null) bits.push(T('{0}% pend. media', fmt(r.avg_pitch_percent, 0)));
         var valueText = bits.join(' · ');
         wireFocusTooltip(hit, label, valueText);
         var projPts = part.map(project);
@@ -2541,7 +2582,7 @@
     });
     var liftItem = document.createElement('span'); liftItem.className = 'key';
     var liftSw = document.createElement('span'); liftSw.className = 'swatch lift';
-    liftItem.appendChild(liftSw); liftItem.appendChild(document.createTextNode('Remonte'));
+    liftItem.appendChild(liftSw); liftItem.appendChild(document.createTextNode(T('Remonte')));
     legend.appendChild(liftItem);
     var presentServiceCats = Object.keys(SERVICE_CATEGORIES).filter(function (k) {
       return (raw.services || []).some(function (s) { return s.category === k; });
@@ -2685,7 +2726,7 @@
       var label = s.name;
       var bits = [];
       if (s.region) bits.push(s.region);
-      if (s.pisteKm != null) bits.push(fmt(Math.round(s.pisteKm)) + ' km de pista');
+      if (s.pisteKm != null) bits.push(T('{0} km de pista', fmt(Math.round(s.pisteKm))));
       var valueText = bits.join(' · ');
       wireFocusTooltip(dot, label, valueText);
       dot.addEventListener('keydown', function (e) {
@@ -2726,7 +2767,7 @@
     var popupGoBtn = document.getElementById('marker-popup-go');
     function hideMarkerPopup() { popupEl.hidden = true; }
     function showMarkerPopup(marker, clientX, clientY) {
-      popupNameEl.textContent = marker.label || 'Estación';
+      popupNameEl.textContent = marker.label || T('Estación');
       popupMetaEl.textContent = marker.valueText || '';
       popupGoBtn.onclick = function () { goToStation(marker.id); };
       popupEl.hidden = false;
@@ -2910,7 +2951,7 @@
       if (!profiles.length) {
         var empty = document.createElement('div');
         empty.className = 'map-tap-popup-noprofile';
-        empty.textContent = 'Todavía no tenemos datos de altitud para este tramo.';
+        empty.textContent = T('Todavía no tenemos datos de altitud para este tramo.');
         frag.appendChild(empty);
       } else {
         // A there-and-back stretch (see splitOutAndBack) yields two profiles
@@ -2922,7 +2963,7 @@
           if (profiles.length > 1) {
             var heading = document.createElement('div');
             heading.className = 'run-profile-part-heading';
-            heading.textContent = 'Carril ' + (idx + 1) + ' de ' + profiles.length;
+            heading.textContent = T('Carril {0} de {1}', idx + 1, profiles.length);
             chartWrap.appendChild(heading);
           }
           var chart = buildProfileChart(profile);
@@ -2931,7 +2972,7 @@
             var steepestNote = document.createElement('div');
             steepestNote.className = 'run-profile-steepest';
             var noteRange = fmtDistRange(chart.steepest.startDist, chart.steepest.endDist);
-            steepestNote.textContent = 'Más pronunciado: ' + Math.round(Math.abs(chart.steepest.pitchPct)) + '% (' + noteRange.start + '–' + noteRange.end + ')';
+            steepestNote.textContent = T('Más pronunciado: {0}% ({1}–{2})', Math.round(Math.abs(chart.steepest.pitchPct)), noteRange.start, noteRange.end);
             chartWrap.appendChild(steepestNote);
           }
           frag.appendChild(chartWrap);
@@ -2968,8 +3009,8 @@
     var domainSection = document.getElementById('domain-section');
     if (group) {
       var others = group.filter(function (id) { return id !== raw.id; }).map(stationById).filter(Boolean);
-      setText('domain-title', 'Dominio esquiable conectado');
-      setText('domain-note', 'Detectado por proximidad geográfica; los km de cada una pueden solaparse:');
+      setText('domain-title', T('Dominio esquiable conectado'));
+      setText('domain-note', T('Detectado por proximidad geográfica; los km de cada una pueden solaparse:'));
       var linksEl = document.getElementById('domain-links');
       others.forEach(function (o) {
         var chip = document.createElement('button');
@@ -3000,13 +3041,13 @@
       // Hero shows the base (where the day starts); the snow section has both.
       var baseNow = fc.now.baseTemp != null;
       setText('k-temp', fmt(Math.round(baseNow ? fc.now.baseTemp : fc.now.temp)) + '°');
-      setText('k-weather-desc', WEATHER_CODE[baseNow ? fc.now.baseCode : fc.now.code] || 'Tiempo actual');
+      setText('k-weather-desc', WEATHER_CODE[baseNow ? fc.now.baseCode : fc.now.code] || T('Tiempo actual'));
       setText('k-wind', fmt(Math.round(baseNow ? fc.now.baseWind : fc.now.wind)) + ' km/h');
-      setText('weather-updated', fc.fetched ? 'actualizado ' + formatLocalTime(fc.fetched) : '');
+      setText('weather-updated', fc.fetched ? T('actualizado {0}', formatLocalTime(fc.fetched)) : '');
       weatherNote.hidden = false;
     } else {
       setText('k-temp', '–');
-      setText('k-weather-desc', 'Sin datos de tiempo');
+      setText('k-weather-desc', T('Sin datos de tiempo'));
       setText('k-wind', '–');
       setText('weather-updated', '');
       weatherNote.hidden = true;
@@ -3020,7 +3061,7 @@
     var dirUrl = stationDirectionsUrl(raw);
     dirLink.hidden = !dirUrl;
     if (dirUrl) dirLink.href = dirUrl;
-    document.title = (raw.name || 'Estación') + ' · Ski Info';
+    document.title = (raw.name || T('Estación')) + ' · Ski Info';
 
     var bookingQuery = bookingSearchQuery(raw);
     if (bookingQuery) {
@@ -3028,7 +3069,7 @@
       var isAffiliate = !!AFFILIATE.bookingDeepLinkPrefix;
       bookingLink.href = bookingUrl(raw);
       bookingLink.rel = isAffiliate ? 'noopener sponsored' : 'noopener';
-      setText('booking-sub', 'Buscar en Booking.com · ' + bookingQuery);
+      setText('booking-sub', T('Buscar en Booking.com · {0}', bookingQuery));
       document.getElementById('booking-disclosure').hidden = !isAffiliate;
       document.getElementById('trip-section').hidden = false;
     }
@@ -3100,7 +3141,7 @@
     setText('runs-count', String(runOrder.length));
     currentRunGroups = runGroups;
     var runsList = document.getElementById('runs-list');
-    if (!runOrder.length) runsList.appendChild(catalogEmpty('No hay pistas con nombre en los datos de esta estación.'));
+    if (!runOrder.length) runsList.appendChild(catalogEmpty(T('No hay pistas con nombre en los datos de esta estación.')));
     runOrder.forEach(function (rname) {
       var g = runGroups[rname];
       var key = diffKey(g.difficulty);
@@ -3113,14 +3154,14 @@
       var meta = document.createElement('div'); meta.className = 'item-meta';
       var bits = [];
       if (g.length_m) bits.push(fmt(Math.round(g.length_m)) + ' m');
-      if (g.vertical_m) bits.push('desnivel ' + fmt(Math.round(g.vertical_m)) + ' m');
-      if (g.length_m) bits.push('pend. media ' + fmt(100 * g.vertical_m / g.length_m, 1) + '%');
-      if (g.minElev != null && g.maxElev != null) bits.push(fmt(Math.round(g.minElev)) + '–' + fmt(Math.round(g.maxElev)) + ' m alt.');
+      if (g.vertical_m) bits.push(T('desnivel {0} m', fmt(Math.round(g.vertical_m))));
+      if (g.length_m) bits.push(T('pend. media {0}%', fmt(100 * g.vertical_m / g.length_m, 1)));
+      if (g.minElev != null && g.maxElev != null) bits.push(T('{0} m alt.', fmt(Math.round(g.minElev)) + '–' + fmt(Math.round(g.maxElev))));
       if (GROOMING[g.grooming]) bits.push(GROOMING[g.grooming]);
-      if (g.segments > 1) bits.push(g.segments + ' tramos');
+      if (g.segments > 1) bits.push(T('{0} tramos', g.segments));
       meta.textContent = bits.join(' · ');
-      if (g.lit === 1) { var pill = document.createElement('span'); pill.className = 'pill'; pill.textContent = 'Nocturna'; meta.appendChild(pill); }
-      if (g.gladed === 1) { var pill2 = document.createElement('span'); pill2.className = 'pill'; pill2.textContent = 'Arbolada'; meta.appendChild(pill2); }
+      if (g.lit === 1) { var pill = document.createElement('span'); pill.className = 'pill'; pill.textContent = T('Nocturna'); meta.appendChild(pill); }
+      if (g.gladed === 1) { var pill2 = document.createElement('span'); pill2.className = 'pill'; pill2.textContent = T('Arbolada'); meta.appendChild(pill2); }
       main.appendChild(name); main.appendChild(meta);
       var chevron = document.createElement('span'); chevron.className = 'item-chevron'; chevron.setAttribute('aria-hidden', 'true'); chevron.textContent = '›';
       item.appendChild(dot); item.appendChild(main); item.appendChild(chevron);
@@ -3152,13 +3193,13 @@
     });
 
     var filterDefs = [
-      { key: 'all', label: 'Todas' },
-      { key: 'novice', label: 'Verde' },
-      { key: 'easy', label: 'Azul' },
-      { key: 'intermediate', label: 'Roja' },
-      { key: 'advanced', label: 'Negra', altKeys: ['advanced', 'expert'] },
+      { key: 'all', label: T('Todas') },
+      { key: 'novice', label: DIFF.novice.label },
+      { key: 'easy', label: DIFF.easy.label },
+      { key: 'intermediate', label: DIFF.intermediate.label },
+      { key: 'advanced', label: DIFF.advanced.label, altKeys: ['advanced', 'expert'] },
       { key: 'freeride', label: 'Freeride', altKeys: ['freeride', 'extreme'] },
-      { key: 'other', label: 'Sin clasif.' }
+      { key: 'other', label: T('Sin clasif.') }
     ];
     var runItems = Array.prototype.slice.call(runsList.querySelectorAll('.run-item'));
     var runChipDefs = filterDefs.map(function (f) {
@@ -3181,7 +3222,7 @@
 
     var liftsList = document.getElementById('lifts-list');
     setText('lifts-count', String(raw.lifts.length));
-    if (!raw.lifts.length) liftsList.appendChild(catalogEmpty('No hay remontes en los datos de esta estación.'));
+    if (!raw.lifts.length) liftsList.appendChild(catalogEmpty(T('No hay remontes en los datos de esta estación.')));
     var liftItems = [];
     raw.lifts.forEach(function (l) {
       var item = document.createElement('div'); item.className = 'item';
@@ -3190,19 +3231,19 @@
       var dot = document.createElement('span'); dot.className = 'dot'; dot.style.background = 'var(--accent)';
       var main = document.createElement('div'); main.className = 'item-main';
       var name = document.createElement('div'); name.className = 'item-name';
-      name.textContent = (l.ref ? l.ref + ' · ' : '') + (l.name || 'Sin nombre') + '  ·  ' + (LIFT_TYPE[l.lift_type] || l.lift_type);
+      name.textContent = (l.ref ? l.ref + ' · ' : '') + (l.name || T('Sin nombre')) + '  ·  ' + (LIFT_TYPE[l.lift_type] || l.lift_type);
       var meta = document.createElement('div'); meta.className = 'item-meta';
       var bits = [];
       if (l.capacity) bits.push(fmt(l.capacity) + ' p/h');
-      if (l.occupancy) bits.push(l.occupancy + ' plazas');
+      if (l.occupancy) bits.push(T('{0} plazas', l.occupancy));
       if (l.length_m) bits.push(fmt(Math.round(l.length_m)) + ' m');
-      if (l.vertical_m) bits.push('desnivel ' + fmt(Math.round(l.vertical_m)) + ' m');
-      if (formatDuration(l.duration_s)) bits.push(formatDuration(l.duration_s) + ' de trayecto');
+      if (l.vertical_m) bits.push(T('desnivel {0} m', fmt(Math.round(l.vertical_m))));
+      if (formatDuration(l.duration_s)) bits.push(T('{0} de trayecto', formatDuration(l.duration_s)));
       meta.textContent = bits.join(' · ');
-      if (l.detachable === 1) { var pill = document.createElement('span'); pill.className = 'pill'; pill.textContent = 'Desembragable'; meta.appendChild(pill); }
-      if (l.bubble === 1) { var pillB = document.createElement('span'); pillB.className = 'pill'; pillB.textContent = 'Burbuja'; meta.appendChild(pillB); }
-      if (l.heating === 1) { var pillH = document.createElement('span'); pillH.className = 'pill'; pillH.textContent = 'Calefactado'; meta.appendChild(pillH); }
-      if (l.access === 'private') { var pillP = document.createElement('span'); pillP.className = 'pill'; pillP.textContent = 'Privado'; meta.appendChild(pillP); }
+      if (l.detachable === 1) { var pill = document.createElement('span'); pill.className = 'pill'; pill.textContent = T('Desembragable'); meta.appendChild(pill); }
+      if (l.bubble === 1) { var pillB = document.createElement('span'); pillB.className = 'pill'; pillB.textContent = T('Burbuja'); meta.appendChild(pillB); }
+      if (l.heating === 1) { var pillH = document.createElement('span'); pillH.className = 'pill'; pillH.textContent = T('Calefactado'); meta.appendChild(pillH); }
+      if (l.access === 'private') { var pillP = document.createElement('span'); pillP.className = 'pill'; pillP.textContent = T('Privado'); meta.appendChild(pillP); }
       main.appendChild(name); main.appendChild(meta);
       item.appendChild(dot); item.appendChild(main);
       liftsList.appendChild(item);
@@ -3210,7 +3251,7 @@
     if (liftItems.length) {
       var liftTypeCounts = {};
       liftItems.forEach(function (it) { var t = it.getAttribute('data-type'); liftTypeCounts[t] = (liftTypeCounts[t] || 0) + 1; });
-      var liftChipDefs = [{ key: 'all', label: 'Todos', count: liftItems.length }].concat(
+      var liftChipDefs = [{ key: 'all', label: T('Todos'), count: liftItems.length }].concat(
         Object.keys(liftTypeCounts).sort(function (a, b) { return liftTypeCounts[b] - liftTypeCounts[a]; })
           .map(function (t) { return { key: t, label: LIFT_TYPE[t] || t, count: liftTypeCounts[t] }; }));
       buildFilterChips(document.getElementById('lift-filters'), liftChipDefs, function (f) {
@@ -3225,8 +3266,8 @@
     setText('services-count', String(services.length));
     if (!services.length) {
       servicesList.appendChild(catalogEmpty(raw.services
-        ? 'No hay servicios registrados en OpenStreetMap para esta estación.'
-        : 'Todavía no tenemos datos de servicios para esta estación.'));
+        ? T('No hay servicios registrados en OpenStreetMap para esta estación.')
+        : T('Todavía no tenemos datos de servicios para esta estación.')));
     } else {
       var catOrder = Object.keys(SERVICE_CATEGORIES);
       var sortedServices = services.slice().sort(function (a, b) {
@@ -3256,7 +3297,7 @@
       });
       var svcCatCounts = {};
       services.forEach(function (s) { svcCatCounts[s.category] = (svcCatCounts[s.category] || 0) + 1; });
-      var svcChipDefs = [{ key: 'all', label: 'Todos', count: services.length }].concat(
+      var svcChipDefs = [{ key: 'all', label: T('Todos'), count: services.length }].concat(
         catOrder.filter(function (k) { return svcCatCounts[k]; }).map(function (k) {
           return { key: k, label: SERVICE_CATEGORIES[k].icon + ' ' + SERVICE_CATEGORIES[k].label, count: svcCatCounts[k] };
         }));
@@ -3275,12 +3316,12 @@
     var detKnown = raw.lifts.filter(function (l) { return l.detachable !== null && l.detachable !== undefined; }).length;
 
     var qualityItems = [
-      { name: 'Pistas con nombre', val: namedCount + ' / ' + raw.runs.length },
-      { name: 'Dificultad etiquetada', val: fmt(100 * diffKnown / runCount, 0) + '%' },
-      { name: 'Iluminación etiquetada', val: fmt(100 * litKnown / runCount, 0) + '%' },
-      { name: 'Nieve artificial etiquetada', val: fmt(100 * snowKnown / runCount, 0) + '%' },
-      { name: 'Capacidad de remonte etiquetada', val: fmt(100 * capKnown / liftCount, 0) + '%' },
-      { name: 'Tipo de agarre etiquetado', val: fmt(100 * detKnown / liftCount, 0) + '%' }
+      { name: T('Pistas con nombre'), val: namedCount + ' / ' + raw.runs.length },
+      { name: T('Dificultad etiquetada'), val: fmt(100 * diffKnown / runCount, 0) + '%' },
+      { name: T('Iluminación etiquetada'), val: fmt(100 * litKnown / runCount, 0) + '%' },
+      { name: T('Nieve artificial etiquetada'), val: fmt(100 * snowKnown / runCount, 0) + '%' },
+      { name: T('Capacidad de remonte etiquetada'), val: fmt(100 * capKnown / liftCount, 0) + '%' },
+      { name: T('Tipo de agarre etiquetado'), val: fmt(100 * detKnown / liftCount, 0) + '%' }
     ];
     var qualityList = document.getElementById('quality-list');
     qualityItems.forEach(function (q) {
@@ -3290,9 +3331,9 @@
       row.appendChild(name); row.appendChild(val);
       qualityList.appendChild(row);
     });
-    setText('quality-note', 'Nieve artificial y vigilancia rara vez están etiquetadas en OpenStreetMap — no significa que no existan, es que casi nadie las mapea todavía.');
+    setText('quality-note', T('Nieve artificial y vigilancia rara vez están etiquetadas en OpenStreetMap — no significa que no existan, es que casi nadie las mapea todavía.'));
 
-    setText('dashboard-credit', 'Datos de OpenSkiMap / OpenStreetMap, licencia ODbL. ID: ' + (raw.id || '').slice(0, 12) + '…');
+    setText('dashboard-credit', T('Datos de OpenSkiMap / OpenStreetMap, licencia ODbL. ID: {0}…', (raw.id || '').slice(0, 12)));
   }
 
   // Offline support (docs/sw.js): the app shell and the stations you've
@@ -3320,6 +3361,38 @@
     };
   })();
 
+  // Language: remember an explicit choice (the lang-redirect script in <head>
+  // follows it), and offer the other language when the browser asks for it.
+  document.addEventListener('click', function (ev) {
+    var a = ev.target.closest && ev.target.closest('.lang-link');
+    if (!a) return;
+    try { localStorage.setItem('si_lang', a.getAttribute('data-lang') || (LANG === 'en' ? 'es' : 'en')); } catch (e) {}
+  });
+  (function langHint() {
+    var browser = (navigator.language || '').slice(0, 2).toLowerCase();
+    var hispanic = /^(es|ca|gl|eu)$/.test(browser);
+    if (LANG === 'es' ? hispanic : !hispanic) return;
+    try { if (localStorage.getItem('si_lang_hint') || localStorage.getItem('si_lang')) return; } catch (e) { return; }
+    var other = LANG === 'es' ? 'en' : 'es';
+    var bar = document.createElement('div');
+    bar.className = 'lang-hint';
+    bar.setAttribute('lang', other);
+    bar.innerHTML = '<span></span><a class="lang-link"></a><button type="button">×</button>';
+    bar.querySelector('span').textContent = other === 'en' ? 'This page is also available in English.' : 'Esta página también está en español.';
+    var link = bar.querySelector('a');
+    link.textContent = other === 'en' ? 'View in English' : 'Ver en español';
+    link.href = (other === 'en' ? '/en/' : '/') + location.search;
+    link.setAttribute('data-lang', other);
+    link.setAttribute('hreflang', other);
+    var close = bar.querySelector('button');
+    close.setAttribute('aria-label', other === 'en' ? 'Close' : 'Cerrar');
+    close.addEventListener('click', function () {
+      bar.remove();
+      try { localStorage.setItem('si_lang_hint', '1'); } catch (e) {}
+    });
+    document.body.appendChild(bar);
+  })();
+
   // "Compartir": the station's own page (/estacion/<slug>/) is the link to
   // share -- it has the preview image and opens straight into its content.
   var slugsPromise = null;
@@ -3327,12 +3400,12 @@
     var raw = currentRaw;
     if (!raw) return;
     if (!slugsPromise) {
-      slugsPromise = fetch('slugs.json').then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { slugsPromise = null; return {}; });
+      slugsPromise = fetch('/slugs.json').then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { slugsPromise = null; return {}; });
     }
     slugsPromise.then(function (slugs) {
       var slug = slugs[raw.id];
-      var url = slug ? 'https://skiinfoapp.com/estacion/' + slug + '/' : 'https://skiinfoapp.com/?estacion=' + raw.id;
-      shareStationLink(raw.name || 'Estación de esquí', url);
+      var url = slug ? 'https://skiinfoapp.com' + PATHS.station + slug + '/' : 'https://skiinfoapp.com' + PATHS.home + '?estacion=' + raw.id;
+      shareStationLink(raw.name || T('Estación de esquí'), url);
     });
   });
 

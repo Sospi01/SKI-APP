@@ -18,10 +18,10 @@ function haversineM(a, b) {
 // (green/blue/red/black), applied here to the *local* steepness of a
 // stretch rather than the run's overall difficulty rating.
 var PITCH_ZONES = [
-  { max: 15, key: 'novice', label: 'Suave (<15%)' },
-  { max: 25, key: 'easy', label: 'Moderada (15-25%)' },
-  { max: 40, key: 'intermediate', label: 'Pronunciada (25-40%)' },
-  { max: Infinity, key: 'advanced', label: 'Muy pronunciada (>40%)' }
+  { max: 15, key: 'novice', label: T('Suave (<15%)') },
+  { max: 25, key: 'easy', label: T('Moderada (15-25%)') },
+  { max: 40, key: 'intermediate', label: T('Pronunciada (25-40%)') },
+  { max: Infinity, key: 'advanced', label: T('Muy pronunciada (>40%)') }
 ];
 function pitchZoneFor(pct) {
   var p = Math.abs(pct);
@@ -189,8 +189,8 @@ function buildProfileChart(raw) {
   // X-axis distance ticks, spaced ~every 0.5km (adaptive for short/long runs).
   // Skipped near either end so their labels don't collide with Salida/Final
   // (margin sized from those labels' actual text length, not a flat guess).
-  var startLabelText = 'Salida · ' + Math.round(smoothed[0].ele) + 'm';
-  var endLabelText = 'Final · ' + Math.round(smoothed[smoothed.length - 1].ele) + 'm';
+  var startLabelText = T('Salida · {0}m', Math.round(smoothed[0].ele));
+  var endLabelText = T('Final · {0}m', Math.round(smoothed[smoothed.length - 1].ele));
   var CHAR_W = 4.4;
   var startLabelEndX = padL + startLabelText.length * CHAR_W + 6;
   var endLabelStartX = (W - padR) - endLabelText.length * CHAR_W - 6;
@@ -266,10 +266,10 @@ function buildProfileChart(raw) {
   endLabel.textContent = endLabelText;
   svg.appendChild(endLabel);
 
-  var ariaLabel = 'Perfil de altitud de la pista, de ' + Math.round(smoothed[0].ele) + ' a ' + Math.round(smoothed[smoothed.length - 1].ele) + ' metros a lo largo de ' + Math.round(totalDist) + ' metros.';
+  var ariaLabel = T('Perfil de altitud de la pista, de {0} a {1} metros a lo largo de {2} metros.', Math.round(smoothed[0].ele), Math.round(smoothed[smoothed.length - 1].ele), Math.round(totalDist));
   if (steepest) {
     var ariaRange = fmtDistRange(steepest.startDist, steepest.endDist);
-    ariaLabel += ' Tramo más pronunciado: ' + Math.round(Math.abs(steepest.pitchPct)) + '% de pendiente, entre ' + ariaRange.start + ' y ' + ariaRange.end + '.';
+    ariaLabel += ' ' + T('Tramo más pronunciado: {0}% de pendiente, entre {1} y {2}.', Math.round(Math.abs(steepest.pitchPct)), ariaRange.start, ariaRange.end);
   }
   svg.setAttribute('aria-label', ariaLabel);
 
@@ -280,7 +280,7 @@ function renderRunProfile(container, group) {
   var profiles = buildElevationProfiles(group.geomParts);
   if (!profiles.length) {
     container.className = 'run-profile empty';
-    container.textContent = 'Todavía no tenemos datos de altitud punto a punto para esta pista.';
+    container.textContent = T('Todavía no tenemos datos de altitud punto a punto para esta pista.');
     return;
   }
   // A piste mapped as several disconnected segments gets one independent
@@ -290,7 +290,7 @@ function renderRunProfile(container, group) {
     if (profiles.length > 1) {
       var heading = document.createElement('div');
       heading.className = 'run-profile-part-heading';
-      heading.textContent = 'Tramo ' + (idx + 1) + ' de ' + profiles.length;
+      heading.textContent = T('Tramo {0} de {1}', idx + 1, profiles.length);
       container.appendChild(heading);
     }
     var chart = buildProfileChart(profile);
@@ -299,7 +299,7 @@ function renderRunProfile(container, group) {
       var steepestNote = document.createElement('div');
       steepestNote.className = 'run-profile-steepest';
       var noteRange = fmtDistRange(chart.steepest.startDist, chart.steepest.endDist);
-      steepestNote.textContent = 'Tramo más pronunciado: ' + Math.round(Math.abs(chart.steepest.pitchPct)) + '% de pendiente, entre ' + noteRange.start + ' y ' + noteRange.end + '.';
+      steepestNote.textContent = T('Tramo más pronunciado: {0}% de pendiente, entre {1} y {2}.', Math.round(Math.abs(chart.steepest.pitchPct)), noteRange.start, noteRange.end);
       container.appendChild(steepestNote);
     }
   });
@@ -313,7 +313,7 @@ function renderRunProfile(container, group) {
   });
   var note = document.createElement('div');
   note.style.marginTop = '4px';
-  note.textContent = 'El color indica la inclinación real en cada punto del perfil, no la dificultad oficial de la pista.';
+  note.textContent = T('El color indica la inclinación real en cada punto del perfil, no la dificultad oficial de la pista.');
   caption.appendChild(note);
   container.appendChild(caption);
 }

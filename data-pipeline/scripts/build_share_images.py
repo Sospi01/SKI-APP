@@ -1,8 +1,9 @@
 """Generate the social-share preview images (Open Graph, 1200x630 JPEG).
 
-One image per station, /og/<slug>.jpg, with its piste map drawn from the
-station's own run/lift geometry next to its name and key numbers, plus a
-generic /og/ski-info.jpg for the home and country pages. These are what
+One image per station and language, /og/<slug>.jpg (Spanish) and
+/og/en/<slug>.jpg (English), with its piste map drawn from the station's own
+run/lift geometry next to its name and key numbers, plus a generic
+ski-info.jpg for the home and country pages in each. These are what
 WhatsApp, Telegram, X, Facebook... show when someone shares a link.
 
 Runs in the Pages deploy workflow after build_seo_pages.py (which writes the
@@ -22,7 +23,8 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from build_seo_pages import fmt, is_downhill, latin_name, load_app_metadata, read_app_sources, short_name  # noqa: E402
+from build_seo_pages import (fmt, fmt_en, is_downhill, latin_name, load_app_metadata, load_i18n,  # noqa: E402
+                             localized_meta, read_app_sources, short_name)
 
 REPO = Path(__file__).resolve().parents[2]
 DOCS = REPO / "docs"
@@ -183,7 +185,20 @@ def finish(img: Image.Image, out: Path, thumb: bool = False) -> None:
             t, "JPEG", quality=82, optimize=True)
 
 
-def station_image(raw: dict, meta: dict, out: Path) -> None:
+# Text on the images, per language (Spanish at /og/, English at /og/en/).
+IMG_TX = {
+    "es": {"km": "{0} km de pistas", "lifts": "{0} remontes", "resort": "Estación de esquí", "resort_in": "Estación de esquí en {0}",
+           "home_title": "Mapas de pistas y previsión de nieve", "home_sub": "{0}+ estaciones de esquí en {1} países",
+           "home_chips": ["Pendiente real", "Nieve a 7 días", "Gratis"]},
+    "en": {"km": "{0} km of pistes", "lifts": "{0} lifts", "resort": "Ski resort", "resort_in": "Ski resort in {0}",
+           "home_title": "Piste maps and snow forecasts", "home_sub": "{0}+ ski resorts in {1} countries",
+           "home_chips": ["Real gradients", "7-day snow", "Free"]},
+}
+NUM = {"es": fmt, "en": fmt_en}
+
+
+def station_images(raw: dict, metas: dict, outs: dict) -> None:
+    """One image per language (outs: {lang: path}); the map is drawn once."""
     img = background()
     # Map panel on the right.
     panel = Image.new("RGBA", img.size, (0, 0, 0, 0))
@@ -191,32 +206,35 @@ def station_image(raw: dict, meta: dict, out: Path) -> None:
     pd.rounded_rectangle([640 * SS, 36 * SS, 1164 * SS, 594 * SS], radius=26 * SS, fill=(6, 18, 34, 120))
     img.paste(panel, (0, 0), panel)
     has_map = draw_map(img, raw, (672, 66, 1132, 564))
+    if not has_map:
+        paste_logo(img, 827, 240, 150)
 
-    cc = raw.get("country_code")
-    country = meta["countries"].get(cc, (cc or "", ""))[0]
-    name = short_name(raw.get("name") or "") or raw.get("name") or ""
-    # The fonts have no CJK glyphs: use a Latin form of the name when there is one.
-    if any(ord(c) >= 0x2E80 for c in name):
-        name = latin_name(raw.get("name") or "", False) or f"Estación de esquí en {raw.get('region') or country}"
-    name = name or "Estación de esquí"
-    place = ", ".join(p for p in [raw.get("region"), country] if p)
     runs = [r for r in raw.get("runs", []) if is_downhill(r)]
     km = sum(r.get("length_m") or 0 for r in runs) / 1000
     lo, hi = raw.get("min_elevation_m"), raw.get("max_elevation_m")
-    stats = []
-    if km >= 0.5:
-        stats.append(f"{fmt(round(km))} km de pistas")
-    if raw.get("lifts"):
-        stats.append(f"{len(raw['lifts'])} remontes")
-    if lo is not None and hi is not None:
-        stats.append(f"{fmt(round(lo))}–{fmt(round(hi))} m")
-    left_column(img, name, place, stats, 540)
-    if not has_map:
-        paste_logo(img, 827, 240, 150)
-    finish(img, out, thumb=True)
+    cc = raw.get("country_code")
+    for i, (lang, out) in enumerate(outs.items()):
+        tx, f = IMG_TX[lang], NUM[lang]
+        country = metas[lang]["countries"].get(cc, (cc or "", ""))[0]
+        name = short_name(raw.get("name") or "") or raw.get("name") or ""
+        # The fonts have no CJK glyphs: use a Latin form of the name when there is one.
+        if any(ord(c) >= 0x2E80 for c in name):
+            name = latin_name(raw.get("name") or "", False) or tx["resort_in"].format(raw.get("region") or country)
+        name = name or tx["resort"]
+        place = ", ".join(p for p in [raw.get("region"), country] if p)
+        stats = []
+        if km >= 0.5:
+            stats.append(tx["km"].format(f(round(km))))
+        if raw.get("lifts"):
+            stats.append(tx["lifts"].format(len(raw["lifts"])))
+        if lo is not None and hi is not None:
+            stats.append(f"{f(round(lo))}–{f(round(hi))} m")
+        page_img = img.copy()
+        left_column(page_img, name, place, stats, 540)
+        finish(page_img, out, thumb=(i == 0))
 
 
-def home_image(stations: list, out: Path) -> None:
+def home_image(stations: list, outs: dict) -> None:
     """Generic image: title + a grid of six of the biggest resorts' piste maps."""
     img = background()
     top = sorted(stations, key=lambda s: -(s.get("pisteKm") or 0))
@@ -253,11 +271,12 @@ def home_image(stations: list, out: Path) -> None:
         draw_map(img, raw, box)
     n = len(stations)
     countries = len({s.get("country") or "ES" for s in stations})
-    hundreds = f"{n // 100 * 100:,}".replace(",", ".")
-    left_column(img, "Mapas de pistas y previsión de nieve",
-                f"{hundreds}+ estaciones de esquí en {countries} países",
-                ["Pendiente real", "Nieve a 7 días", "Gratis"], 540, max_lines=2)
-    finish(img, out)
+    for lang, out in outs.items():
+        tx = IMG_TX[lang]
+        hundreds = f"{n // 100 * 100:,}".replace(",", ".") if lang == "es" else f"{n // 100 * 100:,}"
+        page_img = img.copy()
+        left_column(page_img, tx["home_title"], tx["home_sub"].format(hundreds, countries), tx["home_chips"], 540, max_lines=2)
+        finish(page_img, out)
 
 
 def main() -> None:
@@ -265,18 +284,19 @@ def main() -> None:
     ap.add_argument("--only", nargs="*", help="only these station slugs (for testing)")
     args = ap.parse_args()
     meta = load_app_metadata(read_app_sources(DOCS))
+    metas = {"es": meta, "en": localized_meta(meta, load_i18n(DOCS))}
     slugs = json.loads((DOCS / "slugs.json").read_text(encoding="utf-8"))
-    out_dir = DOCS / "og"
-    home_image(meta["stations"], out_dir / "ski-info.jpg")
+    dirs = {"es": DOCS / "og", "en": DOCS / "og" / "en"}
+    home_image(meta["stations"], {lang: d / "ski-info.jpg" for lang, d in dirs.items()})
     count = 0
     for s in meta["stations"]:
         slug = slugs.get(s["id"])
         if not slug or (args.only and slug not in args.only):
             continue
         raw = json.loads((DOCS / "data" / f"{s['id']}.json").read_text(encoding="utf-8"))
-        station_image(raw, meta, out_dir / f"{slug}.jpg")
+        station_images(raw, metas, {lang: d / f"{slug}.jpg" for lang, d in dirs.items()})
         count += 1
-    print(f"{count} station share images + ski-info.jpg")
+    print(f"{count} stations x {len(dirs)} languages of share images + ski-info.jpg")
 
 
 if __name__ == "__main__":

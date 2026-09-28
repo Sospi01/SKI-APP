@@ -24,6 +24,8 @@ function stationDirectionsUrl(raw) {
   return p ? 'https://www.google.com/maps/dir/?api=1&destination=' + p.lat.toFixed(5) + ',' + p.lon.toFixed(5) : null;
 }
 
+if (typeof T !== 'function') { var T = function (s) { var a = arguments; return s.replace(/\{(\d)\}/g, function (m, i) { return a[+i + 1]; }); }; }
+
 function showShareToast(text) {
   var t = document.getElementById('share-toast');
   if (!t) {
@@ -44,7 +46,7 @@ function showShareToast(text) {
 // Android app (native share sheet via the WebView bridge, from app 1.0.5),
 // then the browser's own share sheet, then copy to the clipboard.
 function shareStationLink(title, url) {
-  var text = title + ' en Ski Info: mapa de pistas y previsión de nieve';
+  var text = T('{0} en Ski Info: mapa de pistas y previsión de nieve', title);
   try {
     if (window.SkiInfoAndroid && window.SkiInfoAndroid.share) { window.SkiInfoAndroid.share(text, url); return; }
   } catch (e) { /* fall through */ }
@@ -52,10 +54,10 @@ function shareStationLink(title, url) {
     navigator.share({ title: title + ' · Ski Info', text: text, url: url }).catch(function () {});
     return;
   }
-  function done() { showShareToast('Enlace copiado'); }
+  function done() { showShareToast(T('Enlace copiado')); }
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(url).then(done, function () { window.prompt('Copia el enlace:', url); });
+    navigator.clipboard.writeText(url).then(done, function () { window.prompt(T('Copia el enlace:'), url); });
   } else {
-    window.prompt('Copia el enlace:', url);
+    window.prompt(T('Copia el enlace:'), url);
   }
 }

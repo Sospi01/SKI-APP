@@ -1,9 +1,12 @@
 """Generate static, crawlable pages for search engines from the app's data.
 
 The web app (docs/index.html) renders every station client-side from one URL,
-so search engines only ever see a single page. This script writes one plain
-HTML page per station (/estacion/<slug>/), one per country (/pais/<slug>/), a
-country index (/pais/), and sitemap.xml. Station pages carry the same content
+so search engines only ever see a single page. This script writes, in Spanish
+and in English, one plain HTML page per station (/estacion/<slug>/,
+/en/resort/<slug>/), one per country (/pais/<slug>/, /en/country/<slug>/), the
+country indexes, the guides (build_guides.py), /app/ and /en/app/, the English
+copy of the app itself (/en/, see build_english_app) and sitemap.xml with
+hreflang alternates. English text comes from docs/i18n/en.js. Station pages carry the same content
 and components as the app's Info tab (styled by docs/static-pages.css, made
 interactive by docs/static-pages.js + docs/profile.js) and link into the
 interactive map via /?estacion=<id>&vista=mapa.
@@ -51,12 +54,6 @@ MAP_ICON = ('<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6.5l5.5-2
             'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>'
             '<line x1="9" y1="4" x2="9" y2="17.5" stroke="currentColor" stroke-width="1.6"/>'
             '<line x1="15" y1="6.5" x2="15" y2="20" stroke="currentColor" stroke-width="1.6"/></svg>')
-
-# Same filter chips as the app's run list.
-RUN_FILTERS = [("all", "Todas", ["all"]), ("novice", "Verde", ["novice"]), ("easy", "Azul", ["easy"]),
-               ("intermediate", "Roja", ["intermediate"]), ("advanced", "Negra", ["advanced", "expert"]),
-               ("freeride", "Freeride", ["freeride", "extreme"]), ("other", "Sin clasif.", ["other"])]
-
 
 # ---------- reading the app's own metadata out of index.html ----------
 
@@ -142,10 +139,20 @@ def fmt(n: float, d: int = 0) -> str:
     return s.replace(",", "\0").replace(".", ",").replace("\0", ".")
 
 
-def format_coord(lat, lon) -> str:
+def fmt_en(n: float, d: int = 0) -> str:
+    """English number format (en-GB): thousands comma, decimal point."""
+    return f"{n:,.{d}f}"
+
+
+FMT = {"es": fmt, "en": fmt_en}
+
+
+def format_coord(lat, lon, lang: str = "es") -> str:
     if lat is None or lon is None:
         return "–"
-    return f"{fmt(abs(lat), 2)}°{'N' if lat >= 0 else 'S'} {fmt(abs(lon), 2)}°{'E' if lon >= 0 else 'O'}"
+    f = FMT[lang]
+    west = "O" if lang == "es" else "W"
+    return f"{f(abs(lat), 2)}°{'N' if lat >= 0 else 'S'} {f(abs(lon), 2)}°{'E' if lon >= 0 else west}"
 
 
 def haversine_km(a: tuple, b: tuple) -> float:
@@ -185,6 +192,149 @@ def pill(text: str) -> str:
     return f'<span class="pill">{e(text)}</span>'
 
 
+# ---------- languages ----------
+
+# Where each language's pages live, and a few head values.
+LOC = {
+    "es": {"html": "es", "og": "es_ES", "home": "/", "station": "/estacion/", "countries": "/pais/", "guides": "/guias/",
+           "app": "/app/", "og_dir": "/og/"},
+    "en": {"html": "en", "og": "en_GB", "home": "/en/", "station": "/en/resort/", "countries": "/en/country/",
+           "guides": "/en/guides/", "app": "/en/app/", "og_dir": "/og/en/"},
+}
+OTHER = {"es": "en", "en": "es"}
+
+# Page text. Spanish is the original wording of the site; English mirrors it.
+TX = {
+    "es": {
+        "resort": "Estación de esquí", "official_site": "Web oficial ↗", "altitude": "Altitud", "vertical": "Desnivel",
+        "km_pistes": "Km pista", "coords": "Coordenadas", "linked": "Dominio esquiable conectado",
+        "linked_note": "Detectado por proximidad geográfica; los km de cada una pueden solaparse:",
+        "directions": "Cómo llegar", "share": "Compartir", "back_country": "Estaciones de {0}", "back_countries": "Países",
+        "open_map": "Abrir el mapa interactivo de pistas",
+        "intro_1": "{0} es una estación de esquí{1}.", "intro_in": " en {0}",
+        "intro_2": "Tiene {0} km de pistas repartidos en {1} pistas con nombre{2}.", "intro_2_lifts": " y {0} remontes",
+        "intro_3": "Su dominio va de {0} a {1} m de altitud, con {2} m de desnivel.",
+        "intro_4": "Aquí tienes todas sus pistas con su perfil de pendiente, sus remontes y los servicios en pistas; "
+                   "en el mapa interactivo las verás sobre imagen de satélite.",
+        "intro_h2": "{0}: mapa de pistas y datos", "terrain": "Terreno por dificultad", "lifts_by_type": "Remontes por tipo",
+        "other": "Otro", "vert_m": "desnivel {0} m", "avg_grad": "pend. media {0}%", "alt_range": "{0}–{1} m alt.",
+        "sections": "{0} tramos", "floodlit": "Nocturna", "glades": "Arbolada", "all_f": "Todas", "unclassified": "Sin clasif.",
+        "pph": "{0} p/h", "seats": "{0} plazas", "ride": "{0} de trayecto", "unnamed": "Sin nombre",
+        "detachable": "Desembragable", "bubble": "Burbuja", "heated": "Calefactado", "private": "Privado", "all_m": "Todos",
+        "no_services": "No hay servicios registrados en OpenStreetMap para esta estación.",
+        "no_services_data": "Todavía no tenemos datos de servicios para esta estación.",
+        "catalog_h2": "Pistas, remontes y servicios", "catalog_sub": "pulsa una pista para ver su perfil",
+        "what_to_list": "Qué listar", "runs": "Pistas", "lifts": "Remontes", "services": "Servicios",
+        "no_runs": "No hay pistas con nombre en los datos de esta estación.",
+        "no_lifts": "No hay remontes en los datos de esta estación.",
+        "q_named": "Pistas con nombre", "q_diff": "Dificultad etiquetada", "q_lit": "Iluminación etiquetada",
+        "q_snow": "Nieve artificial etiquetada", "q_cap": "Capacidad de remonte etiquetada", "q_grip": "Tipo de agarre etiquetado",
+        "quality": "Calidad del dato",
+        "quality_note": "Nieve artificial y vigilancia rara vez están etiquetadas en OpenStreetMap — "
+                        "no significa que no existan, es que casi nadie las mapea todavía.",
+        "map_h2": "Mapa interactivo",
+        "map_text": "Las pistas y remontes de {0} sobre imagen de satélite, el sentido de cada pista, la pendiente real de cada tramo, "
+                    "los servicios y el tiempo en directo.",
+        "map_cta": "Abrir el mapa de {0}", "ranks": "En los rankings", "nearby": "Estaciones cercanas",
+        "nearby_meta": "a {0} km · {1} km de pistas", "snow_h2": "Nieve y tiempo en {0}", "top_txt": " (cota alta, {0} m)",
+        "snow_sum": "Previsión de nieve para los próximos 7 días{0}: {1}{2}", "snow_cm": "{0} cm",
+        "snow_none": "sin nevadas significativas", "snow_when": " (actualizada el {0}).",
+        "snow_generic": "Previsión de nieve y tiempo para los próximos 7 días en {0}{1}.",
+        "title": "{0}: mapa de pistas, previsión de nieve y remontes | Ski Info",
+        "d_km": "{0} km de pistas", "d_runs": "{0} pistas", "d_lifts": "{0} remontes", "d_alt": "Altitud {0}–{1} m. ",
+        "d_tail": "Previsión de nieve a 7 días, mapa de pistas interactivo sobre satélite y pendiente real de cada pista.",
+        # country pages
+        "c_eyebrow": "Países", "c_h1": "Estaciones de esquí en {0}",
+        "c_sub": "{0} estaciones · {1} km de pistas. Elige una estación para ver todas sus pistas con su perfil de pendiente, "
+                 "sus remontes, servicios y el mapa interactivo sobre satélite.",
+        "c_title": "Estaciones de esquí en {0}: mapas de pistas | Ski Info",
+        "c_desc": "Las {0} estaciones de esquí de {1} con mapa de pistas interactivo, perfil de pendiente, remontes y servicios.",
+        "card_pista": "pista", "card_total": "pista total", "n_resorts": "{0} estaciones",
+        "ci_h1": "Estaciones de esquí por país",
+        "ci_sub": "{0} estaciones en {1} países, con mapa de pistas interactivo, perfil de pendiente de cada pista, remontes y servicios.",
+        "ci_title": "Estaciones de esquí por país: mapas de pistas | Ski Info",
+        "ci_desc": "Mapas de pistas interactivos de {0} estaciones de esquí en {1} países: pistas, remontes, pendientes y servicios.",
+        # footer / language
+        "f_countries": "Estaciones por país", "f_guides": "Guías y rankings", "f_app": "App para el móvil", "f_privacy": "Privacidad",
+        "f_data": "Datos de OpenSkiMap / OpenStreetMap, licencia ODbL.", "lang_name": "English",
+        "hint": "Esta página también está en español.", "hint_cta": "Ver en español", "close": "Cerrar",
+    },
+    "en": {
+        "resort": "Ski resort", "official_site": "Official website ↗", "altitude": "Altitude", "vertical": "Vertical",
+        "km_pistes": "Km of pistes", "coords": "Coordinates", "linked": "Linked ski area",
+        "linked_note": "Detected by geographic proximity; their kilometres may overlap:",
+        "directions": "Directions", "share": "Share", "back_country": "Ski resorts in {0}", "back_countries": "Countries",
+        "open_map": "Open the interactive piste map",
+        "intro_1": "{0} is a ski resort{1}.", "intro_in": " in {0}",
+        "intro_2": "It has {0} km of pistes across {1} named runs{2}.", "intro_2_lifts": " and {0} lifts",
+        "intro_3": "The ski area goes from {0} to {1} m of altitude, with {2} m of vertical.",
+        "intro_4": "Here you'll find every run with its gradient profile, the lifts and the on-mountain services; "
+                   "the interactive map shows them on satellite imagery.",
+        "intro_h2": "{0}: piste map and stats", "terrain": "Terrain by difficulty", "lifts_by_type": "Lifts by type",
+        "other": "Other", "vert_m": "{0} m vertical", "avg_grad": "avg. gradient {0}%", "alt_range": "{0}–{1} m altitude",
+        "sections": "{0} sections", "floodlit": "Floodlit", "glades": "Tree skiing", "all_f": "All", "unclassified": "Unclassified",
+        "pph": "{0} p/h", "seats": "{0} seats", "ride": "{0} ride", "unnamed": "Unnamed",
+        "detachable": "Detachable", "bubble": "Bubble", "heated": "Heated seats", "private": "Private", "all_m": "All",
+        "no_services": "No services are recorded in OpenStreetMap for this resort.",
+        "no_services_data": "We don't have services data for this resort yet.",
+        "catalog_h2": "Runs, lifts and services", "catalog_sub": "tap a run to see its profile",
+        "what_to_list": "What to list", "runs": "Runs", "lifts": "Lifts", "services": "Services",
+        "no_runs": "There are no named runs in this resort's data.",
+        "no_lifts": "There are no lifts in this resort's data.",
+        "q_named": "Named runs", "q_diff": "Difficulty tagged", "q_lit": "Lighting tagged",
+        "q_snow": "Snowmaking tagged", "q_cap": "Lift capacity tagged", "q_grip": "Grip type tagged",
+        "quality": "Data quality",
+        "quality_note": "Snowmaking and ski patrol are rarely tagged in OpenStreetMap — "
+                        "it doesn't mean they don't exist, just that hardly anyone maps them yet.",
+        "map_h2": "Interactive map",
+        "map_text": "The runs and lifts of {0} on satellite imagery, the direction of every run, the real gradient of each section, "
+                    "the services and the live weather.",
+        "map_cta": "Open the {0} map", "ranks": "In the rankings", "nearby": "Nearby resorts",
+        "nearby_meta": "{0} km away · {1} km of pistes", "snow_h2": "Snow and weather at {0}", "top_txt": " (summit, {0} m)",
+        "snow_sum": "Snow forecast for the next 7 days{0}: {1}{2}", "snow_cm": "{0} cm",
+        "snow_none": "no significant snowfall", "snow_when": " (updated {0}).",
+        "snow_generic": "Snow and weather forecast for the next 7 days at {0}{1}.",
+        "title": "{0} piste map, snow forecast and lifts | Ski Info",
+        "d_km": "{0} km of pistes", "d_runs": "{0} runs", "d_lifts": "{0} lifts", "d_alt": "Altitude {0}–{1} m. ",
+        "d_tail": "7-day snow forecast, interactive trail map on satellite imagery and the real gradient of every run.",
+        "c_eyebrow": "Countries", "c_h1": "Ski resorts in {0}",
+        "c_sub": "{0} resorts · {1} km of pistes. Choose a resort to see every run with its gradient profile, "
+                 "its lifts, services and the interactive satellite map.",
+        "c_title": "Ski resorts in {0}: piste maps | Ski Info",
+        "c_desc": "The {0} ski resorts in {1} with interactive piste maps, gradient profiles, lifts and services.",
+        "card_pista": "of pistes", "card_total": "of pistes", "n_resorts": "{0} resorts",
+        "ci_h1": "Ski resorts by country",
+        "ci_sub": "{0} resorts in {1} countries, with interactive piste maps, the gradient profile of every run, lifts and services.",
+        "ci_title": "Ski resorts by country: piste maps | Ski Info",
+        "ci_desc": "Interactive piste maps of {0} ski resorts in {1} countries: runs, lifts, gradients and services.",
+        "f_countries": "Resorts by country", "f_guides": "Guides & rankings", "f_app": "Mobile app", "f_privacy": "Privacy",
+        "f_data": "Data from OpenSkiMap / OpenStreetMap, ODbL licence.", "lang_name": "Español",
+        "hint": "This page is also available in English.", "hint_cta": "View in English", "close": "Close",
+    },
+}
+
+
+def load_i18n(docs: Path) -> dict:
+    """docs/i18n/en.js: 'window.SKI_I18N = {json};' shared with the browser."""
+    src = (docs / "i18n" / "en.js").read_text(encoding="utf-8")
+    marker = "window.SKI_I18N ="
+    return json.loads(src[src.index(marker) + len(marker):].strip().rstrip(";"))
+
+
+def localized_meta(meta: dict, i18n: dict) -> dict:
+    """The app tables with English labels (station list and groups unchanged)."""
+    tb = i18n["tables"]
+    out = dict(meta)
+    out["diff"] = {k: tb["diff"].get(k, v) for k, v in meta["diff"].items()}
+    out["lift_types"] = {k: tb["lift_type"].get(k, v) for k, v in meta["lift_types"].items()}
+    out["activity"] = {k: tb["activity"].get(k, v) for k, v in meta["activity"].items()}
+    out["status"] = {k: tb["status"].get(k, v) for k, v in meta["status"].items()}
+    out["grooming"] = {k: tb["grooming"].get(k, v) for k, v in meta["grooming"].items()}
+    out["services"] = {k: (tb["services"].get(k, label), icon) for k, (label, icon) in meta["services"].items()}
+    out["countries"] = {cc: (tb["countries"].get(cc, name), flag) for cc, (name, flag) in meta["countries"].items()}
+    return out
+
+
 # ---------- page shell ----------
 
 # Self-hosted @font-face rules, inlined into every page (one request fewer).
@@ -192,18 +342,50 @@ FONT_FACES = "\n".join(l for l in (REPO / "docs" / "fonts.css").read_text(encodi
                        if l.startswith("@font-face"))
 
 
+def lang_hint_html(lang: str, alternates: dict) -> str:
+    """Offers the page in the reader's language when the browser says it's the
+    other one; never redirects. Clicking a language link remembers the choice
+    (the app's home page follows it)."""
+    other = OTHER[lang]
+    alt = alternates.get(other)
+    if alt:
+        alt = re.sub(r"^https?://[^/]+", "", alt)  # same-site link
+    tx = TX[other]
+    hint = ""
+    if alt:
+        hint = (f'<div class="lang-hint" id="lang-hint" lang="{other}" hidden><span>{e(tx["hint"])}</span>'
+                f'<a class="lang-link" data-lang="{other}" hreflang="{other}" href="{e(alt)}">{e(tx["hint_cta"])}</a>'
+                f'<button type="button" aria-label="{e(tx["close"])}">×</button></div>')
+    return hint + ("<script>(function(){var h=document.getElementById('lang-hint');"
+                   "document.addEventListener('click',function(ev){var a=ev.target.closest&&ev.target.closest('.lang-link');"
+                   "if(a){try{localStorage.setItem('si_lang',a.getAttribute('data-lang'));}catch(e){}}});"
+                   "if(!h)return;var b=(navigator.language||'').slice(0,2).toLowerCase();var hisp=/^(es|ca|gl|eu)$/.test(b);"
+                   f"var show={'!hisp' if lang == 'es' else 'hisp'};"
+                   "try{if(localStorage.getItem('si_lang_hint'))show=false;}catch(e){}"
+                   "if(!show)return;h.hidden=false;h.querySelector('button').addEventListener('click',function(){"
+                   "h.hidden=true;try{localStorage.setItem('si_lang_hint','1');}catch(e){}});})();</script>")
+
+
 def page(*, title: str, description: str, url: str, body: str, body_attrs: str = "",
          jsonld: dict | None = None, noindex: bool = False, scripts: bool = False,
-         image: str = "/og/ski-info.jpg", base_url: str = "https://skiinfoapp.com") -> str:
+         image: str | None = None, base_url: str = "https://skiinfoapp.com",
+         lang: str = "es", alternates: dict | None = None) -> str:
+    loc, tx = LOC[lang], TX[lang]
+    alternates = dict(alternates or {})
+    alternates.setdefault(lang, url)
+    image = image or f"{loc['og_dir']}ski-info.jpg"
     head_extra = '<meta name="robots" content="noindex">\n' if noindex else ""
+    if len(alternates) > 1:
+        head_extra += "".join(f'<link rel="alternate" hreflang="{l}" href="{e(u)}">\n' for l, u in sorted(alternates.items()))
+        head_extra += f'<link rel="alternate" hreflang="x-default" href="{e(alternates.get("en", url))}">\n'
     if jsonld:
         head_extra += ('<script type="application/ld+json">'
                        + json.dumps(jsonld, ensure_ascii=False).replace("</", "<\\/") + "</script>\n")
-    # Stats on every page; station pages report a station view (static-pages.js),
-    # the rest a page view.
     # Deferred: they run in order once the page is parsed, without holding up
-    # the first paint. track.js with data-page reports a plain page view.
-    tail = ('<script defer src="/profile.js"></script>\n<script defer src="/snow.js"></script>\n'
+    # the first paint. Station pages report a station view (static-pages.js);
+    # track.js with data-page reports a plain page view.
+    i18n = ('<script defer src="/i18n/en.js"></script>\n' if lang == "en" else "") + '<script defer src="/i18n.js"></script>\n'
+    tail = (i18n + '<script defer src="/profile.js"></script>\n<script defer src="/snow.js"></script>\n'
             '<script defer src="/station-actions.js"></script>\n<script defer src="/track.js"></script>\n'
             '<script defer src="/static-pages.js"></script>\n'
             if scripts else '<script defer src="/track.js" data-page></script>\n')
@@ -211,8 +393,10 @@ def page(*, title: str, description: str, url: str, body: str, body_attrs: str =
         # Not needed for the first screen: load it without blocking the paint.
         head_extra = ('<link rel="stylesheet" href="/snow.css" media="print" onload="this.media=\'all\'">\n'
                       '<noscript><link rel="stylesheet" href="/snow.css"></noscript>\n' + head_extra)
+    other = OTHER[lang]
+    lang_href = re.sub(r"^https?://[^/]+", "", alternates.get(other) or LOC[other]["home"])
     return f"""<!doctype html>
-<html lang="es">
+<html lang="{loc['html']}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -227,7 +411,7 @@ def page(*, title: str, description: str, url: str, body: str, body_attrs: str =
 <meta property="og:image" content="{e(base_url + image)}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:locale" content="es_ES">
+<meta property="og:locale" content="{loc['og']}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#14345C">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -246,10 +430,11 @@ def page(*, title: str, description: str, url: str, body: str, body_attrs: str =
 <div class="app">
 {body}
 <footer class="credit">
-<a href="/">Ski Info</a> · <a href="/pais/">Estaciones por país</a> · <a href="/guias/">Guías y rankings</a> · <a href="/app/">App para el móvil</a> · <a href="/privacy.html">Privacidad</a><br>
-Datos de OpenSkiMap / OpenStreetMap, licencia ODbL.
+<a href="{loc['home']}">Ski Info</a> · <a href="{loc['countries']}">{tx['f_countries']}</a> · <a href="{loc['guides']}">{tx['f_guides']}</a> · <a href="{loc['app']}">{tx['f_app']}</a> · <a href="/privacy.html">{tx['f_privacy']}</a> · <a class="lang-link" data-lang="{other}" hreflang="{other}" lang="{other}" href="{e(lang_href)}">{tx['lang_name']}</a><br>
+{tx['f_data']}
 </footer>
 </div>
+{lang_hint_html(lang, alternates)}
 {tail}</body>
 </html>
 """
@@ -279,16 +464,19 @@ def chips(list_id: str, defs: list) -> str:
 
 # ---------- station page ----------
 
-def station_page(raw: dict, meta: dict, ctx: dict) -> tuple[str, bool]:
+def station_page(raw: dict, meta: dict, ctx: dict, lang: str = "es") -> tuple[str, bool]:
+    tx, loc, f = TX[lang], LOC[lang], FMT[lang]
     base, sid = ctx["base_url"], raw["id"]
+    slug = ctx["slug"][sid]
     cc = raw.get("country_code")
     country_name = meta["countries"].get(cc, (cc or "", ""))[0]
-    name = raw.get("name") or "Estación de esquí"
+    name = raw.get("name") or tx["resort"]
     short = short_name(name) or name
     place = ", ".join(p for p in [raw.get("locality"), raw.get("region")] if p) or country_name
     place_full = ", ".join(p for p in [raw.get("locality"), raw.get("region"), country_name] if p)
-    url = f"{base}/estacion/{ctx['slug'][sid]}/"
-    app_link = f"/?estacion={sid}&amp;vista=mapa"
+    url = f"{base}{loc['station']}{slug}/"
+    alternates = {l: f"{base}{LOC[l]['station']}{slug}/" for l in LOC}
+    app_link = f"{loc['home']}?estacion={sid}&amp;vista=mapa"
 
     runs = [r for r in raw.get("runs", []) if is_downhill(r)]
     lifts = raw.get("lifts", [])
@@ -304,31 +492,31 @@ def station_page(raw: dict, meta: dict, ctx: dict) -> tuple[str, bool]:
     badges += [meta["status"].get(raw.get("status"), raw.get("status")), country_name]
     badges_html = "".join(f'<span class="badge">{e(b)}</span>' for b in badges if b)
     site = (raw.get("websites") or [None])[0]
-    site_html = f'<a class="site" href="{e(site)}" target="_blank" rel="noopener">Web oficial ↗</a>' if site else ""
+    site_html = f'<a class="site" href="{e(site)}" target="_blank" rel="noopener">{tx["official_site"]}</a>' if site else ""
     stats = [
-        (f"{fmt(round(lo))}–{fmt(round(hi))} m" if lo is not None and hi is not None else "–", "Altitud"),
-        (f"{fmt(round(hi - lo))} m" if lo is not None and hi is not None else "–", "Desnivel"),
-        (f"{fmt(round(total_m / 1000))} km", "Km pista"),
-        (format_coord(raw.get("latitude"), raw.get("longitude")), "Coordenadas"),
+        (f"{f(round(lo))}–{f(round(hi))} m" if lo is not None and hi is not None else "–", tx["altitude"]),
+        (f"{f(round(hi - lo))} m" if lo is not None and hi is not None else "–", tx["vertical"]),
+        (f"{f(round(total_m / 1000))} km", tx["km_pistes"]),
+        (format_coord(raw.get("latitude"), raw.get("longitude"), lang), tx["coords"]),
     ]
     stats_html = "".join(f'<div class="hero-stat"><div class="v">{e(v)}</div><div class="k">{e(k)}</div></div>' for v, k in stats)
     domain_html = ""
     group = ctx["group_of"].get(sid)
     if group:
         links = "".join(
-            f'<a class="chip" href="/estacion/{ctx["slug"][o]}/">{e(ctx["by_id"][o]["name"])} · {fmt(round(ctx["by_id"][o].get("pisteKm") or 0))} km</a>'
+            f'<a class="chip" href="{loc["station"]}{ctx["slug"][o]}/">{e(ctx["by_id"][o]["name"])} · {f(round(ctx["by_id"][o].get("pisteKm") or 0))} km</a>'
             for o in group if o != sid and o in ctx["by_id"])
         if links:
-            domain_html = ('<div class="hero-domain"><div class="hero-domain-title">Dominio esquiable conectado</div>'
-                           '<p class="hero-domain-note">Detectado por proximidad geográfica; los km de cada una pueden solaparse:</p>'
+            domain_html = (f'<div class="hero-domain"><div class="hero-domain-title">{tx["linked"]}</div>'
+                           f'<p class="hero-domain-note">{tx["linked_note"]}</p>'
                            f'<div class="chips">{links}</div></div>')
-    country_slug = ctx["country_slug"].get(cc)
+    country_slug = ctx["country_slug"][lang].get(cc)
     base_pt = base_location(raw)
     directions_html = (f'<a class="hero-action" href="https://www.google.com/maps/dir/?api=1&amp;destination={base_pt[0]:.5f},{base_pt[1]:.5f}" '
-                       f'target="_blank" rel="noopener">{PIN_ICON} Cómo llegar</a>' if base_pt else "")
-    back = (f'<a class="back-btn" href="/pais/{country_slug}/"><span class="chev">‹</span> Estaciones de {e(country_name)}</a>'
-            if country_slug else '<a class="back-btn" href="/pais/"><span class="chev">‹</span> Países</a>')
-    hero = f"""<div class="topbar">{back}<a class="back-btn" href="/">Ski Info</a></div>
+                       f'target="_blank" rel="noopener">{PIN_ICON} {tx["directions"]}</a>' if base_pt else "")
+    back = (f'<a class="back-btn" href="{loc["countries"]}{country_slug}/"><span class="chev">‹</span> {e(tx["back_country"].format(country_name))}</a>'
+            if country_slug else f'<a class="back-btn" href="{loc["countries"]}"><span class="chev">‹</span> {tx["back_countries"]}</a>')
+    hero = f"""<div class="topbar">{back}<a class="back-btn" href="{loc['home']}">Ski Info</a></div>
 <div class="hero">{PEAKS_SVG}<div class="hero-content">
 <div class="badges">{badges_html}</div>
 <div class="hero-title-row"><h1>{e(name)}</h1>{site_html}</div>
@@ -336,8 +524,8 @@ def station_page(raw: dict, meta: dict, ctx: dict) -> tuple[str, bool]:
 <div class="hero-stats">{stats_html}</div>
 {domain_html}
 <div class="hero-cta-row">
-<a class="hero-cta" href="{app_link}">{MAP_ICON} Abrir el mapa interactivo de pistas</a>
-<div class="hero-actions">{directions_html}<button type="button" class="hero-action js-share" data-url="{e(url)}" data-title="{e(short)}">{SHARE_ICON} Compartir</button></div>
+<a class="hero-cta" href="{app_link}">{MAP_ICON} {tx['open_map']}</a>
+<div class="hero-actions">{directions_html}<button type="button" class="hero-action js-share" data-url="{e(url)}" data-title="{e(short)}">{SHARE_ICON} {tx['share']}</button></div>
 </div>
 </div></div>"""
 
@@ -363,15 +551,14 @@ def station_page(raw: dict, meta: dict, ctx: dict) -> tuple[str, bool]:
         g["segments"] += 1
     run_groups = sorted(groups.values(), key=lambda g: (meta["diff_order"].index(diff_key(g["difficulty"])), -g["length_m"]))
 
-    intro = [f"{e(short)} es una estación de esquí" + (f" en {e(place_full)}" if place_full else "") + "."]
+    intro = [tx["intro_1"].format(e(short), tx["intro_in"].format(e(place_full)) if place_full else "")]
     if total_m and run_groups:
-        intro.append(f"Tiene {fmt(round(total_m / 1000))} km de pistas repartidos en {len(run_groups)} pistas con nombre"
-                     + (f" y {len(lifts)} remontes" if lifts else "") + ".")
+        intro.append(tx["intro_2"].format(f(round(total_m / 1000)), len(run_groups),
+                                          tx["intro_2_lifts"].format(len(lifts)) if lifts else ""))
     if lo is not None and hi is not None:
-        intro.append(f"Su dominio va de {fmt(round(lo))} a {fmt(round(hi))} m de altitud, con {fmt(round(hi - lo))} m de desnivel.")
-    intro.append("Aquí tienes todas sus pistas con su perfil de pendiente, sus remontes y los servicios en pistas; "
-                 "en el mapa interactivo las verás sobre imagen de satélite.")
-    intro_html = (f'<section><div class="section-head"><h2>{e(short)}: mapa de pistas y datos</h2></div>'
+        intro.append(tx["intro_3"].format(f(round(lo)), f(round(hi)), f(round(hi - lo))))
+    intro.append(e(tx["intro_4"]))
+    intro_html = (f'<section><div class="section-head"><h2>{e(tx["intro_h2"].format(short))}</h2></div>'
                   f'<p class="intro">{" ".join(intro)}</p></section>')
 
     # ----- charts: terrain by difficulty, lifts by type (same as the app) -----
@@ -380,20 +567,20 @@ def station_page(raw: dict, meta: dict, ctx: dict) -> tuple[str, bool]:
         a = diff_agg.setdefault(diff_key(r.get("difficulty")), [0.0, 0])
         a[0] += (r.get("length_m") or 0) / 1000
         a[1] += 1
-    diff_bars = bars([(meta["diff"][k], diff_agg[k][0], f"{fmt(diff_agg[k][0], 1)} km · {diff_agg[k][1]}", diff_color(k))
+    diff_bars = bars([(meta["diff"][k], diff_agg[k][0], f"{f(diff_agg[k][0], 1)} km · {diff_agg[k][1]}", diff_color(k))
                       for k in meta["diff_order"] if k in diff_agg])
     lift_agg: dict[str, list] = {}
     for l in lifts:
         a = lift_agg.setdefault(l.get("lift_type"), [0.0, 0])
         a[0] += (l.get("length_m") or 0) / 1000
         a[1] += 1
-    lift_bars = bars([(meta["lift_types"].get(k, k or "Otro"), v[0], f"{fmt(v[0], 1)} km · {v[1]}", "var(--accent)")
+    lift_bars = bars([(meta["lift_types"].get(k, k or tx["other"]), v[0], f"{f(v[0], 1)} km · {v[1]}", "var(--accent)")
                       for k, v in sorted(lift_agg.items(), key=lambda kv: -kv[1][0])])
     charts_html = '<div class="charts">'
     if diff_bars:
-        charts_html += f'<section><div class="section-head"><h2>Terreno por dificultad</h2></div>{diff_bars}</section>'
+        charts_html += f'<section><div class="section-head"><h2>{tx["terrain"]}</h2></div>{diff_bars}</section>'
     if lift_bars:
-        charts_html += f'<section><div class="section-head"><h2>Remontes por tipo</h2></div>{lift_bars}</section>'
+        charts_html += f'<section><div class="section-head"><h2>{tx["lifts_by_type"]}</h2></div>{lift_bars}</section>'
     charts_html += "</div>"
 
     # ----- catalog: runs / lifts / services -----
@@ -402,26 +589,30 @@ def station_page(raw: dict, meta: dict, ctx: dict) -> tuple[str, bool]:
         k = diff_key(g["difficulty"])
         bits = []
         if g["length_m"]:
-            bits.append(f'{fmt(round(g["length_m"]))} m')
+            bits.append(f'{f(round(g["length_m"]))} m')
         if g["vertical_m"]:
-            bits.append(f'desnivel {fmt(round(g["vertical_m"]))} m')
+            bits.append(tx["vert_m"].format(f(round(g["vertical_m"]))))
         if g["length_m"]:
-            bits.append(f'pend. media {fmt(100 * g["vertical_m"] / g["length_m"], 1)}%')
+            bits.append(tx["avg_grad"].format(f(100 * g["vertical_m"] / g["length_m"], 1)))
         if g["min"] is not None and g["max"] is not None:
-            bits.append(f'{fmt(round(g["min"]))}–{fmt(round(g["max"]))} m alt.')
+            bits.append(tx["alt_range"].format(f(round(g["min"])), f(round(g["max"]))))
         if meta["grooming"].get(g["grooming"]):
             bits.append(meta["grooming"][g["grooming"]])
         if g["segments"] > 1:
-            bits.append(f'{g["segments"]} tramos')
-        pills = (pill("Nocturna") if g["lit"] else "") + (pill("Arbolada") if g["gladed"] else "")
+            bits.append(tx["sections"].format(g["segments"]))
+        pills = (pill(tx["floodlit"]) if g["lit"] else "") + (pill(tx["glades"]) if g["gladed"] else "")
         label = (f'{g["ref"]} · ' if g["ref"] else "") + g["name"]
         run_items.append(
             f'<div class="item run-item" data-key="{k}" data-run="{e(g["name"])}" role="button" tabindex="0" aria-expanded="false">'
             f'<span class="dot" style="background:{diff_color(k)}"></span><div class="item-main">'
             f'<div class="item-name">{e(label)}</div><div class="item-meta">{e(" · ".join(bits))}{pills}</div></div>'
             f'<span class="item-chevron" aria-hidden="true">›</span></div><div class="run-profile" hidden></div>')
+    run_filters = [("all", tx["all_f"], ["all"]), ("novice", meta["diff"]["novice"], ["novice"]),
+                   ("easy", meta["diff"]["easy"], ["easy"]), ("intermediate", meta["diff"]["intermediate"], ["intermediate"]),
+                   ("advanced", meta["diff"]["advanced"], ["advanced", "expert"]),
+                   ("freeride", meta["diff"]["freeride"], ["freeride", "extreme"]), ("other", tx["unclassified"], ["other"])]
     run_chip_defs = []
-    for key, label, keys in RUN_FILTERS:
+    for key, label, keys in run_filters:
         count = len(run_groups) if key == "all" else sum(1 for g in run_groups if diff_key(g["difficulty"]) in keys)
         if key == "all" or count:
             run_chip_defs.append((keys, label, count, None if key == "all" else diff_color(key)))
@@ -432,24 +623,24 @@ def station_page(raw: dict, meta: dict, ctx: dict) -> tuple[str, bool]:
         lift_type_counts[t] = lift_type_counts.get(t, 0) + 1
         bits = []
         if l.get("capacity"):
-            bits.append(f'{fmt(l["capacity"])} p/h')
+            bits.append(tx["pph"].format(f(l["capacity"])))
         if l.get("occupancy"):
-            bits.append(f'{l["occupancy"]} plazas')
+            bits.append(tx["seats"].format(l["occupancy"]))
         if l.get("length_m"):
-            bits.append(f'{fmt(round(l["length_m"]))} m')
+            bits.append(f'{f(round(l["length_m"]))} m')
         if l.get("vertical_m"):
-            bits.append(f'desnivel {fmt(round(l["vertical_m"]))} m')
+            bits.append(tx["vert_m"].format(f(round(l["vertical_m"]))))
         if l.get("duration_s"):
             m = round(l["duration_s"] / 60)
-            bits.append((f"{m} min" if m >= 1 else f'{round(l["duration_s"])} s') + " de trayecto")
-        pills = ((pill("Desembragable") if l.get("detachable") == 1 else "") + (pill("Burbuja") if l.get("bubble") == 1 else "")
-                 + (pill("Calefactado") if l.get("heating") == 1 else "") + (pill("Privado") if l.get("access") == "private" else ""))
-        label = ((f'{l["ref"]} · ' if l.get("ref") else "") + (l.get("name") or "Sin nombre")
+            bits.append(tx["ride"].format(f"{m} min" if m >= 1 else f'{round(l["duration_s"])} s'))
+        pills = ((pill(tx["detachable"]) if l.get("detachable") == 1 else "") + (pill(tx["bubble"]) if l.get("bubble") == 1 else "")
+                 + (pill(tx["heated"]) if l.get("heating") == 1 else "") + (pill(tx["private"]) if l.get("access") == "private" else ""))
+        label = ((f'{l["ref"]} · ' if l.get("ref") else "") + (l.get("name") or tx["unnamed"])
                  + "  ·  " + meta["lift_types"].get(l.get("lift_type"), l.get("lift_type") or ""))
         lift_items.append(f'<div class="item" data-key="{e(t)}"><span class="dot" style="background:var(--accent)"></span>'
                           f'<div class="item-main"><div class="item-name">{e(label)}</div>'
                           f'<div class="item-meta">{e(" · ".join(bits))}{pills}</div></div></div>')
-    lift_chip_defs = [(["all"], "Todos", len(lifts), None)] + [
+    lift_chip_defs = [(["all"], tx["all_m"], len(lifts), None)] + [
         ([t], meta["lift_types"].get(t, t), n, None) for t, n in sorted(lift_type_counts.items(), key=lambda kv: -kv[1])]
 
     cat_order = list(meta["services"])
@@ -461,7 +652,7 @@ def station_page(raw: dict, meta: dict, ctx: dict) -> tuple[str, bool]:
         svc_items.append(f'<div class="item" data-key="{s["category"]}"><span class="dot" style="background:var(--svc-{s["category"]})"></span>'
                          f'<div class="item-main"><div class="item-name">{icon} {e(s.get("name") or label)}</div>'
                          f'<div class="item-meta">{e(" · ".join(bits))}</div></div></div>')
-    svc_chip_defs = [(["all"], "Todos", len(services), None)] + [
+    svc_chip_defs = [(["all"], tx["all_m"], len(services), None)] + [
         ([k], f"{meta['services'][k][1]} {meta['services'][k][0]}", svc_counts[k], None) for k in cat_order if svc_counts.get(k)]
 
     def panel(key, items, chip_defs, empty_text, hidden):
@@ -469,45 +660,42 @@ def station_page(raw: dict, meta: dict, ctx: dict) -> tuple[str, bool]:
                 if items else f'<div class="list-scroll"><div class="catalog-empty">{e(empty_text)}</div></div>')
         return f'<div class="catalog-panel" id="catalog-{key}"{" hidden" if hidden else ""}>{body}</div>'
 
-    no_services = ("No hay servicios registrados en OpenStreetMap para esta estación." if raw.get("services") is not None
-                   else "Todavía no tenemos datos de servicios para esta estación.")
+    no_services = tx["no_services"] if raw.get("services") is not None else tx["no_services_data"]
     catalog_html = f"""<section>
-<div class="section-head"><h2>Pistas, remontes y servicios</h2><span class="sub">pulsa una pista para ver su perfil</span></div>
-<div class="segmented" role="tablist" aria-label="Qué listar">
-<button type="button" role="tab" class="seg-btn" data-catalog="runs" aria-selected="true">Pistas <span class="seg-count">{len(run_groups)}</span></button>
-<button type="button" role="tab" class="seg-btn" data-catalog="lifts" aria-selected="false">Remontes <span class="seg-count">{len(lifts)}</span></button>
-<button type="button" role="tab" class="seg-btn" data-catalog="services" aria-selected="false">Servicios <span class="seg-count">{len(services)}</span></button>
+<div class="section-head"><h2>{tx['catalog_h2']}</h2><span class="sub">{tx['catalog_sub']}</span></div>
+<div class="segmented" role="tablist" aria-label="{tx['what_to_list']}">
+<button type="button" role="tab" class="seg-btn" data-catalog="runs" aria-selected="true">{tx['runs']} <span class="seg-count">{len(run_groups)}</span></button>
+<button type="button" role="tab" class="seg-btn" data-catalog="lifts" aria-selected="false">{tx['lifts']} <span class="seg-count">{len(lifts)}</span></button>
+<button type="button" role="tab" class="seg-btn" data-catalog="services" aria-selected="false">{tx['services']} <span class="seg-count">{len(services)}</span></button>
 </div>
-{panel("runs", run_items, run_chip_defs, "No hay pistas con nombre en los datos de esta estación.", False)}
-{panel("lifts", lift_items, lift_chip_defs, "No hay remontes en los datos de esta estación.", True)}
+{panel("runs", run_items, run_chip_defs, tx["no_runs"], False)}
+{panel("lifts", lift_items, lift_chip_defs, tx["no_lifts"], True)}
 {panel("services", svc_items, svc_chip_defs, no_services, True)}
 </section>"""
 
     # ----- data quality (same figures as the app) -----
     run_n, lift_n = len(runs) or 1, len(lifts) or 1
-    pct = lambda n, d: f"{fmt(100 * n / d)}%"
+    pct = lambda n, d: f"{f(100 * n / d)}%"
     quality = [
-        ("Pistas con nombre", f"{sum(1 for r in runs if r.get('name'))} / {len(runs)}"),
-        ("Dificultad etiquetada", pct(sum(1 for r in runs if r.get("difficulty")), run_n)),
-        ("Iluminación etiquetada", pct(sum(1 for r in runs if r.get("lit") is not None), run_n)),
-        ("Nieve artificial etiquetada", pct(sum(1 for r in runs if r.get("snowmaking") is not None), run_n)),
-        ("Capacidad de remonte etiquetada", pct(sum(1 for l in lifts if l.get("capacity") is not None), lift_n)),
-        ("Tipo de agarre etiquetado", pct(sum(1 for l in lifts if l.get("detachable") is not None), lift_n)),
+        (tx["q_named"], f"{sum(1 for r in runs if r.get('name'))} / {len(runs)}"),
+        (tx["q_diff"], pct(sum(1 for r in runs if r.get("difficulty")), run_n)),
+        (tx["q_lit"], pct(sum(1 for r in runs if r.get("lit") is not None), run_n)),
+        (tx["q_snow"], pct(sum(1 for r in runs if r.get("snowmaking") is not None), run_n)),
+        (tx["q_cap"], pct(sum(1 for l in lifts if l.get("capacity") is not None), lift_n)),
+        (tx["q_grip"], pct(sum(1 for l in lifts if l.get("detachable") is not None), lift_n)),
     ]
-    quality_html = ('<section><div class="section-head"><h2>Calidad del dato</h2></div><div class="quality-list">'
+    quality_html = (f'<section><div class="section-head"><h2>{tx["quality"]}</h2></div><div class="quality-list">'
                     + "".join(f'<div class="quality-row"><span class="name">{e(k)}</span><span class="val">{e(v)}</span></div>' for k, v in quality)
-                    + '</div><p class="quality-note">Nieve artificial y vigilancia rara vez están etiquetadas en OpenStreetMap — '
-                      'no significa que no existan, es que casi nadie las mapea todavía.</p></section>')
+                    + f'</div><p class="quality-note">{tx["quality_note"]}</p></section>')
 
-    # ----- sidebar: map card + nearby stations -----
-    map_card = (f'<section class="map-card"><div class="section-head"><h2>Mapa interactivo</h2></div>'
-                f'<p class="intro">Las pistas y remontes de {e(short)} sobre imagen de satélite, el sentido de cada pista, '
-                f'la pendiente real de cada tramo, los servicios y el tiempo en directo.</p>'
-                f'<a class="cta-block" href="{app_link}">{MAP_ICON} Abrir el mapa de {e(short)}</a></section>')
-    ranks = ctx["ranks"].get(sid) or []
+    # ----- sidebar: map card, rankings, nearby stations -----
+    map_card = (f'<section class="map-card"><div class="section-head"><h2>{tx["map_h2"]}</h2></div>'
+                f'<p class="intro">{e(tx["map_text"].format(short))}</p>'
+                f'<a class="cta-block" href="{app_link}">{MAP_ICON} {e(tx["map_cta"].format(short))}</a></section>')
+    ranks = ctx["ranks"][lang].get(sid) or []
     ranks_html = ""
     if ranks:
-        ranks_html = ('<section><div class="section-head"><h2>En los rankings</h2></div><div class="rank-list">'
+        ranks_html = (f'<section><div class="section-head"><h2>{tx["ranks"]}</h2></div><div class="rank-list">'
                       + "".join(f'<a class="rank-link" href="{href}"><span class="rank-medal">★</span>{e(label)}</a>'
                                 for label, href in ranks[:8])
                       + '</div></section>')
@@ -515,11 +703,11 @@ def station_page(raw: dict, meta: dict, ctx: dict) -> tuple[str, bool]:
     nearby_html = ""
     if nearby:
         items = "".join(
-            f'<a class="item" href="/estacion/{ctx["slug"][s["id"]]}/"><span class="dot" style="background:var(--accent)"></span>'
+            f'<a class="item" href="{loc["station"]}{ctx["slug"][s["id"]]}/"><span class="dot" style="background:var(--accent)"></span>'
             f'<div class="item-main"><div class="item-name">{e(s["name"])}</div>'
-            f'<div class="item-meta">a {fmt(round(d))} km · {fmt(round(s.get("pisteKm") or 0))} km de pistas</div></div>'
+            f'<div class="item-meta">{tx["nearby_meta"].format(f(round(d)), f(round(s.get("pisteKm") or 0)))}</div></div>'
             f'<span class="item-chevron" aria-hidden="true">›</span></a>' for s, d in nearby)
-        nearby_html = (f'<section><div class="section-head"><h2>Estaciones cercanas</h2></div>'
+        nearby_html = (f'<section><div class="section-head"><h2>{tx["nearby"]}</h2></div>'
                        f'<div class="list-scroll">{items}</div></section>')
 
     # ----- snow + weather: a server-rendered summary from snow.json (so the
@@ -528,19 +716,18 @@ def station_page(raw: dict, meta: dict, ctx: dict) -> tuple[str, bool]:
     snow_html = ""
     if raw.get("latitude") is not None:
         fc = ctx["snow"].get(sid)
-        top_txt = f" (cota alta, {fmt(round(hi))} m)" if hi is not None else ""
+        top_txt = tx["top_txt"].format(f(round(hi))) if hi is not None else ""
         if fc and fc.get("sf"):
             total_sf = sum(v or 0 for v in fc["sf"])
-            when = ctx["snow_date"]
-            summary = (f"Previsión de nieve para los próximos 7 días{top_txt}: "
-                       + (f"{fmt(round(total_sf))} cm" if total_sf >= 1 else "sin nevadas significativas")
-                       + (f" (actualizada el {when})." if when else "."))
+            when = ctx["snow_date"][lang]
+            summary = tx["snow_sum"].format(top_txt, tx["snow_cm"].format(f(round(total_sf))) if total_sf >= 1 else tx["snow_none"],
+                                            tx["snow_when"].format(when) if when else ".")
         else:
-            summary = f"Previsión de nieve y tiempo para los próximos 7 días en {e(short)}{top_txt}."
+            summary = tx["snow_generic"].format(e(short), top_txt)
         attrs = f' data-lat="{raw["latitude"]:.4f}" data-lon="{raw["longitude"]:.4f}"'
         if lo is not None and hi is not None:
             attrs += f' data-top="{round(hi)}" data-base="{round(lo)}"'
-        snow_html = (f'<section id="snow-section"{attrs}><div class="section-head"><h2>Nieve y tiempo en {e(short)}</h2></div>'
+        snow_html = (f'<section id="snow-section"{attrs}><div class="section-head"><h2>{e(tx["snow_h2"].format(short))}</h2></div>'
                      f'<div class="snow" id="snow-forecast"><p class="intro">{summary}</p></div></section>')
 
     body = f"""{hero}
@@ -559,25 +746,25 @@ def station_page(raw: dict, meta: dict, ctx: dict) -> tuple[str, bool]:
 </aside>
 </div>"""
 
-    title = f"{short}: mapa de pistas, previsión de nieve y remontes | Ski Info"
+    title = tx["title"].format(short)
     desc_bits = []
     if total_m:
-        desc_bits.append(f"{fmt(round(total_m / 1000))} km de pistas")
+        desc_bits.append(tx["d_km"].format(f(round(total_m / 1000))))
     if run_groups:
-        desc_bits.append(f"{len(run_groups)} pistas")
+        desc_bits.append(tx["d_runs"].format(len(run_groups)))
     if lifts:
-        desc_bits.append(f"{len(lifts)} remontes")
+        desc_bits.append(tx["d_lifts"].format(len(lifts)))
     description = short + (f" ({place_full})" if place_full else "") + ": " + (", ".join(desc_bits) + ". " if desc_bits else "")
     if lo is not None and hi is not None:
-        description += f"Altitud {fmt(round(lo))}–{fmt(round(hi))} m. "
-    description += "Previsión de nieve a 7 días, mapa de pistas interactivo sobre satélite y pendiente real de cada pista."
+        description += tx["d_alt"].format(f(round(lo)), f(round(hi)))
+    description += tx["d_tail"]
 
-    jsonld = {"@context": "https://schema.org", "@type": "SkiResort", "name": name, "url": url}
+    jsonld = {"@context": "https://schema.org", "@type": "SkiResort", "name": name, "url": url, "inLanguage": lang}
     address = {"@type": "PostalAddress", "addressRegion": raw.get("region"), "addressLocality": raw.get("locality"), "addressCountry": cc}
     jsonld["address"] = {k: v for k, v in address.items() if v}
     if raw.get("latitude") is not None:
         jsonld["geo"] = {"@type": "GeoCoordinates", "latitude": round(raw["latitude"], 5), "longitude": round(raw["longitude"], 5)}
-    jsonld["image"] = f"{base}/og/{ctx['slug'][sid]}.jpg"
+    jsonld["image"] = f"{base}{loc['og_dir']}{slug}.jpg"
     same_as = [x for x in [site, f"https://www.wikidata.org/wiki/{raw['wikidata_id']}" if raw.get("wikidata_id") else None] if x]
     if same_as:
         jsonld["sameAs"] = same_as
@@ -585,51 +772,56 @@ def station_page(raw: dict, meta: dict, ctx: dict) -> tuple[str, bool]:
     return page(title=title, description=description, url=url, body=body,
                 body_attrs=f' data-station="{e(sid)}" data-name="{e(name)}" data-country="{e(cc or "")}"',
                 jsonld=jsonld, noindex=not indexable, scripts=True,
-                image=f"/og/{ctx['slug'][sid]}.jpg", base_url=base), indexable
+                image=f"{loc['og_dir']}{slug}.jpg", base_url=base, lang=lang, alternates=alternates), indexable
 
 
 # ---------- country pages ----------
 
-def station_card(href: str, name: str, sub: str, km: float, label: str = "pista", prefix: str = "") -> str:
+def station_card(href: str, name: str, sub: str, km: float, label: str, prefix: str = "", lang: str = "es") -> str:
     return (f'<a class="station-card" href="{href}"><div class="info"><div class="name">{prefix}{e(name)}</div>'
-            f'<div class="region">{e(sub)}</div></div><div class="stats"><div class="km">{fmt(round(km))} km</div>'
+            f'<div class="region">{e(sub)}</div></div><div class="stats"><div class="km">{FMT[lang](round(km))} km</div>'
             f'<div class="km-label">{e(label)}</div></div><span class="chevron" aria-hidden="true">›</span></a>')
 
 
-def country_page(cc: str, stations: list, meta: dict, ctx: dict) -> str:
+def country_page(cc: str, stations: list, meta: dict, ctx: dict, lang: str = "es") -> str:
+    tx, loc, f = TX[lang], LOC[lang], FMT[lang]
+    base = ctx["base_url"]
     name = meta["countries"].get(cc, (cc, ""))[0]
-    url = f"{ctx['base_url']}/pais/{ctx['country_slug'][cc]}/"
+    url = f"{base}{loc['countries']}{ctx['country_slug'][lang][cc]}/"
+    alternates = {l: f"{base}{LOC[l]['countries']}{ctx['country_slug'][l][cc]}/" for l in LOC}
     total = sum(s.get("pisteKm") or 0 for s in stations)
-    cards = "".join(station_card(f'/estacion/{ctx["slug"][s["id"]]}/', s["name"], s.get("region") or "", s.get("pisteKm") or 0)
-                    for s in stations)
+    cards = "".join(station_card(f'{loc["station"]}{ctx["slug"][s["id"]]}/', s["name"], s.get("region") or "",
+                                 s.get("pisteKm") or 0, tx["card_pista"], lang=lang) for s in stations)
     body = f"""<div class="list-header">
-<div class="eyebrow"><a href="/">Ski Info</a> · <a href="/pais/">Países</a></div>
-<h1>Estaciones de esquí en {e(name)}</h1>
-<p class="list-sub">{len(stations)} estaciones · {fmt(round(total))} km de pistas. Elige una estación para ver todas sus pistas con su perfil de pendiente, sus remontes, servicios y el mapa interactivo sobre satélite.</p>
+<div class="eyebrow"><a href="{loc['home']}">Ski Info</a> · <a href="{loc['countries']}">{tx['c_eyebrow']}</a></div>
+<h1>{e(tx['c_h1'].format(name))}</h1>
+<p class="list-sub">{e(tx['c_sub'].format(len(stations), f(round(total))))}</p>
 </div>
 <div class="station-list">{cards}</div>"""
-    return page(title=f"Estaciones de esquí en {name}: mapas de pistas | Ski Info",
-                description=f"Las {len(stations)} estaciones de esquí de {name} con mapa de pistas interactivo, perfil de pendiente, remontes y servicios.",
-                url=url, body=body)
+    return page(title=tx["c_title"].format(name), description=tx["c_desc"].format(len(stations), name),
+                url=url, body=body, base_url=base, lang=lang, alternates=alternates)
 
 
-def countries_index(by_country: dict, meta: dict, ctx: dict) -> str:
+def countries_index(by_country: dict, meta: dict, ctx: dict, lang: str = "es") -> str:
+    tx, loc = TX[lang], LOC[lang]
+    base = ctx["base_url"]
     order = sorted(by_country, key=lambda cc: -sum(s.get("pisteKm") or 0 for s in by_country[cc]))
     cards = "".join(
-        station_card(f'/pais/{ctx["country_slug"][cc]}/', meta["countries"].get(cc, (cc, ""))[0], f"{len(by_country[cc])} estaciones",
-                     sum(s.get("pisteKm") or 0 for s in by_country[cc]), "pista total",
+        station_card(f'{loc["countries"]}{ctx["country_slug"][lang][cc]}/', meta["countries"].get(cc, (cc, ""))[0],
+                     tx["n_resorts"].format(len(by_country[cc])), sum(s.get("pisteKm") or 0 for s in by_country[cc]),
+                     tx["card_total"], lang=lang,
                      prefix=f'<img class="flag" src="/flags/{cc.lower()}.svg" alt="" width="24" height="18" loading="lazy">')
         for cc in order)
     n = sum(len(v) for v in by_country.values())
     body = f"""<div class="list-header">
-<div class="eyebrow"><a href="/">Ski Info</a></div>
-<h1>Estaciones de esquí por país</h1>
-<p class="list-sub">{n} estaciones en {len(by_country)} países, con mapa de pistas interactivo, perfil de pendiente de cada pista, remontes y servicios.</p>
+<div class="eyebrow"><a href="{loc['home']}">Ski Info</a></div>
+<h1>{tx['ci_h1']}</h1>
+<p class="list-sub">{e(tx['ci_sub'].format(FMT[lang](n), len(by_country)))}</p>
 </div>
 <div class="station-list">{cards}</div>"""
-    return page(title="Estaciones de esquí por país: mapas de pistas | Ski Info",
-                description=f"Mapas de pistas interactivos de {n} estaciones de esquí en {len(by_country)} países: pistas, remontes, pendientes y servicios.",
-                url=f"{ctx['base_url']}/pais/", body=body)
+    return page(title=tx["ci_title"], description=tx["ci_desc"].format(FMT[lang](n), len(by_country)),
+                url=f"{base}{loc['countries']}", body=body, base_url=base, lang=lang,
+                alternates={l: f"{base}{LOC[l]['countries']}" for l in LOC})
 
 
 # ---------- /app: how to get Ski Info on your phone ----------
@@ -645,6 +837,49 @@ IOS_SHARE = ('<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 12.5V2.8M
 IOS_ADD = ('<svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="3" width="14" height="14" rx="3.5" fill="none" stroke="currentColor" '
            'stroke-width="1.6"/><path d="M10 6.5v7M6.5 10h7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>')
 
+APP_TX = {
+    "es": {"add_home": "Añadir a inicio", "available": "Disponible en", "soon": "Muy pronto en",
+           "soon_note": "La app está en fase de pruebas. Mientras tanto puedes usar Ski Info desde Chrome e instalarla: "
+                        "menú <b>⋮</b> → <b>Añadir a pantalla de inicio</b> (o <b>Instalar aplicación</b>).",
+           "h1": "Ski Info en tu móvil",
+           "lead": "Los mapas de pistas, la pendiente de cada pista y la previsión de nieve de {0}+ estaciones, siempre a mano. Gratis y sin registro.",
+           "b1": "Se abre como una app", "b1t": "Con su icono en la pantalla de inicio, a pantalla completa.",
+           "b2": "Funciona con poca cobertura", "b2t": "Las estaciones que ya hayas consultado se abren aunque no tengas señal en pistas.",
+           "b3": "Siempre actualizada", "b3t": "Sin actualizaciones que descargar: siempre la última versión.",
+           "inapp": "Ya estás usando la app de Ski Info. ¡Gracias!", "ios_h2": "iPhone y iPad",
+           "ios_lead": "No hace falta App Store: se instala desde <b>Safari</b> en tres pasos.",
+           "s1": "Abre <b>skiinfoapp.com</b> en Safari y pulsa el botón <b>Compartir</b> <i class=\"ico\">{0}</i> de la barra de abajo.",
+           "s2": "Desliza hacia abajo y pulsa <b>Añadir a pantalla de inicio</b> <i class=\"ico\">{0}</i>.",
+           "s3": "Pulsa <b>Añadir</b>. Ski Info aparecerá en tu pantalla de inicio como cualquier otra app.",
+           "chrome_ios": "Si usas Chrome en el iPhone, el botón Compartir está arriba, junto a la barra de direcciones.",
+           "pc_h2": "En el ordenador",
+           "pc": "No hace falta instalar nada: entra en <a href=\"/\">skiinfoapp.com</a>. En Chrome o Edge también puedes instalarla "
+                 "con el icono <b>Instalar</b> que aparece a la derecha de la barra de direcciones.",
+           "title": "Descarga Ski Info: app de mapas de pistas y nieve para Android y iPhone",
+           "desc": "Instala Ski Info en tu móvil: mapas de pistas, pendiente de cada pista y previsión de nieve de "
+                   "{0}+ estaciones de esquí. Android y iPhone, gratis y sin registro."},
+    "en": {"add_home": "Add to Home", "available": "Get it on", "soon": "Coming soon to",
+           "soon_note": "The app is in testing. Meanwhile you can use Ski Info in Chrome and install it: "
+                        "menu <b>⋮</b> → <b>Add to Home screen</b> (or <b>Install app</b>).",
+           "h1": "Ski Info on your phone",
+           "lead": "Piste maps, the gradient of every run and the snow forecast for {0}+ resorts, always at hand. Free, no sign-up.",
+           "b1": "Opens like an app", "b1t": "With its own icon on your home screen, full screen.",
+           "b2": "Works with poor signal", "b2t": "Resorts you've already opened load even with no signal on the slopes.",
+           "b3": "Always up to date", "b3t": "No updates to download: always the latest version.",
+           "inapp": "You're already using the Ski Info app. Thank you!", "ios_h2": "iPhone and iPad",
+           "ios_lead": "No App Store needed: install it from <b>Safari</b> in three steps.",
+           "s1": "Open <b>skiinfoapp.com/en/</b> in Safari and tap the <b>Share</b> button <i class=\"ico\">{0}</i> in the bottom bar.",
+           "s2": "Scroll down and tap <b>Add to Home Screen</b> <i class=\"ico\">{0}</i>.",
+           "s3": "Tap <b>Add</b>. Ski Info will appear on your home screen like any other app.",
+           "chrome_ios": "If you use Chrome on iPhone, the Share button is at the top, next to the address bar.",
+           "pc_h2": "On a computer",
+           "pc": "Nothing to install: go to <a href=\"/en/\">skiinfoapp.com/en/</a>. In Chrome or Edge you can also install it "
+                 "with the <b>Install</b> icon on the right of the address bar.",
+           "title": "Get Ski Info: piste map and snow forecast app for Android and iPhone",
+           "desc": "Install Ski Info on your phone: piste maps, the gradient of every run and snow forecasts for "
+                   "{0}+ ski resorts. Android and iPhone, free, no sign-up."},
+}
+
 
 def phone(inner: str) -> str:
     """A tiny phone mock-up (SVG) for the iPhone install steps."""
@@ -653,7 +888,8 @@ def phone(inner: str) -> str:
             '<rect x="44" y="9" width="32" height="6" rx="3" fill="var(--text-muted)" opacity=".5"/>' + inner + '</svg>')
 
 
-def app_page(ctx: dict, n_stations: int) -> str:
+def app_page(ctx: dict, n_stations: int, lang: str = "es") -> str:
+    at, loc = APP_TX[lang], LOC[lang]
     safari_bar = phone(
         '<rect x="12" y="24" width="96" height="120" rx="6" fill="var(--hero-2)" opacity=".85"/>'
         '<path d="M12 110 40 74 58 96 74 80 108 116V144H12Z" fill="#fff" opacity=".85"/>'
@@ -668,7 +904,7 @@ def app_page(ctx: dict, n_stations: int) -> str:
         '<rect x="8" y="70" width="104" height="124" rx="12" fill="var(--surface-2)"/>'
         '<g fill="var(--text-muted)" opacity=".45"><rect x="18" y="84" width="60" height="6" rx="3"/><rect x="18" y="104" width="46" height="6" rx="3"/></g>'
         '<rect x="12" y="120" width="96" height="24" rx="6" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/>'
-        '<text x="18" y="136" font-size="8.5" font-weight="700" fill="var(--text-primary)" font-family="IBM Plex Sans, sans-serif">Añadir a inicio</text>'
+        f'<text x="18" y="136" font-size="8.5" font-weight="700" fill="var(--text-primary)" font-family="IBM Plex Sans, sans-serif">{at["add_home"]}</text>'
         '<g transform="translate(88 124)" stroke="var(--accent)" stroke-width="1.6" fill="none"><rect x="1" y="1" width="14" height="14" rx="3.5"/>'
         '<path d="M8 4.5v7M4.5 8h7" stroke-linecap="round"/></g>'
         '<g fill="var(--text-muted)" opacity=".45"><rect x="18" y="156" width="54" height="6" rx="3"/><rect x="18" y="176" width="40" height="6" rx="3"/></g>')
@@ -681,50 +917,49 @@ def app_page(ctx: dict, n_stations: int) -> str:
         '<rect x="58" y="56" width="30" height="30" rx="8" fill="none" stroke="#fff" stroke-width="2"/>'
         '<text x="73" y="96" font-size="7" fill="#fff" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-weight="600">Ski Info</text>')
 
+    play_icon = ('<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 2.8v18.4c0 .4.4.6.7.4l16-9.2c.3-.2.3-.6 0-.8l-16-9.2c-.3-.2-.7 0-.7.4z" '
+                 'fill="currentColor"/></svg>')
     if PLAY_STORE_LIVE:
-        play_html = (f'<a class="store-badge" href="{PLAY_STORE_URL}" target="_blank" rel="noopener">'
-                     '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 2.8v18.4c0 .4.4.6.7.4l16-9.2c.3-.2.3-.6 0-.8l-16-9.2c-.3-.2-.7 0-.7.4z" fill="currentColor"/></svg>'
-                     '<span><small>Disponible en</small>Google Play</span></a>')
+        play_html = (f'<a class="store-badge" href="{PLAY_STORE_URL}" target="_blank" rel="noopener">{play_icon}'
+                     f'<span><small>{at["available"]}</small>Google Play</span></a>')
     else:
-        play_html = ('<span class="store-badge soon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 2.8v18.4c0 .4.4.6.7.4l16-9.2c.3-.2.3-.6 0-.8l-16-9.2c-.3-.2-.7 0-.7.4z" fill="currentColor"/></svg>'
-                     '<span><small>Muy pronto en</small>Google Play</span></span>'
-                     '<p class="app-note">La app está en fase de pruebas. Mientras tanto puedes usar Ski Info desde Chrome e instalarla: '
-                     'menú <b>⋮</b> → <b>Añadir a pantalla de inicio</b> (o <b>Instalar aplicación</b>).</p>')
+        play_html = (f'<span class="store-badge soon">{play_icon}<span><small>{at["soon"]}</small>Google Play</span></span>'
+                     f'<p class="app-note">{at["soon_note"]}</p>')
 
-    hundreds = f"{n_stations // 100 * 100:,}".replace(",", ".")
+    hundreds = FMT[lang](n_stations // 100 * 100) if lang == "en" else f"{n_stations // 100 * 100:,}".replace(",", ".")
     body = f"""<div class="app-hero">{PEAKS_SVG}<div class="app-hero-inner">
-<div class="eyebrow app-eyebrow"><a href="/">Ski Info</a> · App</div>
+<div class="eyebrow app-eyebrow"><a href="{loc['home']}">Ski Info</a> · App</div>
 <img class="app-logo" src="/icons/icon-192.png" alt="" width="84" height="84">
-<h1>Ski Info en tu móvil</h1>
-<p>Los mapas de pistas, la pendiente de cada pista y la previsión de nieve de {hundreds}+ estaciones, siempre a mano. Gratis y sin registro.</p>
+<h1>{at['h1']}</h1>
+<p>{at['lead'].format(hundreds)}</p>
 </div></div>
 <div class="app-wrap">
 <div class="app-benefits">
-<div><b>Se abre como una app</b><span>Con su icono en la pantalla de inicio, a pantalla completa.</span></div>
-<div><b>Funciona con poca cobertura</b><span>Las estaciones que ya hayas consultado se abren aunque no tengas señal en pistas.</span></div>
-<div><b>Siempre actualizada</b><span>Sin actualizaciones que descargar: siempre la última versión.</span></div>
+<div><b>{at['b1']}</b><span>{at['b1t']}</span></div>
+<div><b>{at['b2']}</b><span>{at['b2t']}</span></div>
+<div><b>{at['b3']}</b><span>{at['b3t']}</span></div>
 </div>
 
 <section class="app-card" id="app-android">
 <h2><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9h10v8a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 7 17z M8.5 8a3.5 3.5 0 0 1 7 0z M9 5l-1-1.6M15 5l1-1.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>Android</h2>
-<p class="app-inapp" hidden>Ya estás usando la app de Ski Info. ¡Gracias!</p>
+<p class="app-inapp" hidden>{at['inapp']}</p>
 <div class="app-android-body">{play_html}</div>
 </section>
 
 <section class="app-card" id="app-ios">
-<h2><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10.5 18.5h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>iPhone y iPad</h2>
-<p class="app-lead">No hace falta App Store: se instala desde <b>Safari</b> en tres pasos.</p>
+<h2><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10.5 18.5h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>{at['ios_h2']}</h2>
+<p class="app-lead">{at['ios_lead']}</p>
 <ol class="ios-steps">
-<li>{safari_bar}<span class="step-n">1</span><span>Abre <b>skiinfoapp.com</b> en Safari y pulsa el botón <b>Compartir</b> <i class="ico">{IOS_SHARE}</i> de la barra de abajo.</span></li>
-<li>{share_sheet}<span class="step-n">2</span><span>Desliza hacia abajo y pulsa <b>Añadir a pantalla de inicio</b> <i class="ico">{IOS_ADD}</i>.</span></li>
-<li>{home_screen}<span class="step-n">3</span><span>Pulsa <b>Añadir</b>. Ski Info aparecerá en tu pantalla de inicio como cualquier otra app.</span></li>
+<li>{safari_bar}<span class="step-n">1</span><span>{at['s1'].format(IOS_SHARE)}</span></li>
+<li>{share_sheet}<span class="step-n">2</span><span>{at['s2'].format(IOS_ADD)}</span></li>
+<li>{home_screen}<span class="step-n">3</span><span>{at['s3']}</span></li>
 </ol>
-<p class="app-note">Si usas Chrome en el iPhone, el botón Compartir está arriba, junto a la barra de direcciones.</p>
+<p class="app-note">{at['chrome_ios']}</p>
 </section>
 
 <section class="app-card" id="app-desktop">
-<h2><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4.5" width="18" height="12" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8.5 20h7M12 16.5V20" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>En el ordenador</h2>
-<p class="app-lead">No hace falta instalar nada: entra en <a href="/">skiinfoapp.com</a>. En Chrome o Edge también puedes instalarla con el icono <b>Instalar</b> que aparece a la derecha de la barra de direcciones.</p>
+<h2><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4.5" width="18" height="12" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8.5 20h7M12 16.5V20" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>{at['pc_h2']}</h2>
+<p class="app-lead">{at['pc']}</p>
 </section>
 </div>
 <script>
@@ -735,32 +970,35 @@ def app_page(ctx: dict, n_stations: int) -> str:
   var wrap = document.querySelector('.app-wrap');
   var first = ios ? 'app-ios' : android ? 'app-android' : null;
   if (first) wrap.insertBefore(document.getElementById(first), wrap.querySelector('.app-card'));
-  if (window.SkiInfoAndroid || /; wv\)/.test(ua)) {{
+  if (window.SkiInfoAndroid || /; wv\\)/.test(ua)) {{
     document.querySelector('.app-inapp').hidden = false;
     document.querySelector('.app-android-body').hidden = true;
   }}
 }})();
 </script>"""
-    return page(title="Descarga Ski Info: app de mapas de pistas y nieve para Android y iPhone",
-                description="Instala Ski Info en tu móvil: mapas de pistas, pendiente de cada pista y previsión de nieve de "
-                            f"{hundreds}+ estaciones de esquí. Android y iPhone, gratis y sin registro.",
-                url=f"{ctx['base_url']}/app/", body=body, base_url=ctx["base_url"])
+    base = ctx["base_url"]
+    return page(title=at["title"], description=at["desc"].format(hundreds), url=f"{base}{loc['app']}", body=body,
+                base_url=base, lang=lang, alternates={l: f"{base}{LOC[l]['app']}" for l in LOC})
 
 
 # ---------- home-page data inlined into the app ----------
 
 HOME_EUROPE = {"ES", "FR", "AT", "IT", "CH", "AD", "DE", "SI", "NO", "SE", "FI", "PL", "CZ", "SK", "BG", "RO", "GE", "BA",
                "RS", "ME", "IS", "GB", "LI", "MK", "HR", "RU", "TR", "GR", "UA", "AM", "AZ"}
-HOME_GUIDES = ["donde-nieva-esta-semana", "estaciones-mas-grandes-espana-andorra", "estaciones-para-principiantes-espana-andorra",
-               "pistas-mas-empinadas-espana-andorra", "estaciones-de-esqui-cerca-de-madrid", "estaciones-de-esqui-cerca-de-barcelona"]
+HOME_GUIDES = {
+    "es": ["donde-nieva-esta-semana", "estaciones-mas-grandes-espana-andorra", "estaciones-para-principiantes-espana-andorra",
+           "pistas-mas-empinadas-espana-andorra", "estaciones-de-esqui-cerca-de-madrid", "estaciones-de-esqui-cerca-de-barcelona"],
+    "en": ["where-it-will-snow-this-week", "biggest-ski-resorts-in-the-alps", "best-ski-resorts-for-beginners-in-the-alps",
+           "steepest-ski-runs-in-the-alps", "biggest-ski-resorts-in-north-america", "ski-resorts-near-geneva"],
+}
 
 
-def inject_home_data(index_path: Path, snow_doc: dict | None, stations: list, guides_index: list) -> None:
-    """Fill the app's <script id="home-data"> placeholder (docs/index.html) with
-    the home page's snow ranking and featured guides, so they render with the
-    page instead of arriving later and pushing content down. Only the stations
-    that can make any zone's top list are included (the page ranks them)."""
-    data = {"guides": [g for slug in HOME_GUIDES for g in guides_index if g["slug"] == slug]}
+def home_data_json(snow_doc: dict | None, stations: list, guides_index: list, lang: str) -> str:
+    """The home page's snow ranking and featured guides, inlined into the app
+    (<script id="home-data">) so they render with the page instead of arriving
+    later and pushing content down. Only the stations that can make any zone's
+    top list are included (the page ranks them)."""
+    data = {"guides": [g for slug in HOME_GUIDES[lang] for g in guides_index if g["slug"] == slug]}
     if snow_doc and snow_doc.get("stations"):
         cc_of = {s["id"]: s.get("country") or "ES" for s in stations}
         ranked = sorted(((sum(v or 0 for v in f.get("sf") or []), sid) for sid, f in snow_doc["stations"].items()
@@ -770,13 +1008,87 @@ def inject_home_data(index_path: Path, snow_doc: dict | None, stations: list, gu
             keep.update([sid for _, sid in ranked if zone(cc_of[sid])][:30])
         data["snow"] = {"updated": snow_doc.get("updated"),
                         "stations": {sid: snow_doc["stations"][sid] for sid in keep}}
-    html_text = index_path.read_text(encoding="utf-8")
+    return json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+
+
+def fill_home_data(html_text: str, payload: str) -> str:
     placeholder = re.compile(r'(<script id="home-data" type="application/json">).*?(</script>)', re.DOTALL)
-    payload = json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     new_text, n = placeholder.subn(lambda m: m.group(1) + payload + m.group(2), html_text, count=1)
     if n != 1:
-        raise SystemExit(f"home-data placeholder not found in {index_path}")
-    index_path.write_text(new_text, encoding="utf-8")
+        raise SystemExit("home-data placeholder not found in index.html")
+    return new_text
+
+
+# ---------- the English copy of the app (/en/) ----------
+
+EN_APP_HEAD = {
+    "title": "Ski Info · Piste maps and snow forecasts for ski resorts",
+    "description": "Interactive piste maps on satellite imagery, the gradient profile of every run, lifts, services and 7-day "
+                   "snow forecasts for over 1,200 ski resorts in 45 countries.",
+    "og_title": "Ski Info · Piste maps and snow forecasts",
+    "og_description": "Piste maps on satellite imagery, the real gradient of every run and the snow forecast for over 1,200 ski "
+                      "resorts. Free, no sign-up.",
+}
+EN_LINKS = {'href="/pais/"': 'href="/en/country/"', 'href="/guias/"': 'href="/en/guides/"', 'href="/app/"': 'href="/en/app/"'}
+# Text nodes that are the same in both languages (brand, symbols, numbers...).
+SAME_IN_BOTH = {"Ski Info", "Info", "Freeride", "–", "+", "×", "›", "‹", "1.200+", "Android", "Español"}
+
+
+def build_english_app(index_html: str, i18n: dict, base_url: str) -> str:
+    """docs/en/index.html from docs/index.html: English head, the markup's
+    text and attributes translated from the dictionary, English links, and
+    docs/i18n/en.js loaded before the scripts (whose own strings go through
+    T()). Fails if any visible Spanish text would be left untranslated."""
+    ui = i18n["ui"]
+    s = index_html
+    s = s.replace('<html lang="es">', '<html lang="en">', 1)
+    head_end = s.index("</head>") if "</head>" in s else s.index("<style>")
+    head, rest = s[:head_end], s[head_end:]
+    head = re.sub(r"<title>.*?</title>", f"<title>{html.escape(EN_APP_HEAD['title'])}</title>", head, count=1)
+    head = re.sub(r'(<meta name="description" content=")[^"]*', lambda m: m.group(1) + html.escape(EN_APP_HEAD["description"]), head, count=1)
+    head = head.replace(f'<link rel="canonical" href="{base_url}/">', f'<link rel="canonical" href="{base_url}/en/">', 1)
+    head = re.sub(r'(<meta property="og:title" content=")[^"]*', lambda m: m.group(1) + html.escape(EN_APP_HEAD["og_title"]), head, count=1)
+    head = re.sub(r'(<meta property="og:description" content=")[^"]*', lambda m: m.group(1) + html.escape(EN_APP_HEAD["og_description"]), head, count=1)
+    head = head.replace(f'<meta property="og:url" content="{base_url}/">', f'<meta property="og:url" content="{base_url}/en/">', 1)
+    head = head.replace(f'content="{base_url}/og/ski-info.jpg"', f'content="{base_url}/og/en/ski-info.jpg"', 1)
+    head = head.replace('<meta property="og:locale" content="es_ES">', '<meta property="og:locale" content="en_GB">', 1)
+    # The Spanish home's "remembered English" redirect must not run here.
+    head = re.sub(r"<script id=\"lang-redirect\">.*?</script>\n?", "", head, flags=re.DOTALL)
+    s = head + rest
+
+    start, end = s.index('<div class="app"'), s.index('<script id="home-data"')
+    markup = s[start:end]
+    missing = []
+    markup = markup.replace('<a class="lang-link" href="/en/" hreflang="en" lang="en">English</a>',
+                            '<a class="lang-link" data-lang="es" href="/" hreflang="es" lang="es">Español</a>')
+
+    def tr_text(m):
+        raw = m.group(1)
+        t = raw.strip()
+        if not t or not re.search(r"[A-Za-zÁÉÍÓÚáéíóúñÑ]", t) or t in SAME_IN_BOTH:
+            return m.group(0)
+        if t in ui:
+            return ">" + raw.replace(t, ui[t]) + "<"
+        missing.append(t)
+        return m.group(0)
+    markup = re.sub(r">([^<>]+)<", tr_text, markup)
+
+    def tr_attr(m):
+        t = m.group(2)
+        if t in ui:
+            return f'{m.group(1)}="{ui[t]}"'
+        if re.search(r"[A-Za-z]", t) and t not in SAME_IN_BOTH:
+            missing.append(t)
+        return m.group(0)
+    markup = re.sub(r'(placeholder|aria-label|title)="([^"]+)"', tr_attr, markup)
+    for a, b in EN_LINKS.items():
+        markup = markup.replace(a, b)
+    markup = markup.replace('<span id="home-station-count">1.200+</span>', '<span id="home-station-count">1,200+</span>')
+    if missing:
+        raise SystemExit("untranslated text in the app markup (add it to docs/i18n/en.js): " + "; ".join(sorted(set(missing))))
+    s = s[:start] + markup + s[end:]
+    s = s.replace('<script src="/i18n.js"></script>', '<script src="/i18n/en.js"></script>\n<script src="/i18n.js"></script>', 1)
+    return s
 
 
 # ---------- main ----------
@@ -789,9 +1101,12 @@ def main() -> None:
     ap.add_argument("--inject-home", action="store_true",
                     help="inline the home page's data into docs/index.html (deploy only: rewrites a committed file)")
     args = ap.parse_args()
+    base_url = args.base_url.rstrip("/")
 
-    meta = load_app_metadata(read_app_sources(args.docs))
-    stations = meta["stations"]
+    meta_es = load_app_metadata(read_app_sources(args.docs))
+    i18n = load_i18n(args.docs)
+    metas = {"es": meta_es, "en": localized_meta(meta_es, i18n)}
+    stations = meta_es["stations"]
     by_id = {s["id"]: s for s in stations}
 
     pinned = json.loads(SLUGS_PATH.read_text()) if SLUGS_PATH.exists() else {}
@@ -817,9 +1132,9 @@ def main() -> None:
         by_country.setdefault(s.get("country") or "ES", []).append(s)
     for lst in by_country.values():
         lst.sort(key=lambda s: -(s.get("pisteKm") or 0))
-    country_slug = {cc: slugify(meta["countries"].get(cc, (cc, ""))[0]) for cc in by_country}
+    country_slug = {lang: {cc: slugify(metas[lang]["countries"].get(cc, (cc, ""))[0]) for cc in by_country} for lang in LOC}
 
-    group_of = {sid: g for g in meta["groups"] for sid in g}
+    group_of = {sid: g for g in meta_es["groups"] for sid in g}
     coords = {s["id"]: (s["lat"], s["lon"]) for s in stations if s.get("lat") is not None}
     nearby = {}
     for sid, c in coords.items():
@@ -827,67 +1142,105 @@ def main() -> None:
         nearby[sid] = [(by_id[oid], d) for d, oid in dists[:8] if d <= 150]
 
     # Written just before by fetch_snow_forecast.py; optional.
-    snow, snow_date, snow_updated = {}, "", ""
+    snow, snow_updated, snow_doc = {}, "", None
+    snow_date = {"es": "", "en": ""}
     snow_path = args.docs / "snow.json"
     if snow_path.exists():
-        doc = json.loads(snow_path.read_text(encoding="utf-8"))
-        snow = doc.get("stations", {})
-        snow_updated = doc.get("updated", "")
-        months = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto",
-                  "septiembre", "octubre", "noviembre", "diciembre"]
-        y, m, d = (int(x) for x in doc.get("updated", "")[:10].split("-"))
-        snow_date = f"{d} de {months[m - 1]}"
+        snow_doc = json.loads(snow_path.read_text(encoding="utf-8"))
+        snow = snow_doc.get("stations", {})
+        snow_updated = snow_doc.get("updated", "")
+        months_es = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto",
+                     "septiembre", "octubre", "noviembre", "diciembre"]
+        months_en = ["January", "February", "March", "April", "May", "June", "July", "August",
+                     "September", "October", "November", "December"]
+        y, m, d = (int(x) for x in snow_updated[:10].split("-"))
+        snow_date = {"es": f"{d} de {months_es[m - 1]}", "en": f"{d} {months_en[m - 1]}"}
 
-    ctx = {"base_url": args.base_url.rstrip("/"), "slug": slug, "country_slug": country_slug,
+    ctx = {"base_url": base_url, "slug": slug, "country_slug": country_slug,
            "by_id": by_id, "group_of": group_of, "nearby": nearby, "snow": snow, "snow_date": snow_date}
 
     # First pass: the numbers the guides/rankings need, so station pages can
     # link to the rankings they appear in.
     from build_guides import build_guides, station_ranks, station_stats, write_all
-    stats = []
+    base_stats = []
     for s in stations:
         raw = json.loads((args.docs / "data" / f"{s['id']}.json").read_text(encoding="utf-8"))
-        cc = s.get("country") or "ES"
         st = station_stats(raw, is_downhill)
-        st.update(id=s["id"], name=short_name(s["name"]) or s["name"], cc=cc,
-                  country=meta["countries"].get(cc, (cc, ""))[0], region=s.get("region"),
+        st.update(id=s["id"], name=short_name(s["name"]) or s["name"], cc=s.get("country") or "ES", region=s.get("region"),
                   slug=slug[s["id"]], lat=s.get("lat") or raw.get("latitude") or 0, lon=s.get("lon") or raw.get("longitude") or 0)
-        stats.append(st)
-    guides = build_guides(stats, snow, snow_date, fmt, meta["diff"], snow_updated)
-    ctx["ranks"] = station_ranks(guides)
+        base_stats.append(st)
+    guides, ctx["ranks"] = {}, {}
+    for lang in LOC:
+        stats = [dict(st, country=metas[lang]["countries"].get(st["cc"], (st["cc"], ""))[0]) for st in base_stats]
+        guides[lang] = build_guides(stats, snow, snow_date[lang], FMT[lang], metas[lang]["diff"], snow_updated, lang=lang)
+        ctx["ranks"][lang] = station_ranks(guides[lang], lang)
 
-    urls = [f"{ctx['base_url']}/", f"{ctx['base_url']}/pais/"]
-    urls += write_all(args.docs, guides, page, e, ctx["base_url"])
+    # Guides with the same key in both languages are translations of each other.
+    guide_alt: dict[str, dict] = {"index": {l: f"{base_url}{LOC[l]['guides']}" for l in LOC}}
+    for lang in LOC:
+        for g in guides[lang]:
+            guide_alt.setdefault(g.key, {})[lang] = f"{base_url}{LOC[lang]['guides']}{g.slug}/"
+
+    entries: list[tuple[str, dict]] = []  # (url, alternates) for the sitemap
+    home_alt = {l: f"{base_url}{LOC[l]['home']}" for l in LOC}
+    for lang in LOC:
+        entries.append((home_alt[lang], home_alt))
+        entries += write_all(args.docs, guides[lang], page, e, base_url, lang, lambda key: guide_alt.get(key, {}))
+
     for s in stations:
         raw = json.loads((args.docs / "data" / f"{s['id']}.json").read_text(encoding="utf-8"))
-        html_text, indexable = station_page(raw, meta, ctx)
-        out = args.docs / "estacion" / slug[s["id"]] / "index.html"
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(html_text, encoding="utf-8")
-        if indexable:
-            urls.append(f"{ctx['base_url']}/estacion/{slug[s['id']]}/")
+        for lang in LOC:
+            html_text, indexable = station_page(raw, metas[lang], ctx, lang)
+            out = args.docs / LOC[lang]["station"].strip("/") / slug[s["id"]] / "index.html"
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_text(html_text, encoding="utf-8")
+            if indexable:
+                entries.append((f"{base_url}{LOC[lang]['station']}{slug[s['id']]}/",
+                                {l: f"{base_url}{LOC[l]['station']}{slug[s['id']]}/" for l in LOC}))
 
-    for cc, lst in by_country.items():
-        out = args.docs / "pais" / country_slug[cc] / "index.html"
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(country_page(cc, lst, meta, ctx), encoding="utf-8")
-        urls.append(f"{ctx['base_url']}/pais/{country_slug[cc]}/")
-    (args.docs / "pais" / "index.html").write_text(countries_index(by_country, meta, ctx), encoding="utf-8")
-    (args.docs / "app").mkdir(exist_ok=True)
-    (args.docs / "app" / "index.html").write_text(app_page(ctx, len(stations)), encoding="utf-8")
-    urls.append(f"{ctx['base_url']}/app/")
+    for lang in LOC:
+        croot = args.docs / LOC[lang]["countries"].strip("/")
+        for cc, lst in by_country.items():
+            out = croot / country_slug[lang][cc] / "index.html"
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_text(country_page(cc, lst, metas[lang], ctx, lang), encoding="utf-8")
+            entries.append((f"{base_url}{LOC[lang]['countries']}{country_slug[lang][cc]}/",
+                            {l: f"{base_url}{LOC[l]['countries']}{country_slug[l][cc]}/" for l in LOC}))
+        croot.mkdir(parents=True, exist_ok=True)
+        (croot / "index.html").write_text(countries_index(by_country, metas[lang], ctx, lang), encoding="utf-8")
+        entries.append((f"{base_url}{LOC[lang]['countries']}", {l: f"{base_url}{LOC[l]['countries']}" for l in LOC}))
+        aroot = args.docs / LOC[lang]["app"].strip("/")
+        aroot.mkdir(parents=True, exist_ok=True)
+        (aroot / "index.html").write_text(app_page(ctx, len(stations), lang), encoding="utf-8")
+        entries.append((f"{base_url}{LOC[lang]['app']}", {l: f"{base_url}{LOC[l]['app']}" for l in LOC}))
 
     sitemap = ['<?xml version="1.0" encoding="UTF-8"?>',
-               '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
-    sitemap += [f"  <url><loc>{html.escape(u)}</loc></url>" for u in urls]
+               '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">']
+    for u, alt in entries:
+        links = "".join(f'<xhtml:link rel="alternate" hreflang="{l}" href="{html.escape(v)}"/>' for l, v in sorted(alt.items())) \
+            if len(alt) > 1 else ""
+        sitemap.append(f"  <url><loc>{html.escape(u)}</loc>{links}</url>")
     sitemap.append("</urlset>")
     (args.docs / "sitemap.xml").write_text("\n".join(sitemap) + "\n", encoding="utf-8")
-    if args.inject_home:
-        guides_index = json.loads((args.docs / "guias.json").read_text(encoding="utf-8"))
-        snow_doc = json.loads((args.docs / "snow.json").read_text(encoding="utf-8")) if (args.docs / "snow.json").exists() else None
-        inject_home_data(args.docs / "index.html", snow_doc, stations, guides_index)
 
-    print(f"{len(stations)} station pages, {len(by_country)} country pages, {len(guides)} guides, {len(urls)} URLs in sitemap")
+    # The English app (/en/) is generated from the Spanish one before the
+    # latter gets its own home data inlined.
+    index_path = args.docs / "index.html"
+    index_html = index_path.read_text(encoding="utf-8")
+    en_app = build_english_app(index_html, i18n, base_url)
+    if args.inject_home:
+        for lang, text in (("en", en_app), ("es", index_html)):
+            guides_index = json.loads((args.docs / ("guias.json" if lang == "es" else "en/guides.json")).read_text(encoding="utf-8"))
+            filled = fill_home_data(text, home_data_json(snow_doc, stations, guides_index, lang))
+            if lang == "en":
+                en_app = filled
+            else:
+                index_path.write_text(filled, encoding="utf-8")
+    (args.docs / "en").mkdir(exist_ok=True)
+    (args.docs / "en" / "index.html").write_text(en_app, encoding="utf-8")
+
+    print(f"{len(stations)} stations x {len(LOC)} languages, {len(by_country)} countries, "
+          f"{sum(len(g) for g in guides.values())} guides, {len(entries)} URLs in sitemap")
 
 
 if __name__ == "__main__":

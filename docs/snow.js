@@ -17,6 +17,9 @@ var WEATHER_CODE = {
   85: "Chubascos de nieve", 86: "Chubascos de nieve intensos",
   95: "Tormenta", 96: "Tormenta con granizo", 99: "Tormenta con granizo intensa"
 };
+if (typeof localizeTable === 'function') localizeTable(WEATHER_CODE, 'weather');
+var SNOW_LOCALE = typeof SKI_LOCALE === 'string' ? SKI_LOCALE : 'es-ES';
+if (typeof T !== 'function') { var T = function (s) { var a = arguments; return s.replace(/\{(\d)\}/g, function (m, i) { return a[+i + 1]; }); }; } // pages without docs/i18n.js
 
 var WEATHER_ICONS = {
   sun: '<circle cx="12" cy="12" r="4.2" fill="currentColor"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
@@ -47,7 +50,7 @@ function weatherIconSvg(code) {
 function snowFmt(n, d) {
   if (n == null || isNaN(n)) return '–';
   n = n + 0; // -0 (e.g. Math.round(-0.4)) would print as "-0"
-  return n.toLocaleString('es-ES', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
+  return n.toLocaleString(SNOW_LOCALE, { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
 }
 
 // cm with one decimal below 1 cm, whole cm above ("0,4 cm", "12 cm").
@@ -125,19 +128,20 @@ function parseSnowForecast(top, base, topM, baseM) {
 }
 
 function snowDayLabel(iso, i) {
-  if (i === 0) return 'Hoy';
-  if (i === 1) return 'Mañana';
+  if (i === 0) return T('Hoy');
+  // "Tomorrow" doesn't fit the narrow day column: English uses the weekday.
+  if (i === 1 && SNOW_LOCALE.indexOf('es') === 0) return T('Mañana');
   var dt = new Date(iso + 'T12:00:00Z');
-  var wd = dt.toLocaleDateString('es-ES', { weekday: 'short', timeZone: 'UTC' }).replace('.', '');
+  var wd = dt.toLocaleDateString(SNOW_LOCALE, { weekday: 'short', timeZone: 'UTC' }).replace('.', '');
   return wd.charAt(0).toUpperCase() + wd.slice(1) + ' ' + dt.getUTCDate();
 }
 
 function snowHeadline(fc) {
   var t = fc.total;
-  if (t >= 30) return 'Gran nevada prevista';
-  if (t >= 10) return 'Nieve en camino';
-  if (t >= 1) return 'Alguna nevada débil';
-  return 'Sin nevadas a la vista';
+  if (t >= 30) return T('Gran nevada prevista');
+  if (t >= 10) return T('Nieve en camino');
+  if (t >= 1) return T('Alguna nevada débil');
+  return T('Sin nevadas a la vista');
 }
 
 // Fills `container` with the whole widget (empties it when there's no data).
@@ -157,18 +161,18 @@ function renderSnowForecast(container, fc) {
   var ht = el('div', 'snow-head-txt');
   ht.appendChild(el('div', 'snow-head-title', snowHeadline(fc)));
   var nowParts = [];
-  nowParts.push('Ahora ' + snowFmt(Math.round(fc.now.temp)) + '° en cota alta' + (fc.topM != null ? ' (' + elev(fc.topM) + ')' : ''));
-  if (fc.now.baseTemp != null) nowParts.push(snowFmt(Math.round(fc.now.baseTemp)) + '° en la base');
+  nowParts.push(T('Ahora {0}° en cota alta', snowFmt(Math.round(fc.now.temp))) + (fc.topM != null ? ' (' + elev(fc.topM) + ')' : ''));
+  if (fc.now.baseTemp != null) nowParts.push(T('{0}° en la base', snowFmt(Math.round(fc.now.baseTemp))));
   ht.appendChild(el('div', 'snow-head-sub', nowParts.join(' · ') + ' · ' + (WEATHER_CODE[fc.now.code] || '')));
   head.appendChild(ht);
   container.appendChild(head);
 
   var tiles = el('div', 'snow-tiles');
   [
-    [snowCm(fc.total), 'Nieve próximos 7 días'],
-    [snowCm(fc.last24), 'Nieve últimas 24 h'],
-    [fc.depthCm != null ? snowCm(fc.depthCm) : '–', 'Espesor estimado'],
-    [fc.freezingM != null ? elev(Math.round(fc.freezingM / 50) * 50) : '–', 'Isoterma 0 °C']
+    [snowCm(fc.total), T('Nieve próximos 7 días')],
+    [snowCm(fc.last24), T('Nieve últimas 24 h')],
+    [fc.depthCm != null ? snowCm(fc.depthCm) : '–', T('Espesor estimado')],
+    [fc.freezingM != null ? elev(Math.round(fc.freezingM / 50) * 50) : '–', T('Isoterma 0 °C')]
   ].forEach(function (t, i) {
     var tile = el('div', 'snow-tile' + (i === 0 && fc.total >= 1 ? ' hot' : ''));
     tile.appendChild(el('div', 'v', t[0]));
@@ -197,10 +201,10 @@ function renderSnowForecast(container, fc) {
   });
   container.appendChild(strip);
 
-  var legend = 'Temperaturas máx./mín.: arriba en cota alta' + (fc.topM != null ? ' (' + elev(fc.topM) + ')' : '')
-    + (fc.days[0].baseMax != null ? ', debajo en la base (' + elev(fc.baseM) + ')' : '') + '; viento máximo del día.';
+  var legend = T('Temperaturas máx./mín.: arriba en cota alta') + (fc.topM != null ? ' (' + elev(fc.topM) + ')' : '')
+    + (fc.days[0].baseMax != null ? T(', debajo en la base ({0})', elev(fc.baseM)) : '') + T('; viento máximo del día.');
   container.appendChild(el('p', 'snow-note', legend));
-  var when = fc.fetched ? fc.fetched.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Madrid' }) : '';
-  container.appendChild(el('p', 'snow-note', 'Previsión de modelos meteorológicos (<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>)'
-    + (when ? ', actualizada a las ' + when : '') + '. El espesor es una estimación del modelo, no el parte oficial de la estación.'));
+  var when = fc.fetched ? fc.fetched.toLocaleTimeString(SNOW_LOCALE, { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Madrid' }) : '';
+  container.appendChild(el('p', 'snow-note', T('Previsión de modelos meteorológicos ({0})', '<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>')
+    + (when ? T(', actualizada a las {0}', when) : '') + T('. El espesor es una estimación del modelo, no el parte oficial de la estación.')));
 }

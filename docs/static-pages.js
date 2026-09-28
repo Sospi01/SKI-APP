@@ -80,7 +80,7 @@
       if (open || rendered) return;
       rendered = true;
       panel.className = 'run-profile empty';
-      panel.textContent = 'Cargando perfil…';
+      panel.textContent = T('Cargando perfil…');
       var name = item.getAttribute('data-run');
       stationData().then(function (raw) {
         var parts = [];
@@ -92,7 +92,7 @@
         renderRunProfile(panel, { geomParts: parts });
       }).catch(function () {
         rendered = false;
-        panel.textContent = 'No se pudo cargar el perfil. Inténtalo de nuevo.';
+        panel.textContent = T('No se pudo cargar el perfil. Inténtalo de nuevo.');
       });
     }
     item.addEventListener('click', toggle);

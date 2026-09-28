@@ -21,6 +21,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import math
 import re
 import sqlite3
 import sys
@@ -96,31 +98,74 @@ def station_record(conn: sqlite3.Connection, area_id: str) -> dict | None:
     return {k: area.get(k) for k in KEYS}
 
 
+def find_moved(conn: sqlite3.Connection, old: dict) -> str | None:
+    """OpenSkiMap sometimes gives a ski area a new id (it's derived from the
+    OSM objects it's built from). Find it again: same country, and the same
+    name within 5 km or any name within 1 km of where it was."""
+    if old.get("latitude") is None:
+        return None
+    lat, lon = old["latitude"], old["longitude"]
+    best = None
+    for r in conn.execute("SELECT id, name, latitude, longitude FROM ski_areas WHERE country_code IS ? "
+                          "AND latitude BETWEEN ? AND ? AND longitude BETWEEN ? AND ?",
+                          (old.get("country_code"), lat - 0.1, lat + 0.1, lon - 0.15, lon + 0.15)):
+        if r["latitude"] is None:
+            continue
+        dy = (r["latitude"] - lat) * 111.2
+        dx = (r["longitude"] - lon) * 111.2 * math.cos(math.radians(lat))
+        d = math.hypot(dx, dy)
+        same_name = (r["name"] or "").strip().lower() == (old.get("name") or "").strip().lower()
+        if (same_name and d <= 5) or d <= 1:
+            if best is None or d < best[0]:
+                best = (d, r["id"])
+    return best[1] if best else None
+
+
 def downhill(record: dict) -> tuple[int, float]:
     runs = [r for r in record.get("runs") or [] if not r.get("uses") or "downhill" in r["uses"]]
     km = sum(s.get("length_km") or 0 for s in record.get("run_stats") or [] if s.get("activity") == "downhill")
     return len(runs), km
 
 
-def _numbers(x):
-    """0 and 0.0 are the same value (SQLite hands REAL columns back as floats)."""
-    if isinstance(x, bool) or x is None or isinstance(x, str):
-        return x
-    if isinstance(x, (int, float)):
-        return float(x)
-    if isinstance(x, list):
-        return [_numbers(v) for v in x]
-    if isinstance(x, dict):
-        return {k: _numbers(v) for k, v in x.items()}
-    return x
+def same(a, b) -> bool:
+    """Equal content, numbers compared with a tolerance: rebuilds differ in the
+    last digits of computed lengths and centroids (1e-15), and SQLite hands
+    REAL columns back as floats (0 vs 0.0) -- neither is worth a commit."""
+    if isinstance(a, bool) or isinstance(b, bool):
+        return a is b
+    if isinstance(a, (int, float)) and isinstance(b, (int, float)):
+        return math.isclose(a, b, rel_tol=1e-9, abs_tol=1e-9)
+    if isinstance(a, list) and isinstance(b, list):
+        return len(a) == len(b) and all(same(x, y) for x, y in zip(a, b))
+    if isinstance(a, dict) and isinstance(b, dict):
+        return a.keys() == b.keys() and all(same(a[k], b[k]) for k in a)
+    return a == b
 
 
-def canonical(record: dict) -> str:
-    """Content without incidental ordering (runs of equal length can come in any order)."""
-    d = _numbers(record)
-    for k in ("runs", "lifts", "run_stats", "lift_stats"):
-        d[k] = sorted(json.dumps(x, sort_keys=True) for x in d.get(k) or [])
-    return json.dumps(d, sort_keys=True)
+def _sort_key(x) -> str:
+    def rounded(v):
+        if isinstance(v, float):
+            return round(v, 3)
+        if isinstance(v, list):
+            return [rounded(y) for y in v]
+        if isinstance(v, dict):
+            return {k: rounded(y) for k, y in v.items()}
+        return v
+    return json.dumps(rounded(x), sort_keys=True)
+
+
+def same_record(old: dict, new: dict) -> bool:
+    """same(), ignoring the order of runs/lifts/stats (equal-length runs can
+    come in any order)."""
+    if old.keys() != new.keys():
+        return False
+    for k in old:
+        a, b = old[k], new[k]
+        if k in ("runs", "lifts", "run_stats", "lift_stats") and isinstance(a, list) and isinstance(b, list):
+            a, b = sorted(a, key=_sort_key), sorted(b, key=_sort_key)
+        if not same(a, b):
+            return False
+    return True
 
 
 def main() -> int:
@@ -133,12 +178,23 @@ def main() -> int:
     conn = sqlite3.connect(args.db)
     conn.row_factory = sqlite3.Row
     paths = sorted((args.docs / "data").glob("*.json"))
-    updated, unchanged, kept = [], 0, []
+    updated, unchanged, kept, moved_ids = [], 0, [], []
     writes = []
     for path in paths:
         old = json.loads(path.read_text(encoding="utf-8"))
         new = station_record(conn, old["id"])
         name = old.get("name") or old["id"]
+        if new is None:
+            moved = find_moved(conn, old)
+            if moved and os.path.exists(args.docs / "data" / f"{moved}.json"):
+                moved = None  # that one is a station of its own in the app
+            if moved:
+                # Keep the app's id: slugs, favourites and stats are keyed on it.
+                new = station_record(conn, moved)
+                new["id"] = old["id"]
+                for st in new["run_stats"] + new["lift_stats"]:
+                    st["ski_area_id"] = old["id"]
+                moved_ids.append((name, moved))
         if new is None:
             kept.append((name, "not in the new OpenSkiMap data"))
             continue
@@ -150,7 +206,7 @@ def main() -> int:
             new["name"] = old.get("name")
         for k, v in old.items():  # the services, and anything else not from OpenSkiMap
             new.setdefault(k, v)
-        if canonical(new) == canonical(old):
+        if same_record(old, new):
             unchanged += 1
             continue
         updated.append((name, old_runs, new_runs, old_km, new_km))
@@ -166,6 +222,9 @@ def main() -> int:
     if updated:
         lines += ["", "### Updated", "| Station | Runs | Downhill km |", "|---|---|---|"]
         lines += [f"| {n} | {a} → {b} | {c:.1f} → {d:.1f} |" for n, a, b, c, d in updated[:200]]
+    if moved_ids:
+        lines += ["", "### Found under a new OpenSkiMap id", "| Station | New id |", "|---|---|"]
+        lines += [f"| {n} | {i} |" for n, i in moved_ids]
     if kept:
         lines += ["", "### Kept as they were", "| Station | Why |", "|---|---|"]
         lines += [f"| {n} | {why} |" for n, why in kept]

@@ -76,3 +76,31 @@ def test_broken_data_is_not_written(tmp_path):
     conn.commit()
     assert run(db_path, docs) == 1
     assert {p.name: p.read_text() for p in (docs / "data").glob("*.json")} == before
+
+
+def test_station_with_a_new_openskimap_id_is_found_and_keeps_its_id(tmp_path):
+    db_path = build_db(tmp_path)
+    docs = make_docs(tmp_path, db_path)
+    conn = sqlite3.connect(db_path)  # plain connection: rename the id across tables
+    for table, col in (("ski_areas", "id"), ("run_ski_areas", "ski_area_id"), ("lift_ski_areas", "ski_area_id"),
+                       ("ski_area_run_stats", "ski_area_id"), ("ski_area_lift_stats", "ski_area_id")):
+        conn.execute(f"UPDATE {table} SET {col} = 'skiarea-new' WHERE {col} = 'skiarea-1'")
+    conn.execute("UPDATE ski_areas SET name = 'Renamed' WHERE id = 'skiarea-new'")
+    conn.commit()
+    assert run(db_path, docs) == 0
+    record = json.loads((docs / "data" / "skiarea-1.json").read_text())
+    assert record["id"] == "skiarea-1" and record["name"] == "Renamed"
+    assert all(s["ski_area_id"] == "skiarea-1" for s in record["run_stats"])
+    assert not (docs / "data" / "skiarea-new.json").exists()
+
+
+def test_float_noise_is_not_a_change(tmp_path):
+    db_path = build_db(tmp_path)
+    docs = make_docs(tmp_path, db_path)
+    before = {p.name: p.read_text() for p in (docs / "data").glob("*.json")}
+    conn = sqlite3.connect(db_path)
+    conn.execute("UPDATE ski_areas SET latitude = latitude + 1e-13")
+    conn.execute("UPDATE ski_area_run_stats SET length_km = length_km + 1e-13")
+    conn.commit()
+    assert run(db_path, docs) == 0
+    assert {p.name: p.read_text() for p in (docs / "data").glob("*.json")} == before

@@ -800,7 +800,7 @@
       <div class="home-feature"><div class="home-feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 2.5v1.6M9 13.9v1.6M2.5 9h1.6M3.4 3.4l1.1 1.1M13.5 4.5l1.1-1.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M10 19.5h8a3 3 0 0 0 .3-6 4.5 4.5 0 0 0-8.4 1.6A2.3 2.3 0 0 0 10 19.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div><h3>Nieve y tiempo</h3><p>Nevadas previstas para los próximos 7 días, temperatura en cota alta y en la base, isoterma de 0 °C y viento.</p></div>
     </div>
 
-    <p class="list-footer">Datos de OpenSkiMap / OpenStreetMap (ODbL) · imágenes Esri, Maxar, Earthstar Geographics<br><a href="/pais/">Todas las estaciones por país</a> · <a href="/guias/">Guías y rankings</a> · <a href="/app/">App para el móvil</a> · <a href="/privacy.html">Privacidad</a> · <a class="lang-link" href="/en/" hreflang="en" lang="en">English</a></p>
+    <p class="list-footer">Datos © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">colaboradores de OpenStreetMap</a> (ODbL), vía OpenSkiMap · imágenes Esri, Maxar, Earthstar Geographics<br><a href="/pais/">Todas las estaciones por país</a> · <a href="/guias/">Guías y rankings</a> · <a href="/app/">App para el móvil</a> · <a href="/privacy.html">Privacidad</a> · <a class="lang-link" href="/en/" hreflang="en" lang="en">English</a></p>
   </div>
 
   <div class="screen" id="screen-list" hidden>
@@ -821,7 +821,7 @@
       </div>
     </div>
     <div class="station-list" id="station-list"></div>
-    <p class="list-footer">Datos de OpenSkiMap / OpenStreetMap (ODbL) · imágenes Esri, Maxar, Earthstar Geographics</p>
+    <p class="list-footer">Datos © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">colaboradores de OpenStreetMap</a> (ODbL), vía OpenSkiMap · imágenes Esri, Maxar, Earthstar Geographics</p>
   </div>
 
   <div class="screen" id="screen-country-map" hidden>
@@ -851,7 +851,7 @@
         </div>
       </figure>
     </section>
-    <p class="list-footer">Datos de OpenSkiMap / OpenStreetMap (ODbL) · imágenes Esri, Maxar, Earthstar Geographics · frontera de Natural Earth (dominio público)</p>
+    <p class="list-footer">Datos © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">colaboradores de OpenStreetMap</a> (ODbL), vía OpenSkiMap · imágenes Esri, Maxar, Earthstar Geographics · frontera de Natural Earth (dominio público)</p>
   </div>
 
   <div class="screen" id="screen-dashboard" hidden>
@@ -2583,7 +2583,7 @@
 
     var attrib = document.createElementNS(SVGNS, 'text');
     attrib.setAttribute('x', vbW - 6); attrib.setAttribute('y', vbH - 6); attrib.setAttribute('text-anchor', 'end');
-    attrib.setAttribute('class', 'map-attribution'); attrib.textContent = 'Esri, Maxar, Earthstar Geographics';
+    attrib.setAttribute('class', 'map-attribution'); attrib.textContent = '© OpenStreetMap · Esri, Maxar, Earthstar Geographics';
     svg.appendChild(attrib);
 
     var present = DIFF_ORDER.filter(function (k) { return raw.runs.some(function (r) { return diffKey(r.difficulty) === k; }); });
@@ -2751,7 +2751,7 @@
 
     var attrib = document.createElementNS(SVGNS, 'text');
     attrib.setAttribute('x', vbW - 6); attrib.setAttribute('y', vbH - 6); attrib.setAttribute('text-anchor', 'end');
-    attrib.setAttribute('class', 'map-attribution'); attrib.textContent = 'Esri, Maxar, Earthstar Geographics';
+    attrib.setAttribute('class', 'map-attribution'); attrib.textContent = '© OpenStreetMap · Esri, Maxar, Earthstar Geographics';
     svg.appendChild(attrib);
 
     countryMapState = { svg: svg, content: content, vbW: vbW, vbH: vbH, zoom: 1, tx: 0, ty: 0, markers: markers };
@@ -3348,7 +3348,7 @@
     });
     setText('quality-note', T('Nieve artificial y vigilancia rara vez están etiquetadas en OpenStreetMap — no significa que no existan, es que casi nadie las mapea todavía.'));
 
-    setText('dashboard-credit', T('Datos de OpenSkiMap / OpenStreetMap, licencia ODbL. ID: {0}…', (raw.id || '').slice(0, 12)));
+    setText('dashboard-credit', T('Datos © colaboradores de OpenStreetMap (ODbL), vía OpenSkiMap. ID: {0}…', (raw.id || '').slice(0, 12)));
   }
 
   // Offline support (docs/sw.js): the app shell and the stations you've

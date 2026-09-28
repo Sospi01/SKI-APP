@@ -258,7 +258,7 @@ TX = {
         "ci_desc": "Mapas de pistas interactivos de {0} estaciones de esquí en {1} países: pistas, remontes, pendientes y servicios.",
         # footer / language
         "f_countries": "Estaciones por país", "f_guides": "Guías y rankings", "f_app": "App para el móvil", "f_privacy": "Privacidad",
-        "f_data": "Datos de OpenSkiMap / OpenStreetMap, licencia ODbL.", "lang_name": "English",
+        "f_data": 'Datos © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">colaboradores de OpenStreetMap</a> (ODbL), vía OpenSkiMap.', "lang_name": "English",
         "hint": "Esta página también está en español.", "hint_cta": "Ver en español", "close": "Cerrar",
     },
     "en": {
@@ -310,7 +310,7 @@ TX = {
         "ci_title": "Ski resorts by country: piste maps | Ski Info",
         "ci_desc": "Interactive piste maps of {0} ski resorts in {1} countries: runs, lifts, gradients and services.",
         "f_countries": "Resorts by country", "f_guides": "Guides & rankings", "f_app": "Mobile app", "f_privacy": "Privacy",
-        "f_data": "Data from OpenSkiMap / OpenStreetMap, ODbL licence.", "lang_name": "Español",
+        "f_data": 'Data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a> (ODbL), via OpenSkiMap.', "lang_name": "Español",
         "hint": "This page is also available in English.", "hint_cta": "View in English", "close": "Close",
     },
 }

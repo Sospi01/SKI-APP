@@ -136,10 +136,11 @@ Ski Info (https://skiinfoapp.com/en/?ref=reddit-osm) takes the pistes, lifts and
 Some things that might interest mappers:
 - Every resort page has a "data quality" block showing what share of runs and lifts have each tag (names, piste:difficulty, lit, snowmaking, aerialway:capacity, aerialway:detachable). It makes the gaps pretty visible: snowmaking, for example, is almost never tagged.
 - The gradient rankings surface mapping errors quickly: a "green" run with a 60% average usually means a wrong difficulty tag or a way drawn in the wrong place.
+- piste:difficulty is shown in each region's own colours (OpenSkiMap's run convention): "easy" is a blue run in the Alps but a green circle in North America, where "expert" becomes a double black diamond.
 
 Example, the steepest runs in the Alps: https://skiinfoapp.com/en/guides/steepest-ski-runs-in-the-alps/?ref=reddit-osm
 
-Data is attributed to OpenStreetMap contributors (ODbL) on every page. Feedback very welcome, especially on tags I should be using and am not.
+Every page and map credits © OpenStreetMap contributors (ODbL). Feedback very welcome, especially on tags I should be using and am not.
 ```
 
 ---

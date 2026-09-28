@@ -10,6 +10,8 @@ on:
       - data-pipeline/scripts/fetch_snow_forecast.py
       - data-pipeline/scripts/build_share_images.py
       - data-pipeline/scripts/build_guides.py
+      - data-pipeline/scripts/guide_texts.py
+      - data-pipeline/scripts/page_texts.py
       - data-pipeline/fonts/**
       - data-pipeline/station_slugs.json
       - .github/workflows/deploy-pages.yml

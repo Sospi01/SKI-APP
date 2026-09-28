@@ -43,6 +43,49 @@ function showShareToast(text) {
   showShareToast.timer = setTimeout(function () { t.style.opacity = '0'; }, 2200);
 }
 
+// "Mis estaciones": the ids of the stations someone saved, newest first, kept
+// in this browser only (the home page lists them with their snow forecast).
+var FAV_KEY = 'si_favs', FAV_MAX = 30;
+function favStations() {
+  try {
+    var v = JSON.parse(localStorage.getItem(FAV_KEY) || '[]');
+    return Array.isArray(v) ? v.filter(function (x) { return typeof x === 'string'; }) : [];
+  } catch (e) { return []; }
+}
+function isFavStation(id) { return favStations().indexOf(id) !== -1; }
+// Returns the new state (true = saved), or null if the browser can't store it.
+function toggleFavStation(id) {
+  var list = favStations(), i = list.indexOf(id);
+  if (i === -1) list.unshift(id); else list.splice(i, 1);
+  try { localStorage.setItem(FAV_KEY, JSON.stringify(list.slice(0, FAV_MAX))); } catch (e) { return null; }
+  return i === -1;
+}
+var FAV_ICON = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.6l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5L2.8 7.9l5-.7z" '
+  + 'fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+// Wires a "Guardar" button: its label, pressed state and a confirmation toast.
+// getStation() -> { id, name, country } of the station it applies to.
+function setupFavButton(btn, getStation, onChange) {
+  function paint() {
+    var s = getStation(), on = !!(s && isFavStation(s.id));
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    btn.classList.toggle('is-fav', on);
+    btn.innerHTML = FAV_ICON + '<span></span>';
+    btn.querySelector('span').textContent = on ? T('Guardada') : T('Guardar');
+  }
+  btn.addEventListener('click', function () {
+    var s = getStation();
+    if (!s) return;
+    var on = toggleFavStation(s.id);
+    if (on === null) return;
+    paint();
+    showShareToast(on ? T('Guardada en Mis estaciones') : T('Quitada de Mis estaciones'));
+    if (on && window.SkiTrack && SkiTrack.fav) SkiTrack.fav(s.id, s.name, s.country);
+    if (onChange) onChange(on);
+  });
+  paint();
+  return paint;
+}
+
 // Android app (native share sheet via the WebView bridge, from app 1.0.5),
 // then the browser's own share sheet, then copy to the clipboard.
 function shareStationLink(title, url) {

@@ -58,6 +58,13 @@
     });
   });
 
+  document.querySelectorAll('.js-fav').forEach(function (btn) {
+    if (typeof setupFavButton !== 'function') return;
+    setupFavButton(btn, function () {
+      return { id: btn.getAttribute('data-id'), name: btn.getAttribute('data-name'), country: btn.getAttribute('data-country') };
+    });
+  });
+
   var dataPromise = null;
   function stationData() {
     if (!dataPromise) {

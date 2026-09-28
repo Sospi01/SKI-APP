@@ -313,6 +313,14 @@ window.SKI_I18N = {
   "Cerrar": "Close",
   "Vista de la estación": "Resort view",
   "Instalar Ski Info": "Install Ski Info",
-  "Estaciones de España": "Ski resorts in Spain"
+  "Estaciones de España": "Ski resorts in Spain",
+  "Guardar": "Save",
+  "Guardada": "Saved",
+  "Guardada en Mis estaciones": "Saved to My resorts",
+  "Quitada de Mis estaciones": "Removed from My resorts",
+  "Mis estaciones": "My resorts",
+  "las que has guardado": "the ones you saved",
+  "nieve prevista en 7 días": "snow forecast for the next 7 days",
+  "O": "W"
  }
 };

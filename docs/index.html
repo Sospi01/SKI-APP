@@ -295,6 +295,8 @@
   }
   .hero-action:hover { background: rgba(255,255,255,0.22); }
   .hero-action[hidden] { display: none; }
+  .hero-action.is-fav svg { color: #ffd257; }
+  .hero-action.is-fav svg path { fill: currentColor; }
   .hero-action svg { width: 16px; height: 16px; }
 
   section { padding: 20px 18px; border-bottom: 1px solid var(--border); }
@@ -769,6 +771,11 @@
       </div>
     </div>
 
+    <div class="home-section" id="favs-section" hidden>
+      <div class="home-section-head"><h2>Mis estaciones</h2><span class="sub" id="favs-sub">las que has guardado</span></div>
+      <div class="station-list snow-rank" id="favs-list"></div>
+    </div>
+
     <div class="home-section" id="snow-rank-section" hidden>
       <div class="home-section-head"><h2>Dónde va a nevar</h2><span class="sub" id="snow-rank-sub">previsión a 7 días en cota alta</span></div>
       <div class="snow-rank-chips" id="snow-rank-chips" role="group" aria-label="Zona">
@@ -883,6 +890,7 @@
           <div class="hero-stat"><div class="v" id="k-wind">–</div><div class="k">Viento</div></div>
         </div>
         <div class="hero-actions">
+          <button type="button" class="hero-action" id="h-fav" aria-pressed="false">Guardar</button>
           <a class="hero-action" id="h-directions" href="#" target="_blank" rel="noopener" hidden><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.2c-3 0-5.4 2.4-5.4 5.4C4.6 11.7 10 17.8 10 17.8s5.4-6.1 5.4-10.2c0-3-2.4-5.4-5.4-5.4z" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="10" cy="7.5" r="1.9" fill="currentColor"/></svg>Cómo llegar</a>
           <button type="button" class="hero-action" id="h-share"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="14.5" cy="4.5" r="2.3" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="5.5" cy="10" r="2.3" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="14.5" cy="15.5" r="2.3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7.5 8.9l5-3.2M7.5 11.1l5 3.2" stroke="currentColor" stroke-width="1.6"/></svg>Compartir</button>
         </div>
@@ -1241,7 +1249,7 @@
   function normalize(s) { return (s || "").toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ""); }
   function formatCoord(lat, lon) {
     if (lat == null || lon == null) return "–";
-    var latDir = lat >= 0 ? 'N' : 'S', lonDir = lon >= 0 ? 'E' : 'O';
+    var latDir = lat >= 0 ? 'N' : 'S', lonDir = lon >= 0 ? 'E' : T('O');
     return fmt(Math.abs(lat), 2) + '°' + latDir + ' ' + fmt(Math.abs(lon), 2) + '°' + lonDir;
   }
 
@@ -1660,6 +1668,63 @@
     });
   })();
 
+  // Seven daily bars of forecast snowfall, scaled to maxDay (cm).
+  function sparkHtml(sf, maxDay) {
+    return '<span class="snow-spark" aria-hidden="true">' + sf.map(function (v) {
+      return v > 0.05 ? '<i style="height:' + Math.max(8, v / maxDay * 100) + '%"></i>' : '<i class="z"></i>';
+    }).join('') + '</span>';
+  }
+  // A station's daily snowfall from today on, from snow.json's format
+  // ({ d: first day, sf: [cm...] }); null if too little of the week is left.
+  function snowFromToday(f) {
+    if (!f || !f.sf) return null;
+    var t = new Date();
+    var skip = Math.max(0, Math.round((Date.UTC(t.getFullYear(), t.getMonth(), t.getDate()) - Date.parse(f.d + 'T00:00:00Z')) / 86400000));
+    var sf = f.sf.slice(skip).map(function (v) { return v || 0; });
+    return sf.length >= 4 ? sf : null;
+  }
+
+  // ---- "Mis estaciones": the stations saved with "Guardar" (station-actions.js,
+  // this browser only), each with its 7-day snow forecast when there is one.
+  // The inlined ranking data covers the snowiest stations; for the rest the
+  // whole snow.json is fetched once.
+  var renderFavs = (function () {
+    var section = document.getElementById('favs-section');
+    var listEl = document.getElementById('favs-list');
+    var fullSnow = null, loading = false;
+    function snowFor(id) {
+      var doc = fullSnow || (HOME_DATA && HOME_DATA.snow);
+      return snowFromToday(doc && doc.stations && doc.stations[id]);
+    }
+    function render() {
+      var favs = favStations().map(stationById).filter(Boolean);
+      section.hidden = !favs.length;
+      listEl.innerHTML = '';
+      if (!favs.length) return;
+      if (!fullSnow && !loading && favs.some(function (s) { return !snowFor(s.id); })) {
+        loading = true;
+        fetch('/snow.json').then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (doc) { if (doc && doc.stations) { fullSnow = doc; render(); } })
+          .catch(function () {});
+      }
+      var sfs = favs.map(function (s) { return snowFor(s.id); });
+      var maxDay = Math.max.apply(null, sfs.filter(Boolean).map(function (sf) { return Math.max.apply(null, sf); }).concat([5]));
+      setText('favs-sub', sfs.some(Boolean) ? T('nieve prevista en 7 días') : T('las que has guardado'));
+      favs.forEach(function (s, i) {
+        var sf = sfs[i], card;
+        if (sf) {
+          card = homeStationCard(s, snowFmt(Math.round(sf.reduce(function (a, b) { return a + b; }, 0))) + ' cm', T('en 7 días'));
+          card.insertBefore(document.createRange().createContextualFragment(sparkHtml(sf, maxDay)), card.querySelector('.stats'));
+        } else {
+          card = homeStationCard(s, fmt(Math.round(s.pisteKm || 0)) + ' km', T('pista'));
+        }
+        listEl.appendChild(card);
+      });
+    }
+    render();
+    return render;
+  })();
+
   // ---- "Dónde va a nevar": ranking from snow.json, generated at deploy
   // time (data-pipeline/scripts/fetch_snow_forecast.py). Hidden if missing or
   // too old to still cover most of the coming week.
@@ -1668,9 +1733,6 @@
     var section = document.getElementById('snow-rank-section');
     var listEl = document.getElementById('snow-rank-list');
     var zone = 'world', rows = [];
-    function dayDiff(fromIso, to) {
-      return Math.round((Date.UTC(to.getFullYear(), to.getMonth(), to.getDate()) - Date.parse(fromIso + 'T00:00:00Z')) / 86400000);
-    }
     function render() {
       listEl.innerHTML = '';
       var picked = rows.filter(function (r) {
@@ -1685,9 +1747,7 @@
       }
       var maxDay = Math.max.apply(null, picked.map(function (r) { return Math.max.apply(null, r.sf); }).concat([5]));
       picked.forEach(function (r, i) {
-        var spark = '<span class="snow-spark" aria-hidden="true">' + r.sf.map(function (v) {
-          return v > 0.05 ? '<i style="height:' + Math.max(8, v / maxDay * 100) + '%"></i>' : '<i class="z"></i>';
-        }).join('') + '</span>';
+        var spark = sparkHtml(r.sf, maxDay);
         var card = homeStationCard(r.s, snowFmt(Math.round(r.total)) + ' cm', T('en 7 días'), '<span class="rank">' + (i + 1) + '</span>');
         card.insertBefore(document.createRange().createContextualFragment(spark), card.querySelector('.stats'));
         listEl.appendChild(card);
@@ -1704,13 +1764,9 @@
     else fetch('/snow.json').then(function (r) { return r.ok ? r.json() : null; }).then(applySnow).catch(function () {});
     function applySnow(doc) {
       if (!doc || !doc.stations) return;
-      var today = new Date();
       Object.keys(doc.stations).forEach(function (id) {
-        var f = doc.stations[id], s = stationById(id);
-        if (!s || !f.sf) return;
-        var skip = Math.max(0, dayDiff(f.d, today));
-        var sf = f.sf.slice(skip).map(function (v) { return v || 0; });
-        if (sf.length < 4) return;
+        var s = stationById(id), sf = snowFromToday(doc.stations[id]);
+        if (!s || !sf) return;
         rows.push({ s: s, sf: sf, total: sf.reduce(function (a, b) { return a + b; }, 0) });
       });
       if (!rows.length) return;
@@ -1864,6 +1920,7 @@
     screenDashboard.hidden = false;
     document.getElementById('app').classList.add('dash-mode');
     currentRaw = null;
+    if (paintFav) paintFav();
     mapBuiltKey = null;
     mapState = null;
     selectedMapKey = null;
@@ -3116,6 +3173,7 @@
 
     setText('map-station-name', raw.name || '');
     currentRaw = raw;
+    if (paintFav) paintFav();
     ensureMapBuilt();
 
     var diffAgg = {};
@@ -3429,6 +3487,10 @@
     });
     document.body.appendChild(bar);
   })();
+
+  var paintFav = setupFavButton(document.getElementById('h-fav'), function () {
+    return currentRaw && { id: currentRaw.id, name: currentRaw.name, country: currentRaw.country_code };
+  }, function () { renderFavs(); });
 
   // "Compartir": the station's own page (/estacion/<slug>/) is the link to
   // share -- it has the preview image and opens straight into its content.

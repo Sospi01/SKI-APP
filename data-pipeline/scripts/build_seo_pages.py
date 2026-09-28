@@ -49,6 +49,8 @@ PEAKS_SVG = ('<svg class="peaks" viewBox="0 0 400 140" preserveAspectRatio="none
              '<polygon points="0,140 0,110 90,60 150,95 210,50 270,100 330,65 400,100 400,140" fill="rgba(255,255,255,0.20)"/></svg>')
 PIN_ICON = ('<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.2c-3 0-5.4 2.4-5.4 5.4C4.6 11.7 10 17.8 10 17.8s5.4-6.1 5.4-10.2c0-3-2.4-5.4-5.4-5.4z" '
             'fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="10" cy="7.5" r="1.9" fill="currentColor"/></svg>')
+FAV_ICON = ('<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.6l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5L2.8 7.9l5-.7z" '
+            'fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>')
 SHARE_ICON = ('<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="14.5" cy="4.5" r="2.3" fill="none" stroke="currentColor" stroke-width="1.6"/>'
               '<circle cx="5.5" cy="10" r="2.3" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="14.5" cy="15.5" r="2.3" fill="none" stroke="currentColor" stroke-width="1.6"/>'
               '<path d="M7.5 8.9l5-3.2M7.5 11.1l5 3.2" stroke="currentColor" stroke-width="1.6"/></svg>')
@@ -221,7 +223,7 @@ TX = {
         "resort": "Estación de esquí", "official_site": "Web oficial ↗", "altitude": "Altitud", "vertical": "Desnivel",
         "km_pistes": "Km pista", "coords": "Coordenadas", "linked": "Dominio esquiable conectado",
         "linked_note": "Detectado por proximidad geográfica; los km de cada una pueden solaparse:",
-        "directions": "Cómo llegar", "share": "Compartir", "back_country": "Estaciones de {0}", "back_countries": "Países",
+        "directions": "Cómo llegar", "share": "Compartir", "save": "Guardar", "back_country": "Estaciones de {0}", "back_countries": "Países",
         "open_map": "Abrir el mapa interactivo de pistas",
         "intro_1": "{0} es una estación de esquí{1}.", "intro_in": " en {0}",
         "intro_2": "Tiene {0} km de pistas repartidos en {1} pistas con nombre{2}.", "intro_2_lifts": " y {0} remontes",
@@ -275,7 +277,7 @@ TX = {
         "resort": "Ski resort", "official_site": "Official website ↗", "altitude": "Altitude", "vertical": "Vertical",
         "km_pistes": "Km of pistes", "coords": "Coordinates", "linked": "Linked ski area",
         "linked_note": "Detected by geographic proximity; their kilometres may overlap:",
-        "directions": "Directions", "share": "Share", "back_country": "Ski resorts in {0}", "back_countries": "Countries",
+        "directions": "Directions", "share": "Share", "save": "Save", "back_country": "Ski resorts in {0}", "back_countries": "Countries",
         "open_map": "Open the interactive piste map",
         "intro_1": "{0} is a ski resort{1}.", "intro_in": " in {0}",
         "intro_2": "It has {0} km of pistes across {1} named runs{2}.", "intro_2_lifts": " and {0} lifts",
@@ -539,7 +541,7 @@ def station_page(raw: dict, meta: dict, ctx: dict, lang: str = "es") -> tuple[st
 {domain_html}
 <div class="hero-cta-row">
 <a class="hero-cta" href="{app_link}">{MAP_ICON} {tx['open_map']}</a>
-<div class="hero-actions">{directions_html}<button type="button" class="hero-action js-share" data-url="{e(url)}" data-title="{e(short)}">{SHARE_ICON} {tx['share']}</button></div>
+<div class="hero-actions"><button type="button" class="hero-action js-fav" aria-pressed="false" data-id="{sid}" data-name="{e(short)}" data-country="{cc}">{FAV_ICON} {tx['save']}</button>{directions_html}<button type="button" class="hero-action js-share" data-url="{e(url)}" data-title="{e(short)}">{SHARE_ICON} {tx['share']}</button></div>
 </div>
 </div></div>"""
 

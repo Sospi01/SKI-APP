@@ -350,7 +350,7 @@ function compute(now) {
 
   function windowStats(from) {
     const users = new Set(), sessions = new Set(), viewUsers = new Set(), mapUsers = new Set(), bookUsers = new Set();
-    let newUsers = 0, views = 0, maps = 0, bookings = 0;
+    let newUsers = 0, views = 0, maps = 0, bookings = 0, favs = 0;
     // Same counts split by where the visit came from: the Android app or a browser.
     const by = { app: plat(), web: plat() };
     for (const e of ev) {
@@ -363,8 +363,9 @@ function compute(now) {
       else if (e.y === 'station') { views++; viewUsers.add(e.u); }
       else if (e.y === 'map') { maps++; mapUsers.add(e.u); }
       else if (e.y === 'booking') { bookings++; bookUsers.add(e.u); }
+      else if (e.y === 'fav') favs++;
     }
-    return { users: users.size, sessions: sessions.size, newUsers, views, maps, bookings,
+    return { users: users.size, sessions: sessions.size, newUsers, views, maps, bookings, favs,
       viewUsers: viewUsers.size, mapUsers: mapUsers.size, bookUsers: bookUsers.size, by };
   }
   function plat() { return { users: new Set(), sessions: new Set(), bookings: 0 }; }
@@ -569,7 +570,8 @@ function render() {
     ['Sesiones', fmtN(w.hoy.sessions), fmtN(w.d7.sessions), fmtN(w.d30.sessions)],
     ['Fichas de estación vistas', fmtN(w.hoy.views), fmtN(w.d7.views), fmtN(w.d30.views)],
     ['Aperturas del mapa', fmtN(w.hoy.maps), fmtN(w.d7.maps), fmtN(w.d30.maps)],
-    ['Clics en Booking', fmtN(w.hoy.bookings), fmtN(w.d7.bookings), fmtN(w.d30.bookings)]
+    ['Clics en Booking', fmtN(w.hoy.bookings), fmtN(w.d7.bookings), fmtN(w.d30.bookings)],
+    ['Estaciones guardadas', fmtN(w.hoy.favs), fmtN(w.d7.favs), fmtN(w.d30.favs)]
   ]);
 
   barChart($('chart-users'), m.days, [{ valueOf: (d) => d.users.size, color: 'var(--series-1)' }], 'usuarios');

@@ -162,6 +162,7 @@ var SkiTrack = (function () {
     station: function (id, name, country) { send('station', stationFields(id, name, country)); },
     map: function (id, name, country) { send('map', stationFields(id, name, country)); },
     booking: function (id, name, country) { send('booking', stationFields(id, name, country)); },
+    fav: function (id, name, country) { send('fav', stationFields(id, name, country)); },
     // Any other page (guides, countries, /app): which one, for the stats.
     page: function () { send('page', { lp: location.pathname }); }
   };

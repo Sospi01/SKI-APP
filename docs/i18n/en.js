@@ -10,6 +10,7 @@ window.SKI_I18N = {
    "intermediate": "Red",
    "advanced": "Black",
    "expert": "Black (expert)",
+   "double": "Double black",
    "freeride": "Freeride",
    "extreme": "Extreme",
    "other": "Unclassified"

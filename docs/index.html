@@ -1034,11 +1034,24 @@
     intermediate: { label: "Roja",   color: "var(--diff-intermediate)" },
     advanced:     { label: "Negra",  color: "var(--diff-advanced)" },
     expert:       { label: "Negra (experta)", color: "var(--diff-expert)" },
+    double:       { label: "Doble negra", color: "var(--diff-expert)" },
     freeride:     { label: "Freeride", color: "var(--diff-freeride)" },
     extreme:      { label: "Extrema", color: "var(--diff-extreme)" },
     other:        { label: "Sin clasificar", color: "var(--diff-other)" }
   };
-  var DIFF_ORDER = ["novice", "easy", "intermediate", "advanced", "expert", "freeride", "extreme", "other"];
+  var DIFF_ORDER = ["novice", "easy", "intermediate", "advanced", "expert", "double", "freeride", "extreme", "other"];
+  // OSM's piste:difficulty is one scale worldwide, but each region colours it
+  // its own way (OpenSkiMap's run_convention): "easy" is a blue run in Europe
+  // and a green circle in North America. Map it to the grade shown, named
+  // after the European key with that colour. Mirrors build_guides.py.
+  var DIFF_SHOWN_AS = {
+    north_america: { easy: 'novice', intermediate: 'easy', expert: 'double' },
+    japan: { easy: 'novice' }
+  };
+  function shownDifficulty(d, convention) {
+    var m = DIFF_SHOWN_AS[convention];
+    return (m && d && m[d]) || d;
+  }
   var LIFT_TYPE = {
     chair_lift: "Telesilla", drag_lift: "Arrastre", magic_carpet: "Cinta transportadora",
     platter: "Telesquí (plato)", gondola: "Telecabina", cable_car: "Teleférico",
@@ -1861,6 +1874,7 @@
         raw.runs = raw.runs.filter(function (r) {
           return !r.uses || r.uses.split(',').indexOf('downhill') !== -1;
         });
+        raw.runs.forEach(function (r) { r.difficulty = shownDifficulty(r.difficulty, raw.run_convention); });
         // Live weather + 7-day snow forecast straight from the browser
         // (Open-Meteo via snow.js): no pipeline, always up to date.
         var weatherFetch = (raw.latitude != null && raw.longitude != null)
@@ -3197,7 +3211,7 @@
       { key: 'novice', label: DIFF.novice.label },
       { key: 'easy', label: DIFF.easy.label },
       { key: 'intermediate', label: DIFF.intermediate.label },
-      { key: 'advanced', label: DIFF.advanced.label, altKeys: ['advanced', 'expert'] },
+      { key: 'advanced', label: DIFF.advanced.label, altKeys: ['advanced', 'expert', 'double'] },
       { key: 'freeride', label: 'Freeride', altKeys: ['freeride', 'extreme'] },
       { key: 'other', label: T('Sin clasif.') }
     ];

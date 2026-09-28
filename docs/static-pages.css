@@ -16,6 +16,7 @@
   --diff-intermediate: hsl(359 78% 49%);
   --diff-advanced: hsl(0 0% 12%);
   --diff-expert: hsl(0 0% 12%);
+  --diff-double: var(--diff-expert);
   --diff-freeride: hsl(34 93% 46%);
   --diff-extreme: hsl(34 93% 46%);
   --diff-other: hsl(0 0% 55%);

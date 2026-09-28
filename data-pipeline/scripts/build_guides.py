@@ -19,9 +19,24 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+# OSM's piste:difficulty is the same scale everywhere, but each region shows
+# it with its own colours (OpenSkiMap's run_convention): "easy" is a blue run
+# in Europe but a green circle in North America. Map it to the grade shown,
+# named after the European key with that colour ("double" = double black
+# diamond). Mirrors DIFF_SHOWN_AS in docs/index.html.
+DIFF_SHOWN_AS = {
+    "north_america": {"easy": "novice", "intermediate": "easy", "expert": "double"},
+    "japan": {"easy": "novice"},
+}
+
+
+def shown_difficulty(difficulty: str | None, convention: str | None) -> str | None:
+    return DIFF_SHOWN_AS.get(convention, {}).get(difficulty, difficulty)
+
+
 # Official piste grades only: freeride/extreme itineraries and ungraded
 # "descenso" ways would otherwise fill the steepest-run lists.
-GRADED = {"novice", "easy", "intermediate", "advanced", "expert"}
+GRADED = {"novice", "easy", "intermediate", "advanced", "expert", "double"}
 IBERIA = {"ES", "AD"}
 # Unpatrolled ski routes / itineraries sometimes carry a piste grade in OSM.
 NOT_A_PISTE = re.compile(r"^descenso|ski ?route|skiroute|itin[eé]rai|itinerar|freeride|variante", re.IGNORECASE)
@@ -116,10 +131,12 @@ def station_stats(raw: dict, is_downhill) -> dict:
     km = sum(r.get("length_m") or 0 for r in runs) / 1000
     easy_km = sum(r.get("length_m") or 0 for r in runs if r.get("difficulty") in ("novice", "easy")) / 1000
     groups: dict[str, dict] = {}
+    convention = raw.get("run_convention")
     for r in runs:
         if not r.get("name"):
             continue
-        g = groups.setdefault(r["name"], {"name": r["name"], "len": 0.0, "vert": 0.0, "diff": r.get("difficulty")})
+        g = groups.setdefault(r["name"], {"name": r["name"], "len": 0.0, "vert": 0.0,
+                                          "diff": shown_difficulty(r.get("difficulty"), convention)})
         g["len"] += r.get("length_m") or 0
         g["vert"] += r.get("vertical_m") or 0
     return {

@@ -25,6 +25,7 @@ from PIL import Image, ImageDraw, ImageFont
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build_seo_pages import (fmt, fmt_en, is_downhill, latin_name, load_app_metadata, load_i18n,  # noqa: E402
                              localized_meta, read_app_sources, short_name)
+from build_guides import shown_difficulty  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[2]
 DOCS = REPO / "docs"
@@ -35,7 +36,7 @@ SS = 2  # drawn at 2x and downsampled, for anti-aliased lines and text
 # The app's dark-theme piste colours (they read best on the navy background).
 DIFF_COLORS = {
     "novice": "#31c43f", "easy": "#4ba3ef", "intermediate": "#ec5b60",
-    "advanced": "#e6e6e6", "expert": "#e6e6e6", "freeride": "#f2a33a",
+    "advanced": "#e6e6e6", "expert": "#e6e6e6", "double": "#e6e6e6", "freeride": "#f2a33a",
     "extreme": "#f2a33a", "other": "#8c8c8c",
 }
 LIFT_COLOR = "#a79ef0"
@@ -105,9 +106,10 @@ def draw_map(img: Image.Image, raw: dict, box: tuple) -> bool:
         for part in l["geom"]:
             if len(part) > 1:
                 d.line([proj(p) for p in part], fill=LIFT_COLOR, width=int(1.3 * SS))
-    order = ["other", "novice", "easy", "intermediate", "freeride", "extreme", "advanced", "expert"]
-    for r in sorted(runs, key=lambda r: order.index(r.get("difficulty")) if r.get("difficulty") in order else 0):
-        color = DIFF_COLORS.get(r.get("difficulty"), DIFF_COLORS["other"])
+    order = ["other", "novice", "easy", "intermediate", "freeride", "extreme", "advanced", "expert", "double"]
+    shown = lambda r: shown_difficulty(r.get("difficulty"), raw.get("run_convention"))
+    for r in sorted(runs, key=lambda r: order.index(shown(r)) if shown(r) in order else 0):
+        color = DIFF_COLORS.get(shown(r), DIFF_COLORS["other"])
         for part in r["geom"]:
             if len(part) > 1:
                 line = [proj(p) for p in part]

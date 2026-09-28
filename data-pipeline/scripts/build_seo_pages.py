@@ -26,6 +26,8 @@ import re
 import unicodedata
 from pathlib import Path
 
+from build_guides import shown_difficulty
+
 REPO = Path(__file__).resolve().parents[2]
 SLUGS_PATH = REPO / "data-pipeline" / "station_slugs.json"
 
@@ -478,7 +480,9 @@ def station_page(raw: dict, meta: dict, ctx: dict, lang: str = "es") -> tuple[st
     alternates = {l: f"{base}{LOC[l]['station']}{slug}/" for l in LOC}
     app_link = f"{loc['home']}?estacion={sid}&amp;vista=mapa"
 
-    runs = [r for r in raw.get("runs", []) if is_downhill(r)]
+    convention = raw.get("run_convention")
+    runs = [dict(r, difficulty=shown_difficulty(r.get("difficulty"), convention))
+            for r in raw.get("runs", []) if is_downhill(r)]
     lifts = raw.get("lifts", [])
     services = [s for s in raw.get("services") or [] if s.get("category") in meta["services"]]
     total_m = sum(r.get("length_m") or 0 for r in runs)
@@ -609,7 +613,7 @@ def station_page(raw: dict, meta: dict, ctx: dict, lang: str = "es") -> tuple[st
             f'<span class="item-chevron" aria-hidden="true">›</span></div><div class="run-profile" hidden></div>')
     run_filters = [("all", tx["all_f"], ["all"]), ("novice", meta["diff"]["novice"], ["novice"]),
                    ("easy", meta["diff"]["easy"], ["easy"]), ("intermediate", meta["diff"]["intermediate"], ["intermediate"]),
-                   ("advanced", meta["diff"]["advanced"], ["advanced", "expert"]),
+                   ("advanced", meta["diff"]["advanced"], ["advanced", "expert", "double"]),
                    ("freeride", meta["diff"]["freeride"], ["freeride", "extreme"]), ("other", tx["unclassified"], ["other"])]
     run_chip_defs = []
     for key, label, keys in run_filters:

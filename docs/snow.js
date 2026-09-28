@@ -73,7 +73,13 @@ function fetchSnowForecast(lat, lon, topM, baseM) {
   ];
   if (twoPoints) params.push('elevation=' + Math.round(topM) + ',' + Math.round(baseM));
   else if (topM != null) params.push('elevation=' + Math.round(topM));
-  return fetch('https://api.open-meteo.com/v1/forecast?' + params.join('&'))
+  // The station screen waits for this, so never let a slow or stalled
+  // Open-Meteo response hold it up: give up after a few seconds.
+  var ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+  var timeout = new Promise(function (resolve) {
+    setTimeout(function () { if (ctrl) ctrl.abort(); resolve(null); }, SNOW_FETCH_TIMEOUT_MS);
+  });
+  var request = fetch('https://api.open-meteo.com/v1/forecast?' + params.join('&'), ctrl ? { signal: ctrl.signal } : undefined)
     .then(function (r) { return r.ok ? r.json() : null; })
     .then(function (data) {
       if (!data) return null;
@@ -82,7 +88,9 @@ function fetchSnowForecast(lat, lon, topM, baseM) {
       return parseSnowForecast(top, base, topM, twoPoints ? baseM : null);
     })
     .catch(function (err) { console.error('forecast fetch failed', err); return null; });
+  return Promise.race([request, timeout]);
 }
+var SNOW_FETCH_TIMEOUT_MS = 5000;
 
 function parseSnowForecast(top, base, topM, baseM) {
   if (!top || !top.daily || !top.hourly || !top.current) return null;

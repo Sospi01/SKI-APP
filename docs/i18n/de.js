@@ -323,7 +323,7 @@ window.SKI_I18N = {
   "nieve prevista en 7 días": "Schneeprognose für 7 Tage",
   "O": "W",
   "Mapa de pistas": "Pistenplan",
-  "Abrir mapa ›": "Karte öffnen ›",
-  "{0} pistas y {1} remontes sobre satélite": "{0} Pisten und {1} Lifte auf Satellitenbild"
+  "Abrir mapa": "Karte öffnen",
+  "{0} pistas · {1} remontes": "{0} Pisten · {1} Lifte"
  }
 };

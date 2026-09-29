@@ -1058,7 +1058,7 @@ APP_HEAD = {
     **MORE_APP_HEAD,
 }
 # Text nodes that are the same in every language (brand, symbols, numbers, language names...).
-SAME_IN_BOTH = {"Ski Info", "Info", "Freeride", "–", "+", "×", "›", "‹", "1.200+", "Android"} | set(LANG_NAMES.values())
+SAME_IN_BOTH = {"Ski Info", "Info", "Freeride", "–", "+", "×", "›", "‹", "1.200+", "Android", "© Esri · OpenStreetMap"} | set(LANG_NAMES.values())
 # "1.200+" in the home's title, per language.
 HUNDREDS = {"en": "1,200+", "fr": "1\u00a0200+"}
 

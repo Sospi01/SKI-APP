@@ -304,21 +304,41 @@
      the map tab (on desktop the map is always on screen next to the info). */
   .map-preview-section { padding: 16px 18px 4px; }
   .map-preview {
-    display: block; width: 100%; padding: 0; border: none; border-radius: 16px; overflow: hidden; cursor: pointer;
-    background: linear-gradient(160deg, #0f2a48, #173f6b); color: #fff; font: inherit; text-align: left;
-    box-shadow: 0 10px 26px -14px rgba(10,30,60,0.55);
+    position: relative; display: block; width: 100%; padding: 0; border: none; border-radius: 18px; overflow: hidden; cursor: pointer;
+    /* What shows until the imagery arrives (or if it can't): dark terrain. */
+    background: radial-gradient(120% 90% at 30% 20%, #2e3f4a 0%, #1c2831 55%, #121a21 100%);
+    color: #fff; font: inherit; text-align: left; -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 1px 2px rgba(10,20,30,0.18), 0 14px 30px -16px rgba(10,30,60,0.6);
+    transition: transform 0.15s ease;
   }
-  .map-preview-art { display: block; width: 100%; height: auto; aspect-ratio: 320 / 168; }
+  .map-preview:active { transform: scale(0.985); }
+  .map-preview:focus-visible { outline: 3px solid var(--accent, #2f7de1); outline-offset: 2px; }
+  .map-preview-art { display: block; width: 100%; height: auto; aspect-ratio: 320 / 184; }
+  .mp-tiles { opacity: 0; transition: opacity 0.35s ease; filter: saturate(1.08) contrast(1.04) brightness(0.9); }
+  .map-preview.has-imagery .mp-tiles { opacity: 1; }
+  .mp-run-casing { fill: none; stroke: var(--map-halo); stroke-width: 3.8; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+  .mp-run { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+  .mp-lift-casing { fill: none; stroke: var(--map-halo); stroke-width: 3.2; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+  .mp-lift { fill: none; stroke: var(--map-lift-color); stroke-width: 1.5; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
+  /* The caption sits on the imagery, over a fade to dark, like a map app's card. */
   .map-preview-bar {
-    display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 14px 13px;
-    background: rgba(0,0,0,0.22);
+    position: absolute; left: 0; right: 0; bottom: 0;
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 34px 14px 12px;
+    background: linear-gradient(to bottom, rgba(6,12,18,0) 0%, rgba(6,12,18,0.55) 45%, rgba(6,12,18,0.82) 100%);
+    pointer-events: none;
   }
-  .map-preview-text { display: flex; flex-direction: column; min-width: 0; }
-  .map-preview-title { font-weight: 700; font-size: 15px; }
-  .map-preview-sub { font-size: 12.5px; opacity: 0.8; }
+  .map-preview-text { display: flex; flex-direction: column; min-width: 0; text-shadow: 0 1px 3px rgba(0,0,0,0.6); }
+  .map-preview-title { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 21px; line-height: 1.05; letter-spacing: 0.01em; }
+  .map-preview-sub { font-size: 12.5px; opacity: 0.88; margin-top: 2px; }
   .map-preview-cta {
-    flex-shrink: 0; padding: 8px 14px; border-radius: 999px; background: #fff; color: #10263f;
-    font-size: 13px; font-weight: 700; white-space: nowrap;
+    display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; padding: 8px 13px; border-radius: 999px;
+    background: rgba(255,255,255,0.95); color: #10263f; font-size: 13px; font-weight: 700; white-space: nowrap;
+    box-shadow: 0 4px 12px -4px rgba(0,0,0,0.5);
+  }
+  .map-preview-cta svg { width: 14px; height: 14px; }
+  .map-preview-attrib {
+    position: absolute; top: 8px; right: 10px; font-size: 9.5px; line-height: 1; color: rgba(255,255,255,0.78);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8); pointer-events: none;
   }
   @media (min-width: 1000px) { .map-preview-section { display: none; } }
 
@@ -958,10 +978,11 @@
 
     <section class="map-preview-section" id="map-preview-section" hidden>
       <button type="button" class="map-preview" id="map-preview">
-        <svg class="map-preview-art" id="map-preview-art" viewBox="0 0 320 168" preserveAspectRatio="xMidYMid meet" aria-hidden="true"></svg>
+        <svg class="map-preview-art" id="map-preview-art" viewBox="0 0 320 184" preserveAspectRatio="xMidYMid slice" aria-hidden="true"></svg>
+        <span class="map-preview-attrib" aria-hidden="true">© Esri · OpenStreetMap</span>
         <span class="map-preview-bar">
           <span class="map-preview-text"><span class="map-preview-title">Mapa de pistas</span><span class="map-preview-sub" id="map-preview-sub"></span></span>
-          <span class="map-preview-cta">Abrir mapa ›</span>
+          <span class="map-preview-cta"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 2.5h4v4M13.5 2.5L9 7M6.5 13.5h-4v-4M2.5 13.5L7 9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>Abrir mapa</span>
         </span>
       </button>
     </section>
@@ -1080,7 +1101,7 @@
 <!-- Home-page data (snow ranking, featured guides) inlined at deploy time by
      data-pipeline/scripts/build_seo_pages.py, so those sections paint together
      with the rest of the page instead of jumping in later. null = fetch it. -->
-<script id="home-data" type="application/json">null</script>
+<script id="home-data" type="application/json">{"guides":[{"slug":"donde-nieva-esta-semana","key":"snow","group":"Nieve","title":"Dónde va a nevar esta semana","top":"Big Moose Mountain","thumb":"big-moose-mountain"},{"slug":"estaciones-mas-grandes-espana-andorra","key":"biggest:iberia","group":"Estaciones","title":"Las estaciones de esquí más grandes de España y Andorra","top":"Baqueira-Beret","thumb":"baqueira-beret"},{"slug":"estaciones-para-principiantes-espana-andorra","key":"beginners:iberia","group":"Estaciones","title":"Las mejores estaciones para principiantes de España y Andorra","top":"Valdesquí","thumb":"valdesqui"},{"slug":"pistas-mas-empinadas-espana-andorra","key":"steep:iberia","group":"Pistas","title":"Las pistas de esquí más empinadas de España y Andorra","top":"Pasarells","thumb":"baqueira-beret"},{"slug":"estaciones-de-esqui-cerca-de-madrid","key":"near:madrid","group":"Cerca de tu ciudad","title":"Estaciones de esquí cerca de Madrid","top":"Valdesquí","thumb":"valdesqui"},{"slug":"estaciones-de-esqui-cerca-de-barcelona","key":"near:barcelona","group":"Cerca de tu ciudad","title":"Estaciones de esquí cerca de Barcelona","top":"Rasos de Peguera","thumb":"rasos-de-peguera"}],"snow":{"updated":"2026-09-27T17:53:51.224850Z","stations":{"4f28d329e3135d4beda7482aac1820ad0f7cad63":{"d":"2026-09-27","sf":[15.8,11.7,18.1,9.7,14.6,15.0,2.2],"el":2500},"5086434142fad1c9cd9c1c9923e6f92ddff22059":{"d":"2026-09-27","sf":[2.7,9.6,15.3,0,12.5,4.5,18.9],"el":2500},"3bfbf3fc95f82938cf30b2e4dcb3ffa5e5c0287c":{"d":"2026-09-27","sf":[0.6,8.5,8.5,0.4,10.6,17.9,11.3],"el":2500},"b11f8a9b8390463caf77e7adc3db6c226cfe088b":{"d":"2026-09-27","sf":[1.8,1.0,1.6,0,0.9,1.9,0],"el":2500},"8bc747789f707f0342b2f046100b2a3b15b99d9a":{"d":"2026-09-27","sf":[1.8,0.6,0,0,1.2,0,0],"el":2500},"115153d665a84e72f87204612bed70c17c48c820":{"d":"2026-09-27","sf":[0,14.5,11.1,18.0,0,15.5,0],"el":2500},"304d72fa57c50cd759b4ebeff3e48dbee4789b17":{"d":"2026-09-27","sf":[0,0.8,0,1.7,1.3,1.4,2.3],"el":2500},"249b71bbd0b0e12a38288b69152091243ea65f00":{"d":"2026-09-27","sf":[5.8,19.4,5.3,6.9,10.7,0,18.1],"el":2500},"3a7825318074a6cf80651dc5d976e66241982c9a":{"d":"2026-09-27","sf":[10.5,5.1,17.5,0.3,1.6,12.4,1.5],"el":2500},"acec7f838b66cfa338b12c9583387745cca11d86":{"d":"2026-09-27","sf":[0,3.0,0.8,0,0,0.4,0.1],"el":2500},"190ac40e5a28ff14ac6492e3f59d2a1a31535bd8":{"d":"2026-09-27","sf":[24.0,7.5,0,15.0,5.4,7.2,23.6],"el":2500},"32d8d3bde25f69961aa5ec2fd4335bd7ed386384":{"d":"2026-09-27","sf":[18.5,0.4,6.4,17.1,20.5,9.8,0],"el":2500},"1b306639a276ae1103bb8f7f682db30d717d65be":{"d":"2026-09-27","sf":[0.1,2.3,0.5,2.2,0,0,0.0],"el":2500},"72438266ce73580af0c90e93ee73d74e2f9363da":{"d":"2026-09-27","sf":[29.2,16.5,0,0,7.8,0,10.4],"el":2500},"f59d3a11828781d7a5599f6c9fe0fa07b93f0fda":{"d":"2026-09-27","sf":[2.4,19.2,0,11.5,0.2,9.8,24.8],"el":2500},"a539ba68e8d5b562ffda594d369ec70134e1bed9":{"d":"2026-09-27","sf":[0,3.3,12.9,2.8,17.6,1.5,17.6],"el":2500},"c9a311a41c98d29c1b4f6fc4411d5feb4ed51171":{"d":"2026-09-27","sf":[3.3,0,1.9,0,0,0,0],"el":2500},"52c9c35a9f63939f43b957b39196aa77ec0013c7":{"d":"2026-09-27","sf":[2.1,0,0.6,0,1.6,0.7,0],"el":2500},"734bf891129028a0256dbfd600faf04df1cb7280":{"d":"2026-09-27","sf":[10.0,17.7,0.0,6.2,6.7,0.2,23.4],"el":2500},"5ee4bbf3ab3be8e91b05b56e05180dd4ee735335":{"d":"2026-09-27","sf":[2.0,1.7,0,0,0.6,1.4,0],"el":2500},"1c76331ece5818c80d76890bc674c6687e89474d":{"d":"2026-09-27","sf":[13.7,0,17.5,1.6,10.4,16.3,1.0],"el":2500},"f208da1c140e4bdaba348f998b835c51fd028e1c":{"d":"2026-09-27","sf":[1.2,0,1.2,0.8,2.3,2.5,0],"el":2500},"a82f34f376325886d7e9645f44a5f0e20084e78f":{"d":"2026-09-27","sf":[13.2,7.2,9.4,15.8,4.7,19.5,0],"el":2500},"e70324e7722d70438a015278587839023291ff32":{"d":"2026-09-27","sf":[0.2,0.8,0,0,2.5,0,0],"el":2500},"9e00e72809ffc15563763518cdab85c73f9eccfa":{"d":"2026-09-27","sf":[0,0,4.6,1.7,1.1,0,1.0],"el":2500},"5de76e63f17d805e0408c795d97d0eb510223c49":{"d":"2026-09-27","sf":[13.7,21.0,0,0,0,5.3,0],"el":2500},"a75ba724521506bc66cf2665ccd6cce9cb07c627":{"d":"2026-09-27","sf":[2.8,3.9,11.7,0,22.6,13.3,9.8],"el":2500},"92e0b47ebc42bbff72cec9778f288d8bf5124db0":{"d":"2026-09-27","sf":[0,0.9,0.5,1.3,1.0,1.8,2.2],"el":2500},"3bb5825af05cc8cbb080ac4209e4d37b3e4c0452":{"d":"2026-09-27","sf":[3.5,18.3,17.3,5.2,15.0,0,4.3],"el":2500},"6eebeff16c8b480fc1335c8bed596286706cb776":{"d":"2026-09-27","sf":[0,0,0,0,2.3,1.0,0.7],"el":2500},"d7cc8768ea056dd9a46d954ce7d03d433288ba8a":{"d":"2026-09-27","sf":[20.4,0,14.5,0,13.3,14.5,0],"el":2500},"e46979235b7900d705c2748e4571a7dccaf6aefe":{"d":"2026-09-27","sf":[8.0,15.9,10.6,1.4,0,5.7,11.0],"el":2500},"c41f49ca5a7222c2bdb1d034afc424189dafd485":{"d":"2026-09-27","sf":[3.3,16.2,1.0,7.3,14.0,10.7,4.9],"el":2500},"a6792c241300dee70b989ffcf6a12b8225bbd7d9":{"d":"2026-09-27","sf":[0,0,2.1,0,0,1.2,2.0],"el":2500},"d02d16e39611d48a0421991064355899bce16402":{"d":"2026-09-27","sf":[10.1,4.6,8.5,7.0,5.4,11.9,15.3],"el":2500},"e8a6ca6d3428fe6f8834452132ac04f0fce1ebca":{"d":"2026-09-27","sf":[5.0,16.1,0,30.6,5.1,4.1,2.8],"el":2500},"3669872cd370e40a419797142ee6045858777407":{"d":"2026-09-27","sf":[9.0,5.5,5.7,19.7,13.5,12.6,12.8],"el":2500},"7e2b2e2ae39a8764945229ed9d6314ee6d0aae47":{"d":"2026-09-27","sf":[0.1,1.2,0,1.8,0,1.9,3.2],"el":2500},"5ecb06388006e4740e7ce8234e26d036ce85edb7":{"d":"2026-09-27","sf":[2.9,0,1.5,0,0,0.7,0],"el":2500},"faa3b5961985ac8abe14b00d07ca7235b4eef86b":{"d":"2026-09-27","sf":[0,0,0,0,0.5,0.0,2.3],"el":2500},"5624b8f3824246373e812cbc4dc5c28fea6e85b9":{"d":"2026-09-27","sf":[20.5,17.3,0,9.5,0,8.1,1.6],"el":2500},"34c3dc543a71495ffe5c7267a898311a3b49014e":{"d":"2026-09-27","sf":[18.9,0,0,0,0,1.5,0],"el":2500},"82a0812ebad8ad4f78cd5d850dc5cc456370c88f":{"d":"2026-09-27","sf":[0,9.0,12.4,0,4.7,6.0,17.5],"el":2500},"5ffd86e2374dc98261a846de36bfc510ab758dfc":{"d":"2026-09-27","sf":[11.4,14.1,4.9,8.7,3.2,22.1,7.4],"el":2500},"6cec3bb37625a310c1c7cc1982a122a334049469":{"d":"2026-09-27","sf":[11.9,11.7,14.2,1.4,12.3,0,9.2],"el":2500},"4bfd6216f4414dd3505228bef1ea6d9e8049c74e":{"d":"2026-09-27","sf":[4.1,0,1.5,0.1,0,0,1.7],"el":2500},"0589077799a0fce5af4bc382569b143114eafd5f":{"d":"2026-09-27","sf":[2.9,10.3,18.0,1.1,6.0,19.2,8.1],"el":2500},"a73915aea3f13e82e57ea7fdd357654697af7ded":{"d":"2026-09-27","sf":[0,18.2,0,0.4,3.3,17.4,12.6],"el":2500},"45d0f9aea9eb43a1fa74bbeb6b57c613b09a8f82":{"d":"2026-09-27","sf":[0.7,1.3,0,0.5,0,0.3,1.5],"el":2500},"1e281ff389476a82150ad7ef7be5f1ea48edd5e5":{"d":"2026-09-27","sf":[0,6.0,11.4,17.8,23.4,20.7,0],"el":2500},"2774ee9df926487819e252679b539a79fd2024a0":{"d":"2026-09-27","sf":[3.3,11.3,0,10.1,5.1,10.7,23.6],"el":2500},"4d9c0191491227da58bc418ee8633c62485f29c8":{"d":"2026-09-27","sf":[12.6,3.8,0,20.4,5.3,9.3,10.6],"el":2500},"0c827a420edfb4e2372113eea954115ebd9f0af4":{"d":"2026-09-27","sf":[10.9,0,4.1,0.9,24.2,2.9,14.9],"el":2500},"dbc0bc60b1e30a0037ee606b5cc5841e4239d35c":{"d":"2026-09-27","sf":[0,0.6,13.1,14.3,19.5,1.2,11.8],"el":2500},"03fcc0299c9030bf81bf077f9a94ee0b327040d9":{"d":"2026-09-27","sf":[0.7,2.3,0,1.3,0,2.8,1.5],"el":2500},"0bc0af67288ed7c592e1f3364a400234763eb023":{"d":"2026-09-27","sf":[0,0,0,0.1,0,1.6,1.4],"el":2500},"66e672470add74c3e6a2bd8d4c1bb07cc4721728":{"d":"2026-09-27","sf":[9.6,19.5,11.5,13.0,7.8,11.2,9.9],"el":2500},"3185aba25eb1b4d8d9c544cf00a8fe4d7a91aa24":{"d":"2026-09-27","sf":[13.6,19.3,5.4,0,5.9,6.0,13.4],"el":2500},"0f46917975b8dab5e541edf6469105c3c091ec22":{"d":"2026-09-27","sf":[0,2.6,2.7,0.5,2.8,0,0],"el":2500},"4061fa811727fdb41a320ed9b89bc1516574fbcd":{"d":"2026-09-27","sf":[0,1.8,0,0.9,4.0,0,0],"el":2500},"82115168a1f3e2e458c9b6d977a077cc91fe868d":{"d":"2026-09-27","sf":[8.2,13.4,8.4,5.5,5.8,0,8.4],"el":2500},"ca6edf6b8029a5937ebdf4eac9107cae9cea16da":{"d":"2026-09-27","sf":[7.5,10.9,13.7,4.6,0,0,13.3],"el":2500},"a005d05d07127924ceabfd883cef8041c3432356":{"d":"2026-09-27","sf":[0,0.2,0.8,0.1,0.8,1.4,0],"el":2500},"01a2c20b6b73ef0dfd7aab4197302672ba34ef0c":{"d":"2026-09-27","sf":[24.3,10.5,18.2,15.9,12.2,0,15.6],"el":2500},"66d7172b6f16d747817d3232b04205ea449b416a":{"d":"2026-09-27","sf":[9.5,6.4,0,0,15.9,5.8,21.8],"el":2500},"f6faf99488990e64ba15017512e03b1b8634abf8":{"d":"2026-09-27","sf":[16.6,0,14.7,1.0,5.4,22.5,0],"el":2500},"28ade7297d64ecd6d406c7ea58d7df8eaec8c582":{"d":"2026-09-27","sf":[2.3,0,0,0.1,1.3,2.3,0],"el":2500},"e6ac8d5864a0c200e5cd378d76b66c6c50a65720":{"d":"2026-09-27","sf":[5.7,2.3,12.4,11.0,3.3,11.5,10.8],"el":2500},"b1929238d8b7cb7633b24fa6629b5bbf8ef48911":{"d":"2026-09-27","sf":[0,1.8,0,0,0,0,1.0],"el":2500},"423504a1fa53bcfbe5bf956f0cd48c12868c7f06":{"d":"2026-09-27","sf":[0,8.6,26.8,7.9,16.1,0,12.7],"el":2500},"1771e68c0cb96ffc4c834d53f8e60f77fe5ed05e":{"d":"2026-09-27","sf":[20.5,12.7,13.2,1.3,4.9,11.1,7.7],"el":2500}}}}</script>
 <script src="/stations.js"></script>
 <script src="/i18n.js"></script>
 <script src="/profile.js"></script>
@@ -1949,61 +1970,123 @@
     reapplyMapSelection();
   }
 
-  // The phone's map preview: every run and lift drawn in their real shape, in
-  // the share images' colours (bright on navy), fitted into the card. Long
+  // The phone's map preview: a card like a map app's -- the resort's satellite
+  // imagery (the same Esri tiles as the map) with every run and lift drawn on
+  // it in the map's own colours and casings, cropped to fill the card. Long
   // resorts are thinned to a few thousand points; it's a picture, not the map.
-  var PREVIEW_COLORS = { novice: '#31c43f', easy: '#4ba3ef', intermediate: '#ec5b60', advanced: '#e6e6e6', expert: '#e6e6e6',
-    double: '#e6e6e6', freeride: '#f2a33a', extreme: '#f2a33a', other: '#8c8c8c' };
-  var PREVIEW_ORDER = ['other', 'novice', 'easy', 'intermediate', 'freeride', 'extreme', 'advanced', 'expert', 'double'];
+  var PREVIEW_W = 320, PREVIEW_H = 184, PREVIEW_CAPTION_H = 50, PREVIEW_TILE_MAX = 16;
   function renderMapPreview(raw) {
+    var SVGNS = 'http://www.w3.org/2000/svg';
     var section = document.getElementById('map-preview-section');
+    var card = document.getElementById('map-preview');
     var svg = document.getElementById('map-preview-art');
     var runs = raw.runs.filter(function (r) { return r.geom && r.geom.length; });
     var lifts = (raw.lifts || []).filter(function (l) { return l.geom && l.geom.length; });
-    var total = 0, minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, lat0 = raw.latitude || 0;
-    var k = Math.cos(lat0 * Math.PI / 180);
+    var total = 0, lonMin = Infinity, lonMax = -Infinity, latMin = Infinity, latMax = -Infinity;
     runs.concat(lifts).forEach(function (f) {
       f.geom.forEach(function (part) {
         total += part.length;
         part.forEach(function (p) {
-          var x = p[0] * k, y = -p[1];
-          if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y;
+          if (p[0] < lonMin) lonMin = p[0]; if (p[0] > lonMax) lonMax = p[0];
+          if (p[1] < latMin) latMin = p[1]; if (p[1] > latMax) latMax = p[1];
         });
       });
     });
-    if (!runs.length || !isFinite(minX)) { section.hidden = true; return; }
-    var W = 320, H = 168, pad = 12;
-    var scale = Math.min((W - 2 * pad) / Math.max(maxX - minX, 1e-9), (H - 2 * pad) / Math.max(maxY - minY, 1e-9));
-    var ox = (W - (maxX - minX) * scale) / 2, oy = (H - (maxY - minY) * scale) / 2;
+    svg.innerHTML = '';
+    card.classList.remove('has-imagery');
+    if (!runs.length || !isFinite(lonMin)) { section.hidden = true; return; }
+
+    // Same projection as buildMap. The resort is fitted above the caption,
+    // with the padding grown on one axis so it fills that space; the imagery
+    // runs on under the caption (terrain all around, no empty bands).
+    var W = PREVIEW_W, H = PREVIEW_H, Hc = H - PREVIEW_CAPTION_H;
+    var cos = Math.cos((latMin + latMax) / 2 * Math.PI / 180);
+    var projW = Math.max((lonMax - lonMin) * cos, 1e-4), projH = Math.max(latMax - latMin, 1e-4);
+    var pad = Math.max(projW, projH) * 0.07, padX = pad, padY = pad;
+    if ((projH + 2 * pad) / (projW + 2 * pad) < Hc / W) padY += ((projW + 2 * pad) * Hc / W - (projH + 2 * pad)) / 2;
+    else padX += ((projH + 2 * pad) * W / Hc - (projW + 2 * pad)) / 2;
+    var scale = W / (projW + 2 * padX);
+    function x(lon) { return ((lon - lonMin) * cos + padX) * scale; }
+    function y(lat) { return ((latMax - lat) + padY) * scale; }
+
+    // Imagery sharp enough for a phone's screen (about 2.2 tile pixels per
+    // card unit), within a small tile budget.
+    var lonMinP = lonMin - padX / cos, lonMaxP = lonMax + padX / cos;
+    var latMinP = latMin - padY - PREVIEW_CAPTION_H / scale, latMaxP = latMax + padY;
+    var zoom = 5;
+    for (var z = 17; z >= 5; z--) {
+      var g = tileGridAt(lonMinP, lonMaxP, latMinP, latMaxP, z);
+      if ((g.xt1 - g.xt0 + 1) * (g.yt1 - g.yt0 + 1) > PREVIEW_TILE_MAX) continue;
+      zoom = z;
+      break;
+    }
+    while (zoom > 5 && TILE_SIZE * Math.pow(2, zoom - 1) * (lonMaxP - lonMinP) / 360 >= W * 2.2) zoom--;
+    var grid = tileGridAt(lonMinP, lonMaxP, latMinP, latMaxP, zoom);
+    var tiles = document.createElementNS(SVGNS, 'g');
+    tiles.setAttribute('class', 'mp-tiles');
+    var pending = (grid.xt1 - grid.xt0 + 1) * (grid.yt1 - grid.yt0 + 1), loaded = 0;
+    function tileDone(ok) {
+      if (ok) loaded++;
+      if (--pending === 0 && loaded && svg.contains(tiles)) card.classList.add('has-imagery');
+    }
+    for (var ty = grid.yt0; ty <= grid.yt1; ty++) {
+      for (var tx = grid.xt0; tx <= grid.xt1; tx++) {
+        var nw = tile2deg(tx, ty, zoom), se = tile2deg(tx + 1, ty + 1, zoom);
+        var img = document.createElementNS(SVGNS, 'image');
+        var url = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/' + zoom + '/' + ty + '/' + tx;
+        img.setAttribute('x', x(nw[1]).toFixed(2));
+        img.setAttribute('y', y(nw[0]).toFixed(2));
+        // A hair of overlap hides the seams between tiles.
+        img.setAttribute('width', (x(se[1]) - x(nw[1]) + 0.4).toFixed(2));
+        img.setAttribute('height', (y(se[0]) - y(nw[0]) + 0.4).toFixed(2));
+        img.setAttribute('preserveAspectRatio', 'none');
+        img.addEventListener('load', function () { tileDone(true); });
+        img.addEventListener('error', function () { tileDone(false); });
+        img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', url);
+        img.setAttribute('href', url);
+        tiles.appendChild(img);
+      }
+    }
+    svg.appendChild(tiles);
+
     var step = Math.max(1, Math.ceil(total / 5000));
-    var width = total < 1500 ? 2.4 : total < 6000 ? 1.9 : 1.6;
     function d(part) {  // every step-th point, always ending on the last one
       var out = '', last = part.length - 1;
       for (var i = 0; ; i = Math.min(i + step, last)) {
         var p = part[i];
-        out += (out ? 'L' : 'M') + ((p[0] * k - minX) * scale + ox).toFixed(1) + ' ' + ((-p[1] - minY) * scale + oy).toFixed(1);
+        out += (out ? 'L' : 'M') + x(p[0]).toFixed(1) + ' ' + y(p[1]).toFixed(1);
         if (i === last) break;
       }
       return out;
     }
-    var html = lifts.map(function (l) {
-      return l.geom.filter(function (p) { return p.length > 1; }).map(function (p) {
-        return '<path d="' + d(p) + '" stroke="#a79ef0" stroke-width="0.9" stroke-dasharray="3 2" fill="none"/>';
-      }).join('');
-    }).join('');
-    runs.slice().sort(function (a, b) { return PREVIEW_ORDER.indexOf(diffKey(a.difficulty)) - PREVIEW_ORDER.indexOf(diffKey(b.difficulty)); })
+    var casings = '', lines = '';
+    lifts.forEach(function (l) {
+      l.geom.forEach(function (p) {
+        if (p.length < 2) return;
+        var path = d(p);
+        casings += '<path class="mp-lift-casing" d="' + path + '"/>';
+        lines += '<path class="mp-lift" d="' + path + '"/>';
+      });
+    });
+    // Easiest runs first (unclassified ones under all), so the steeper ones are drawn on top where they meet.
+    var order = ['other'].concat(DIFF_ORDER.filter(function (k) { return k !== 'other'; }));
+    runs.slice().sort(function (a, b) { return order.indexOf(diffKey(a.difficulty)) - order.indexOf(diffKey(b.difficulty)); })
       .forEach(function (r) {
-        var color = PREVIEW_COLORS[diffKey(r.difficulty)] || PREVIEW_COLORS.other;
+        var color = DIFF[diffKey(r.difficulty)].color;
         r.geom.forEach(function (p) {
-          if (p.length > 1) html += '<path d="' + d(p) + '" stroke="' + color + '" stroke-width="' + width + '" fill="none" stroke-linecap="round" stroke-linejoin="round"/>';
+          if (p.length < 2) return;
+          var path = d(p);
+          casings += '<path class="mp-run-casing" d="' + path + '"/>';
+          lines += '<path class="mp-run" style="stroke:' + color + '" d="' + path + '"/>';
         });
       });
-    svg.innerHTML = html;
+    svg.insertAdjacentHTML('beforeend', '<g>' + casings + '</g><g>' + lines + '</g>');
+
     // Counted like the runs list: named runs (OSM splits many into several ways).
     var named = {};
     raw.runs.forEach(function (r) { if (r.name) named[r.name] = true; });
     var nRuns = Object.keys(named).length || runs.length;
-    setText('map-preview-sub', T('{0} pistas y {1} remontes sobre satélite', nRuns, (raw.lifts || []).length));
+    setText('map-preview-sub', T('{0} pistas · {1} remontes', nRuns, (raw.lifts || []).length));
     section.hidden = false;
   }
 
@@ -2085,6 +2168,9 @@
     window.scrollTo(0, 0);
     setText('h-name', T('Cargando…'));
     setText('h-place', '');
+    // Nothing from the station seen before stays on screen while this one loads.
+    ['f-alt', 'f-vert', 'k-km', 'f-coords', 'k-sunrise', 'k-sunset', 'k-temp', 'k-wind'].forEach(function (elId) { setText(elId, '–'); });
+    ['h-site', 'h-directions', 'weather-note', 'map-preview-section'].forEach(function (elId) { document.getElementById(elId).hidden = true; });
     setText('map-station-name', '');
     ['runs-count', 'lifts-count', 'services-count'].forEach(function (elId) { setText(elId, ''); });
     ['badges', 'chart-difficulty', 'chart-lifts', 'runs-list', 'lifts-list', 'services-list', 'quality-list', 'run-filters', 'lift-filters', 'service-filters', 'map-legend', 'domain-links']

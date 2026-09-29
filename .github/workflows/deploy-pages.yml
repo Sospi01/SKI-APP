@@ -18,6 +18,9 @@ on:
   # Daily rebuild so the snow forecast (home ranking + station pages) stays fresh.
   schedule:
     - cron: '17 4 * * *'
+    # GitHub's schedules are best effort and a run can be skipped: a second
+    # daily rebuild keeps the forecast at most half a day old.
+    - cron: '7 11 * * *'
   workflow_dispatch: {}
 
 permissions:

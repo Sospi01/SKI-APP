@@ -1,3 +1,57 @@
+// The language picker the app puts in its headers: a flag button that opens
+// the five languages. hrefFor(lang) gives where each one leads (worked out
+// when the menu opens, so it follows the station on screen); picking one is
+// remembered like any other language link (below).
+var SKI_LANG_CHOICES = [['es', 'es', 'Español'], ['en', 'gb', 'English'], ['fr', 'fr', 'Français'],
+  ['de', 'de', 'Deutsch'], ['it', 'it', 'Italiano']];
+function mountLangPicker(container, hrefFor, className) {
+  var page = (document.documentElement.getAttribute('lang') || 'es').slice(0, 2);
+  var cur = SKI_LANG_CHOICES.filter(function (c) { return c[0] === page; })[0] || SKI_LANG_CHOICES[0];
+  var flag = function (cc) { return '<img src="/flags/' + cc + '.svg" alt="" width="20" height="15">'; };
+  var wrap = document.createElement('div');
+  wrap.className = 'lang-picker' + (className ? ' ' + className : '');
+  var btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'lang-picker-btn';
+  btn.setAttribute('aria-haspopup', 'true');
+  btn.setAttribute('aria-expanded', 'false');
+  btn.setAttribute('aria-label', cur[2]);
+  btn.innerHTML = flag(cur[1]) + '<span>' + cur[0].toUpperCase() + '</span>'
+    + '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var menu = document.createElement('div');
+  menu.className = 'lang-picker-menu';
+  menu.hidden = true;
+  SKI_LANG_CHOICES.forEach(function (c) {
+    var a = document.createElement('a');
+    a.className = 'lang-picker-item lang-link';
+    a.setAttribute('data-lang', c[0]);
+    a.setAttribute('hreflang', c[0]);
+    a.setAttribute('lang', c[0]);
+    if (c[0] === page) a.setAttribute('aria-current', 'true');
+    a.innerHTML = flag(c[1]) + '<span></span>';
+    a.querySelector('span').textContent = c[2];
+    a.href = hrefFor(c[0]);
+    a.addEventListener('click', function (ev) { if (c[0] === page) { ev.preventDefault(); close(); } });
+    menu.appendChild(a);
+  });
+  function open() {
+    Array.prototype.forEach.call(menu.children, function (a) { a.href = hrefFor(a.getAttribute('data-lang')); });
+    menu.hidden = false;
+    btn.setAttribute('aria-expanded', 'true');
+  }
+  function close() {
+    menu.hidden = true;
+    btn.setAttribute('aria-expanded', 'false');
+  }
+  btn.addEventListener('click', function () { if (menu.hidden) open(); else close(); });
+  document.addEventListener('click', function (ev) { if (!wrap.contains(ev.target)) close(); });
+  document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') close(); });
+  wrap.appendChild(btn);
+  wrap.appendChild(menu);
+  container.appendChild(wrap);
+  return wrap;
+}
+
 // The site's languages, for every page (the app and the generated ones):
 // remembers an explicit choice made with a language link (the Spanish home's
 // "lang-redirect" script follows it), and when the browser speaks one of the

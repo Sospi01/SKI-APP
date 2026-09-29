@@ -71,6 +71,8 @@ function setupFavButton(btn, getStation, onChange) {
     btn.classList.toggle('is-fav', on);
     btn.innerHTML = FAV_ICON + '<span></span>';
     btn.querySelector('span').textContent = on ? T('Guardada') : T('Guardar');
+    // Phones show just the star (see .fav-btn in the CSS): the label stays readable to screen readers.
+    btn.setAttribute('aria-label', on ? T('Guardada') : T('Guardar'));
   }
   btn.addEventListener('click', function () {
     var s = getStation();

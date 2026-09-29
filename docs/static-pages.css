@@ -100,8 +100,8 @@ a { color: var(--accent); }
 .hero-cta svg { width: 18px; height: 18px; }
 .hero-actions { display: flex; gap: 8px; margin-top: 10px; }
 .hero-action {
-  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 9px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.38);
+  flex: 1 1 auto; display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap;
+  padding: 9px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.38);
   background: rgba(255,255,255,0.12); color: #fff; font: inherit; font-size: 13px; font-weight: 600;
   text-decoration: none; cursor: pointer;
 }
@@ -109,6 +109,8 @@ a { color: var(--accent); }
 .hero-action svg { width: 16px; height: 16px; }
 .hero-action.is-fav svg { color: #ffd257; }
 .hero-action.is-fav svg path { fill: currentColor; }
+/* Phones: "Save" is just its star, so the three actions fit on one line in every language. */
+@media (max-width: 719px) { .hero-action.js-fav { flex: 0 0 auto; padding: 8px 11px; font-size: 0; gap: 0; } .hero-action.js-fav span { display: none; } }
 
 /* sections */
 section { padding: 20px 18px; border-bottom: 1px solid var(--border); }

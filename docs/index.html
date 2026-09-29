@@ -291,15 +291,42 @@
   .hero a.site[hidden] { display: none; }
   .hero-actions { display: flex; gap: 8px; margin-top: 12px; }
   .hero-action {
-    flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-    padding: 8px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.38);
+    flex: 1 1 auto; display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap;
+    padding: 8px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.38);
     background: rgba(255,255,255,0.12); color: #fff; font: inherit; font-size: 13px; font-weight: 600;
     text-decoration: none; cursor: pointer;
   }
   .hero-action:hover { background: rgba(255,255,255,0.22); }
   .hero-action[hidden] { display: none; }
   .hero-action.is-fav svg { color: #ffd257; }
+
+  /* Language picker (mountLangPicker in docs/lang.js): top right of the home
+     hero and of the station screen on phones, in the site header on desktop. */
+  .lang-picker { position: relative; flex-shrink: 0; }
+  .lang-picker-btn {
+    display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px 0 8px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text-secondary); cursor: pointer;
+    font: inherit; font-size: 12.5px; font-weight: 700; letter-spacing: 0.4px;
+  }
+  .lang-picker-btn svg { width: 10px; height: 10px; opacity: 0.75; }
+  .lang-picker img { width: 20px; height: 15px; border-radius: 2px; object-fit: cover; box-shadow: 0 0 0 1px rgba(0,0,0,0.12); }
+  .lang-picker.on-dark .lang-picker-btn { background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.35); color: #fff; }
+  .lang-picker-menu {
+    position: absolute; right: 0; top: calc(100% + 6px); z-index: 40; min-width: 168px; padding: 6px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 14px 34px -12px rgba(0,0,0,0.35);
+  }
+  .lang-picker-menu[hidden] { display: none; }
+  .lang-picker-item {
+    display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px;
+    color: var(--text-primary); text-decoration: none; font-size: 14px; font-weight: 500;
+  }
+  .lang-picker-item:hover, .lang-picker-item:focus-visible { background: var(--surface-2); }
+  .lang-picker-item[aria-current] { color: var(--accent); font-weight: 700; }
+  .lang-picker.in-hero { position: absolute; top: 14px; right: 16px; z-index: 3; }
+  .lang-picker.in-header { margin-left: auto; }
   .hero-action.is-fav svg path { fill: currentColor; }
+  /* Phones: "Save" is just its star, so the three actions fit on one line in every language. */
+  @media (max-width: 999px) { .hero-action.fav-btn { flex: 0 0 auto; padding: 8px 11px; } .hero-action.fav-btn span { display: none; } }
   .hero-action svg { width: 16px; height: 16px; }
 
   section { padding: 20px 18px; border-bottom: 1px solid var(--border); }
@@ -689,6 +716,7 @@
     .site-nav { display: flex; gap: 22px; }
     .site-nav a { color: var(--text-secondary); text-decoration: none; font-size: 14px; font-weight: 500; }
     .site-nav a:hover { color: var(--accent); }
+    .lang-picker.in-hero, .lang-picker.in-topbar { display: none; }
 
     /* country + station lists: wide, centered, card grid */
     #screen-list, #screen-country-map { max-width: 1232px; margin: 0 auto; padding: 0 16px; }
@@ -893,7 +921,7 @@
           <div class="hero-stat"><div class="v" id="k-wind">–</div><div class="k">Viento</div></div>
         </div>
         <div class="hero-actions">
-          <button type="button" class="hero-action" id="h-fav" aria-pressed="false">Guardar</button>
+          <button type="button" class="hero-action fav-btn" id="h-fav" aria-pressed="false">Guardar</button>
           <a class="hero-action" id="h-directions" href="#" target="_blank" rel="noopener" hidden><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.2c-3 0-5.4 2.4-5.4 5.4C4.6 11.7 10 17.8 10 17.8s5.4-6.1 5.4-10.2c0-3-2.4-5.4-5.4-5.4z" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="10" cy="7.5" r="1.9" fill="currentColor"/></svg>Cómo llegar</a>
           <button type="button" class="hero-action" id="h-share"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="14.5" cy="4.5" r="2.3" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="5.5" cy="10" r="2.3" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="14.5" cy="15.5" r="2.3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7.5 8.9l5-3.2M7.5 11.1l5 3.2" stroke="currentColor" stroke-width="1.6"/></svg>Compartir</button>
         </div>
@@ -3471,6 +3499,18 @@
         setTimeout(function () { el.hidden = false; }, 2500);
       }
     };
+  })();
+
+  // Language picker: each language's home, with the station on screen if any.
+  (function () {
+    var HOMES = { es: '/', en: '/en/', fr: '/fr/', de: '/de/', it: '/it/' };
+    var hrefFor = function (lang) {
+      var onStation = currentRaw && !document.getElementById('screen-dashboard').hidden;
+      return HOMES[lang] + (onStation ? '?estacion=' + encodeURIComponent(currentRaw.id) : '');
+    };
+    mountLangPicker(document.querySelector('.site-header'), hrefFor, 'in-header');
+    mountLangPicker(document.querySelector('#screen-country .home-hero'), hrefFor, 'in-hero on-dark');
+    mountLangPicker(document.querySelector('#pane-info .topbar'), hrefFor, 'in-topbar');
   })();
 
   var paintFav = setupFavButton(document.getElementById('h-fav'), function () {

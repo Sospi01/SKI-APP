@@ -250,6 +250,7 @@
     <section class="card">
       <div class="card-head"><h2>Fidelización</h2><span class="sub">últimos 30 días</span></div>
       <table class="grid" id="loyalty"></table>
+      <p class="note" id="idle-note" hidden></p>
       <div class="card-head" style="margin-top:14px"><h2 style="font-size:15px">Sesiones por usuario</h2></div>
       <div class="hbars" id="sessions-dist"></div>
     </section>
@@ -285,7 +286,9 @@ const FIREBASE_CONFIG = {
   appId: '1:254160061971:web:3832f5f88f5899bceca1e6'
 };
 const SDK = 'https://www.gstatic.com/firebasejs/10.12.5/';
-const CACHE_KEY = 'si_stats_cache_v2';  // v2: events keep lang and tz (the country)
+const CACHE_KEY = 'si_stats_cache_v2';
+// When track.js started skipping search engines and automated browsers.
+const BOT_FILTER_SINCE = Date.UTC(2026, 8, 29, 22, 0);  // v2: events keep lang and tz (the country)
 const DEMO = new URLSearchParams(location.search).has('demo');
 const HIDDEN_KEY = DEMO ? 'si_stats_hidden_uids_demo' : 'si_stats_hidden_uids';
 const KEEP_DAYS = 120;
@@ -431,6 +434,7 @@ function compute(now) {
     let u = perUser.get(e.u);
     if (!u) { u = { uid: e.u, days: new Set(), sessions: new Set(), secs: 0, stations: new Map(), booked: new Map(), bookings: 0, maps: 0, first: firstSeen.get(e.u), last: e.t, platform: lastPlatform.get(e.u), origin: firstOpen.get(e.u), laterSrc: laterSrc.get(e.u), country: userCountry.get(e.u) }; perUser.set(e.u, u); }
     u.days.add(dayKey(e.t)); u.sessions.add(e.s); u.last = Math.max(u.last, e.t);
+    if (e.y !== 'open' && e.y !== 'page' && e.y !== 'time') u.acts = (u.acts || 0) + 1;
     if (e.y === 'time') {
       u.secs += e.sec || 0;
       perSession.set(e.s, (perSession.get(e.s) || 0) + (e.sec || 0));
@@ -448,6 +452,11 @@ function compute(now) {
   // loyalty
   const users30 = [...perUser.values()];
   const returning = users30.filter((u) => u.days.size >= 2).length;
+  // One visit, no time on screen and nothing opened: before the robot filter
+  // (track.js, 29 Sept) mostly search engines rendering pages; after it, people
+  // who left at once.
+  const idle = users30.filter((u) => u.sessions.size === 1 && !u.secs && !u.acts);
+  const idleBefore = idle.filter((u) => u.first < BOT_FILTER_SINCE).map((u) => u.uid);
   const buckets = [
     { label: '1 sesión', test: (n) => n === 1 },
     { label: '2–3 sesiones', test: (n) => n >= 2 && n <= 3 },
@@ -470,6 +479,7 @@ function compute(now) {
     totalUsers: firstSeen.size, android, web, activeAndroid30, activeWeb30,
     since: ev.length ? ev[0].t : null, eventCount: ev.length,
     days, returning, buckets, avgDaysPerUser, users30Count: users30.length,
+    idleBefore, idleAfter: idle.length - idleBefore.length,
     durations, totalSecs, median, avgSession: durations.length ? totalSecs / durations.length : 0,
     avgPerUserDay: userDays ? totalSecs / userDays : 0,
     stations, usersList
@@ -643,8 +653,17 @@ function render() {
   tableRows($('loyalty'), null, [
     ['Usuarios que vuelven (2 días o más)', fmtN(m.returning) + ' · ' + fmtPct(m.returning / m.users30Count)],
     ['Días de uso medios por usuario', (Math.round(m.avgDaysPerUser * 10) / 10).toLocaleString('es-ES')],
-    ['Usuarios activos / mes', fmtN(m.users30Count)]
+    ['Usuarios activos / mes', fmtN(m.users30Count)],
+    ['Sin actividad antes del filtro de robots (probables robots)', fmtN(m.idleBefore.length) + ' · ' + fmtPct(m.idleBefore.length / m.users30Count)],
+    ['Sin actividad desde el filtro (se van al momento)', fmtN(m.idleAfter) + ' · ' + fmtPct(m.idleAfter / m.users30Count)]
   ]);
+  const idleNote = $('idle-note');
+  idleNote.hidden = !m.idleBefore.length;
+  if (m.idleBefore.length) {
+    idleNote.innerHTML = '«Sin actividad» = una sola visita, 0 segundos y sin abrir ninguna estación. Hasta el 29 de septiembre por la noche el contador no distinguía a los robots de Google, Search Console o PageSpeed, que cargan la web como un navegador: casi todos los de antes de esa fecha lo son. '
+      + '<button type="button" class="linkbtn" id="hide-idle">Ocultar esos ' + fmtN(m.idleBefore.length) + ' de todas las cifras</button>';
+    $('hide-idle').onclick = () => { m.idleBefore.forEach((uid) => hidden.add(uid)); saveHidden(); render(); };
+  }
   hbars($('sessions-dist'), m.buckets.map((b) => ({ label: b.label, value: b.value, text: fmtN(b.value) + ' · ' + fmtPct(b.value / m.users30Count) })));
 
   tableRows($('time'), null, [
@@ -856,6 +875,11 @@ function demoEvents() {
         out.push({ id: sid + 't', t: t + 30000, y: 'time', u: uid, s: sid, p: platform, sec: Math.round(40 + rnd() * rnd() * 900) });
       }
     }
+  }
+  // A few one-visit users who never did anything (robots, before the filter).
+  for (let i = 0; i < 8; i++) {
+    const t = Math.min(now, BOT_FILTER_SINCE) - (i + 1) * 5 * 3600000;
+    out.push({ id: 'idle' + i, t, y: 'open', u: 'idle' + i + 'xxxx', s: 'si' + i, p: 'web', nw: true, src: 'directo', lp: '/estacion/formigal/' });
   }
   return out.filter((e) => e.t <= now).sort((a, b) => a.t - b.t);
 }

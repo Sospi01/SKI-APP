@@ -20,7 +20,12 @@ var SkiTrack = (function () {
   // Fields older Firestore rules don't know about: dropped on a rejected write.
   var NEW_FIELDS = ['src', 'ref', 'lp', 'tz'];
   var ua = navigator.userAgent || '';
-  var disabled = !/(^|\.)skiinfoapp\.com$|\.github\.io$/.test(location.hostname);
+  // Search engines and testing tools that run the page like a browser (Google
+  // renders every page it indexes, Search Console's URL inspection, PageSpeed)
+  // aren't visitors: each load would count as a new person with 0 seconds.
+  var BOTS = /googlebot|google-inspectiontool|googleother|adsbot|mediapartners|storebot|bingbot|bingpreview|yandex|baiduspider|duckduckbot|slurp|applebot|petalbot|bytespider|ahrefsbot|semrushbot|mj12bot|dotbot|facebookexternalhit|chrome-lighthouse|headlesschrome|gptbot|claudebot|ccbot|amazonbot|crawler|spider/i;
+  var disabled = !/(^|\.)skiinfoapp\.com$|\.github\.io$/.test(location.hostname)
+    || navigator.webdriver === true || BOTS.test(navigator.userAgent || '');
   // Android's WebView user agent carries "; wv)" -- that's the Play Store app.
   var platform = /; wv\)/.test(ua) ? 'android' : 'web';
 

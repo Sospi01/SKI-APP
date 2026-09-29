@@ -4,7 +4,8 @@
 // create-only from here, and reading needs the owner's Google sign-in on
 // stats.html. No cookies and nothing personal: a random per-install id kept
 // in localStorage, a session id, where the visit came from (the referring
-// site, not what anyone searched for), and which stations/pages were opened.
+// site, not what anyone searched for), the device's time zone (for the
+// country, without any IP lookup), and which stations/pages were opened.
 //
 // A session is shared by every page and tab of the same browser: it only
 // starts again after 30 minutes without activity, so moving from a guide to
@@ -17,7 +18,7 @@ var SkiTrack = (function () {
   var SESSION_GAP_MS = 30 * 60 * 1000;
   var FLUSH_EVERY_MS = 10 * 60 * 1000;
   // Fields older Firestore rules don't know about: dropped on a rejected write.
-  var NEW_FIELDS = ['src', 'ref', 'lp'];
+  var NEW_FIELDS = ['src', 'ref', 'lp', 'tz'];
   var ua = navigator.userAgent || '';
   var disabled = !/(^|\.)skiinfoapp\.com$|\.github\.io$/.test(location.hostname);
   // Android's WebView user agent carries "; wv)" -- that's the Play Store app.
@@ -124,7 +125,9 @@ var SkiTrack = (function () {
     touch();
     activeMs = 0;
     visibleSince = document.hidden ? null : Date.now();
-    send('open', { isNew: isNew, lang: (navigator.language || '').slice(0, 10), src: src.src, ref: src.ref, lp: location.pathname });
+    var tz = '';
+    try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) {}
+    send('open', { isNew: isNew, lang: (navigator.language || '').slice(0, 10), src: src.src, ref: src.ref, lp: location.pathname, tz: tz.slice(0, 40) });
     isNew = false;
   }
   function sessionAlive() {

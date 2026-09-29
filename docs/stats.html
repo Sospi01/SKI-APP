@@ -150,6 +150,8 @@
   .badge.src { background: color-mix(in srgb, var(--series-1) 14%, transparent); color: var(--series-1); border-color: color-mix(in srgb, var(--series-1) 35%, transparent); }
   .badge.src.none { background: var(--surface-2); color: var(--text-muted); border-color: var(--border); font-weight: 600; }
   .origin { margin-bottom: 2px; }
+  .flag { width: 16px; height: 12px; border-radius: 2px; vertical-align: -1px; margin-right: 5px; object-fit: cover; box-shadow: 0 0 0 1px rgba(0,0,0,0.12); }
+  .badge .flag { width: 13px; height: 10px; margin-right: 4px; }
   .origin strong { color: var(--text-primary); font-weight: 600; }
   .when { font-size: 11.5px; color: var(--text-muted); text-align: right; white-space: nowrap; }
   .user-meta { grid-column: 1 / -1; font-size: 11.5px; color: var(--text-secondary); }
@@ -219,6 +221,9 @@
       <table class="grid" id="sources"></table>
       <div class="card-head" style="margin-top:14px"><h2 style="font-size:15px">Páginas de entrada</h2><span class="sub">últimos 30 días</span></div>
       <div class="list" id="landing"></div>
+      <div class="card-head" style="margin-top:14px"><h2 style="font-size:15px">Países</h2><span class="sub">usuarios, últimos 30 días</span></div>
+      <div class="list" id="countries"></div>
+      <p class="note">Por la zona horaria del dispositivo (sin usar la IP). Las visitas anteriores al 29 de septiembre se estiman por el idioma del navegador, que es menos fiable: muchos navegadores vienen en inglés de EE. UU. aunque la persona esté en otro país.</p>
       <div class="card-head" style="margin-top:14px"><h2 style="font-size:15px">Webs que te enlazan</h2><span class="sub">últimos 30 días</span></div>
       <div class="list" id="referrers"></div>
       <div class="card-head" style="margin-top:14px"><h2 style="font-size:15px">Guías y páginas vistas</h2><span class="sub">últimos 30 días</span></div>
@@ -280,7 +285,7 @@ const FIREBASE_CONFIG = {
   appId: '1:254160061971:web:3832f5f88f5899bceca1e6'
 };
 const SDK = 'https://www.gstatic.com/firebasejs/10.12.5/';
-const CACHE_KEY = 'si_stats_cache_v1';
+const CACHE_KEY = 'si_stats_cache_v2';  // v2: events keep lang and tz (the country)
 const DEMO = new URLSearchParams(location.search).has('demo');
 const HIDDEN_KEY = DEMO ? 'si_stats_hidden_uids_demo' : 'si_stats_hidden_uids';
 const KEEP_DAYS = 120;
@@ -320,7 +325,8 @@ function compact(id, d) {
     id, t: d.ts.toMillis(), y: d.type, u: d.uid, s: d.sid, p: d.platform,
     st: d.station || undefined, n: d.name || undefined, c: d.country || undefined,
     sec: d.secs != null ? Number(d.secs) : undefined, nw: d.isNew || undefined,
-    src: d.src || undefined, ref: d.ref || undefined, lp: d.lp || undefined
+    src: d.src || undefined, ref: d.ref || undefined, lp: d.lp || undefined,
+    lg: d.lang || undefined, tz: d.tz || undefined
   };
 }
 
@@ -383,10 +389,15 @@ function compute(now) {
   // all-time (within the cached window) totals + platform
   // Where each person came from: the first visit's source (resumed sessions
   // and moves inside the site aren't a source), and those of their later visits.
-  const firstSeen = new Map(), lastPlatform = new Map(), firstOpen = new Map(), laterSrc = new Map();
+  const firstSeen = new Map(), lastPlatform = new Map(), firstOpen = new Map(), laterSrc = new Map(), userCountry = new Map();
   for (const e of ev) {
     if (!firstSeen.has(e.u)) firstSeen.set(e.u, e.t);
     lastPlatform.set(e.u, e.p);
+    if (e.y === 'open') {
+      // The latest visit's country; a time zone beats a guess from the language.
+      const c = eventCountry(e), had = userCountry.get(e.u);
+      if (c && (c.how === 'tz' || !had || had.how === 'lang')) userCountry.set(e.u, c);
+    }
     if (e.y !== 'open' || e.src === 'reanudada' || e.src === 'interna') continue;
     if (!firstOpen.has(e.u)) { firstOpen.set(e.u, e); continue; }
     if (!e.src) continue;
@@ -418,7 +429,7 @@ function compute(now) {
       if (e.y === 'station') d.views++;
     }
     let u = perUser.get(e.u);
-    if (!u) { u = { uid: e.u, days: new Set(), sessions: new Set(), secs: 0, stations: new Map(), booked: new Map(), bookings: 0, maps: 0, first: firstSeen.get(e.u), last: e.t, platform: lastPlatform.get(e.u), origin: firstOpen.get(e.u), laterSrc: laterSrc.get(e.u) }; perUser.set(e.u, u); }
+    if (!u) { u = { uid: e.u, days: new Set(), sessions: new Set(), secs: 0, stations: new Map(), booked: new Map(), bookings: 0, maps: 0, first: firstSeen.get(e.u), last: e.t, platform: lastPlatform.get(e.u), origin: firstOpen.get(e.u), laterSrc: laterSrc.get(e.u), country: userCountry.get(e.u) }; perUser.set(e.u, u); }
     u.days.add(dayKey(e.t)); u.sessions.add(e.s); u.last = Math.max(u.last, e.t);
     if (e.y === 'time') {
       u.secs += e.sec || 0;
@@ -672,6 +683,26 @@ function sourceLabel(src) {
   if (src.indexOf('app:') === 0) return 'App ' + src.slice(4);
   return SOURCE_LABELS[src] || src;
 }
+// ---------- country ----------
+// From the device's time zone (sent since 29 Sept; IANA zone.tab, with the old
+// aliases some browsers still report), or, for earlier visits, roughly from the
+// browser's language region ("en-US"). Never from the IP.
+const TZ_COUNTRY = new Map();
+'AD:Europe/Andorra;AE:Asia/Dubai;AF:Asia/Kabul;AG:America/Antigua;AI:America/Anguilla;AL:Europe/Tirane;AM:Asia/Yerevan;AO:Africa/Luanda;AQ:Antarctica/Casey,Antarctica/Davis,Antarctica/DumontDUrville,Antarctica/Mawson,Antarctica/McMurdo,Antarctica/Palmer,Antarctica/Rothera,Antarctica/South_Pole,Antarctica/Syowa,Antarctica/Troll,Antarctica/Vostok;AR:America/Argentina/Buenos_Aires,America/Argentina/Catamarca,America/Argentina/ComodRivadavia,America/Argentina/Cordoba,America/Argentina/Jujuy,America/Argentina/La_Rioja,America/Argentina/Mendoza,America/Argentina/Rio_Gallegos,America/Argentina/Salta,America/Argentina/San_Juan,America/Argentina/San_Luis,America/Argentina/Tucuman,America/Argentina/Ushuaia,America/Buenos_Aires,America/Catamarca,America/Cordoba,America/Jujuy,America/Mendoza,America/Rosario;AS:Pacific/Pago_Pago,Pacific/Samoa,US/Samoa;AT:Europe/Vienna;AU:Antarctica/Macquarie,Australia/ACT,Australia/Adelaide,Australia/Brisbane,Australia/Broken_Hill,Australia/Canberra,Australia/Currie,Australia/Darwin,Australia/Eucla,Australia/Hobart,Australia/LHI,Australia/Lindeman,Australia/Lord_Howe,Australia/Melbourne,Australia/NSW,Australia/North,Australia/Perth,Australia/Queensland,Australia/South,Australia/Sydney,Australia/Tasmania,Australia/Victoria,Australia/West,Australia/Yancowinna;AW:America/Aruba;AX:Europe/Mariehamn;AZ:Asia/Baku;BA:Europe/Sarajevo;BB:America/Barbados;BD:Asia/Dacca,Asia/Dhaka;BE:Europe/Brussels;BF:Africa/Ouagadougou;BG:Europe/Sofia;BH:Asia/Bahrain;BI:Africa/Bujumbura;BJ:Africa/Porto-Novo;BL:America/St_Barthelemy;BM:Atlantic/Bermuda;BN:Asia/Brunei;BO:America/La_Paz;BQ:America/Kralendijk;BR:America/Araguaina,America/Bahia,America/Belem,America/Boa_Vista,America/Campo_Grande,America/Cuiaba,America/Eirunepe,America/Fortaleza,America/Maceio,America/Manaus,America/Noronha,America/Porto_Acre,America/Porto_Velho,America/Recife,America/Rio_Branco,America/Santarem,America/Sao_Paulo,Brazil/Acre,Brazil/DeNoronha,Brazil/East,Brazil/West;BS:America/Nassau;BT:Asia/Thimbu,Asia/Thimphu;BW:Africa/Gaborone;BY:Europe/Minsk;BZ:America/Belize;CA:America/Atikokan,America/Blanc-Sablon,America/Cambridge_Bay,America/Coral_Harbour,America/Creston,America/Dawson,America/Dawson_Creek,America/Edmonton,America/Fort_Nelson,America/Glace_Bay,America/Goose_Bay,America/Halifax,America/Inuvik,America/Iqaluit,America/Moncton,America/Montreal,America/Nipigon,America/Pangnirtung,America/Rainy_River,America/Rankin_Inlet,America/Regina,America/Resolute,America/St_Johns,America/Swift_Current,America/Thunder_Bay,America/Toronto,America/Vancouver,America/Whitehorse,America/Winnipeg,America/Yellowknife,Canada/Atlantic,Canada/Central,Canada/Eastern,Canada/Mountain,Canada/Newfoundland,Canada/Pacific,Canada/Saskatchewan,Canada/Yukon;CC:Indian/Cocos;CD:Africa/Kinshasa,Africa/Lubumbashi;CF:Africa/Bangui;CG:Africa/Brazzaville;CH:Europe/Zurich;CI:Africa/Abidjan;CK:Pacific/Rarotonga;CL:America/Coyhaique,America/Punta_Arenas,America/Santiago,Chile/Continental,Chile/EasterIsland,Pacific/Easter;CM:Africa/Douala;CN:Asia/Chongqing,Asia/Chungking,Asia/Harbin,Asia/Kashgar,Asia/Shanghai,Asia/Urumqi,PRC;CO:America/Bogota;CR:America/Costa_Rica;CU:America/Havana,Cuba;CV:Atlantic/Cape_Verde;CW:America/Curacao;CX:Indian/Christmas;CY:Asia/Famagusta,Asia/Nicosia,Europe/Nicosia;CZ:Europe/Prague;DE:Europe/Berlin,Europe/Busingen;DJ:Africa/Djibouti;DK:Europe/Copenhagen;DM:America/Dominica;DO:America/Santo_Domingo;DZ:Africa/Algiers;EC:America/Guayaquil,Pacific/Galapagos;EE:Europe/Tallinn;EG:Africa/Cairo,Egypt;EH:Africa/El_Aaiun;ER:Africa/Asmara,Africa/Asmera;ES:Africa/Ceuta,Atlantic/Canary,Europe/Madrid;ET:Africa/Addis_Ababa;FI:Europe/Helsinki;FJ:Pacific/Fiji;FK:Atlantic/Stanley;FM:Pacific/Chuuk,Pacific/Kosrae,Pacific/Pohnpei,Pacific/Ponape,Pacific/Truk,Pacific/Yap;FO:Atlantic/Faeroe,Atlantic/Faroe;FR:Europe/Paris;GA:Africa/Libreville;GB:Europe/Belfast,Europe/London,GB,GB-Eire;GD:America/Grenada;GE:Asia/Tbilisi;GF:America/Cayenne;GG:Europe/Guernsey;GH:Africa/Accra;GI:Europe/Gibraltar;GL:America/Danmarkshavn,America/Godthab,America/Nuuk,America/Scoresbysund,America/Thule;GM:Africa/Banjul;GN:Africa/Conakry;GP:America/Guadeloupe;GQ:Africa/Malabo;GR:Europe/Athens;GS:Atlantic/South_Georgia;GT:America/Guatemala;GU:Pacific/Guam;GW:Africa/Bissau;GY:America/Guyana;HK:Asia/Hong_Kong,Hongkong;HN:America/Tegucigalpa;HR:Europe/Zagreb;HT:America/Port-au-Prince;HU:Europe/Budapest;ID:Asia/Jakarta,Asia/Jayapura,Asia/Makassar,Asia/Pontianak,Asia/Ujung_Pandang;IE:Eire,Europe/Dublin;IL:Asia/Jerusalem,Asia/Tel_Aviv,Israel;IM:Europe/Isle_of_Man;IN:Asia/Calcutta,Asia/Kolkata;IO:Indian/Chagos;IQ:Asia/Baghdad;IR:Asia/Tehran,Iran;IS:Atlantic/Reykjavik,Iceland;IT:Europe/Rome;JE:Europe/Jersey;JM:America/Jamaica,Jamaica;JO:Asia/Amman;JP:Asia/Tokyo,Japan;KE:Africa/Nairobi;KG:Asia/Bishkek;KH:Asia/Phnom_Penh;KI:Pacific/Enderbury,Pacific/Kanton,Pacific/Kiritimati,Pacific/Tarawa;KM:Indian/Comoro;KN:America/St_Kitts;KP:Asia/Pyongyang;KR:Asia/Seoul,ROK;KW:Asia/Kuwait;KY:America/Cayman;KZ:Asia/Almaty,Asia/Aqtau,Asia/Aqtobe,Asia/Atyrau,Asia/Oral,Asia/Qostanay,Asia/Qyzylorda;LA:Asia/Vientiane;LB:Asia/Beirut;LC:America/St_Lucia;LI:Europe/Vaduz;LK:Asia/Colombo;LR:Africa/Monrovia;LS:Africa/Maseru;LT:Europe/Vilnius;LU:Europe/Luxembourg;LV:Europe/Riga;LY:Africa/Tripoli,Libya;MA:Africa/Casablanca;MC:Europe/Monaco;MD:Europe/Chisinau,Europe/Tiraspol;ME:Europe/Podgorica;MF:America/Marigot;MG:Indian/Antananarivo;MH:Kwajalein,Pacific/Kwajalein,Pacific/Majuro;MK:Europe/Skopje;ML:Africa/Bamako,Africa/Timbuktu;MM:Asia/Rangoon,Asia/Yangon;MN:Asia/Choibalsan,Asia/Hovd,Asia/Ulaanbaatar,Asia/Ulan_Bator;MO:Asia/Macao,Asia/Macau;MP:Pacific/Saipan;MQ:America/Martinique;MR:Africa/Nouakchott;MS:America/Montserrat;MT:Europe/Malta;MU:Indian/Mauritius;MV:Indian/Maldives;MW:Africa/Blantyre;MX:America/Bahia_Banderas,America/Cancun,America/Chihuahua,America/Ciudad_Juarez,America/Ensenada,America/Hermosillo,America/Matamoros,America/Mazatlan,America/Merida,America/Mexico_City,America/Monterrey,America/Ojinaga,America/Santa_Isabel,America/Tijuana,Mexico/BajaNorte,Mexico/BajaSur,Mexico/General;MY:Asia/Kuala_Lumpur,Asia/Kuching;MZ:Africa/Maputo;NA:Africa/Windhoek;NC:Pacific/Noumea;NE:Africa/Niamey;NF:Pacific/Norfolk;NG:Africa/Lagos;NI:America/Managua;NL:Europe/Amsterdam;NO:Atlantic/Jan_Mayen,Europe/Oslo;NP:Asia/Kathmandu,Asia/Katmandu;NR:Pacific/Nauru;NU:Pacific/Niue;NZ:NZ,NZ-CHAT,Pacific/Auckland,Pacific/Chatham;OM:Asia/Muscat;PA:America/Panama;PE:America/Lima;PF:Pacific/Gambier,Pacific/Marquesas,Pacific/Tahiti;PG:Pacific/Bougainville,Pacific/Port_Moresby;PH:Asia/Manila;PK:Asia/Karachi;PL:Europe/Warsaw,Poland;PM:America/Miquelon;PN:Pacific/Pitcairn;PR:America/Puerto_Rico;PS:Asia/Gaza,Asia/Hebron;PT:Atlantic/Azores,Atlantic/Madeira,Europe/Lisbon,Portugal;PW:Pacific/Palau;PY:America/Asuncion;QA:Asia/Qatar;RE:Indian/Reunion;RO:Europe/Bucharest;RS:Europe/Belgrade;RU:Asia/Anadyr,Asia/Barnaul,Asia/Chita,Asia/Irkutsk,Asia/Kamchatka,Asia/Khandyga,Asia/Krasnoyarsk,Asia/Magadan,Asia/Novokuznetsk,Asia/Novosibirsk,Asia/Omsk,Asia/Sakhalin,Asia/Srednekolymsk,Asia/Tomsk,Asia/Ust-Nera,Asia/Vladivostok,Asia/Yakutsk,Asia/Yekaterinburg,Europe/Astrakhan,Europe/Kaliningrad,Europe/Kirov,Europe/Moscow,Europe/Samara,Europe/Saratov,Europe/Ulyanovsk,Europe/Volgograd,W-SU;RW:Africa/Kigali;SA:Asia/Riyadh;SB:Pacific/Guadalcanal;SC:Indian/Mahe;SD:Africa/Khartoum;SE:Europe/Stockholm;SG:Asia/Singapore,Singapore;SH:Atlantic/St_Helena;SI:Europe/Ljubljana;SJ:Arctic/Longyearbyen;SK:Europe/Bratislava;SL:Africa/Freetown;SM:Europe/San_Marino;SN:Africa/Dakar;SO:Africa/Mogadishu;SR:America/Paramaribo;SS:Africa/Juba;ST:Africa/Sao_Tome;SV:America/El_Salvador;SX:America/Lower_Princes;SY:Asia/Damascus;SZ:Africa/Mbabane;TC:America/Grand_Turk;TD:Africa/Ndjamena;TF:Indian/Kerguelen;TG:Africa/Lome;TH:Asia/Bangkok;TJ:Asia/Dushanbe;TK:Pacific/Fakaofo;TL:Asia/Dili;TM:Asia/Ashgabat,Asia/Ashkhabad;TN:Africa/Tunis;TO:Pacific/Tongatapu;TR:Asia/Istanbul,Europe/Istanbul,Turkey;TT:America/Port_of_Spain;TV:Pacific/Funafuti;TW:Asia/Taipei,ROC;TZ:Africa/Dar_es_Salaam;UA:Europe/Kiev,Europe/Kyiv,Europe/Simferopol,Europe/Uzhgorod,Europe/Zaporozhye;UG:Africa/Kampala;UM:Pacific/Midway,Pacific/Wake;US:America/Adak,America/Anchorage,America/Atka,America/Boise,America/Chicago,America/Denver,America/Detroit,America/Fort_Wayne,America/Indiana/Indianapolis,America/Indiana/Knox,America/Indiana/Marengo,America/Indiana/Petersburg,America/Indiana/Tell_City,America/Indiana/Vevay,America/Indiana/Vincennes,America/Indiana/Winamac,America/Indianapolis,America/Juneau,America/Kentucky/Louisville,America/Kentucky/Monticello,America/Knox_IN,America/Los_Angeles,America/Louisville,America/Menominee,America/Metlakatla,America/New_York,America/Nome,America/North_Dakota/Beulah,America/North_Dakota/Center,America/North_Dakota/New_Salem,America/Phoenix,America/Shiprock,America/Sitka,America/Yakutat,Navajo,Pacific/Honolulu,Pacific/Johnston,US/Alaska,US/Aleutian,US/Arizona,US/Central,US/East-Indiana,US/Eastern,US/Hawaii,US/Indiana-Starke,US/Michigan,US/Mountain,US/Pacific;UY:America/Montevideo;UZ:Asia/Samarkand,Asia/Tashkent;VA:Europe/Vatican;VC:America/St_Vincent;VE:America/Caracas;VG:America/Tortola;VI:America/St_Thomas,America/Virgin;VN:Asia/Ho_Chi_Minh,Asia/Saigon;VU:Pacific/Efate;WF:Pacific/Wallis;WS:Pacific/Apia;YE:Asia/Aden;YT:Indian/Mayotte;ZA:Africa/Johannesburg;ZM:Africa/Lusaka;ZW:Africa/Harare'.split(';').forEach((g) => { const [cc, zones] = g.split(':'); zones.split(',').forEach((z) => TZ_COUNTRY.set(z, cc)); });
+const FLAGS = new Set('AD AM AR AT AU AZ BA BG CA CH CL CN CZ DE ES FI FR GB GE GR HR IN IR IS IT JP KG KR KZ LB LI ME MK NO NZ PL RO RS RU SE SI SK TR UA US'.split(' '));
+const regionNames = (() => { try { return new Intl.DisplayNames(['es'], { type: 'region' }); } catch (e) { return null; } })();
+function countryName(cc) { try { return (regionNames && regionNames.of(cc)) || cc; } catch (e) { return cc; } }
+// { cc, how: 'tz' | 'lang', detail } for an 'open' event, or null.
+function eventCountry(e) {
+  if (e.tz && TZ_COUNTRY.has(e.tz)) return { cc: TZ_COUNTRY.get(e.tz), how: 'tz', detail: e.tz };
+  const m = /^[a-z]{2,3}-([A-Z]{2})$/.exec(e.lg || '');
+  if (m) return { cc: m[1], how: 'lang', detail: e.lg };
+  return null;
+}
+function countryHtml(cc) {
+  return (FLAGS.has(cc) ? '<img class="flag" src="flags/' + cc.toLowerCase() + '.svg" alt="" width="16" height="12">' : '') + esc(countryName(cc));
+}
+
 // Short form for a person's row: the full labels explain themselves in the sources table.
 const SOURCE_SHORT = { directo: 'Directo', pwa: 'Icono en el móvil', app: 'App Android', web: 'Otra web' };
 function sourceShort(src, ref) {
@@ -697,7 +728,7 @@ function renderSources() {
   const ev = events.filter((e) => !hidden.has(e.u));
   const from = { hoy: startOfDay(now), d7: startOfDay(now, 6), d30: startOfDay(now, 29) };
   const counts = new Map();
-  const landing = new Map(), refs = new Map(), pages = new Map();
+  const landing = new Map(), refs = new Map(), pages = new Map(), userCc = new Map();
   for (const e of ev) {
     if (e.t < from.d30) continue;
     if (e.y === 'open') {
@@ -708,6 +739,8 @@ function renderSources() {
       if (e.t >= from.d7) c.d7++;
       if (e.t >= from.hoy) c.hoy++;
       if (e.lp) landing.set(e.lp, (landing.get(e.lp) || 0) + 1);
+      const ec = eventCountry(e), had = userCc.get(e.u);
+      if (ec && (ec.how === 'tz' || !had || had.how === 'lang')) userCc.set(e.u, ec);
       if (e.ref && e.src !== 'interna') refs.set(e.ref, (refs.get(e.ref) || 0) + 1);
     } else if (e.y === 'page' && e.lp) {
       pages.set(e.lp, (pages.get(e.lp) || 0) + 1);
@@ -726,6 +759,12 @@ function renderSources() {
   list($('landing'), landing, 'Aún sin datos: se registra desde esta versión.', pathLabel);
   list($('referrers'), refs, 'Todavía ninguna web externa te ha enviado visitas.');
   list($('pages'), pages, 'Aún sin datos: se registra desde esta versión.', pathLabel);
+  const countries = new Map();
+  for (const c of userCc.values()) countries.set(c.cc, (countries.get(c.cc) || 0) + 1);
+  const topCc = [...countries.entries()].sort((a, b) => b[1] - a[1]).slice(0, 15);
+  $('countries').innerHTML = topCc.length ? topCc.map(([cc, n]) =>
+    '<div class="row"><span class="name">' + countryHtml(cc) + '</span><span class="nums">' + fmtN(n) + '</span></div>').join('')
+    : '<div class="empty">Aún sin datos.</div>';
 }
 
 function renderUsers(m) {
@@ -744,11 +783,14 @@ function renderUsers(m) {
     return '<details class="user"><summary>' +
       '<span class="uid">#' + esc(u.uid.slice(0, 6)) + '</span>' +
       '<span class="badges"><span class="badge">' + (u.platform === 'android' ? 'App' : 'Web') + '</span>' +
+      (u.country ? '<span class="badge country"' + (u.country.how === 'lang' ? ' title="Aproximado, por el idioma del navegador">≈ ' : '>') + countryHtml(u.country.cc) + '</span>' : '') +
       (u.origin && u.origin.src !== 'app' ? '<span class="badge src' + (u.origin.src ? '' : ' none') + '">' + esc(sourceShort(u.origin.src, u.origin.ref)) + '</span>' : '') + '</span>' +
       '<span class="when">' + ago(u.last, now) + '</span>' +
       '<span class="user-meta">' + u.days.size + (u.days.size === 1 ? ' día' : ' días') + ' · ' + u.sessions.size + (u.sessions.size === 1 ? ' sesión' : ' sesiones') + ' · ' + fmtDur(u.secs) +
       ' · ' + u.stations.size + (u.stations.size === 1 ? ' estación' : ' estaciones') + (u.bookings ? ' · ' + u.bookings + ' Booking' : '') + '</span>' +
       '</summary><div class="user-body">' +
+      (u.country ? '<div class="origin">País: <strong>' + countryHtml(u.country.cc) + '</strong> ' +
+        esc(u.country.how === 'tz' ? '(zona horaria ' + u.country.detail + ')' : '(aproximado, por el idioma del navegador ' + u.country.detail + ')') + '</div>' : '') +
       originHtml(u) +
       'Primera visita: ' + fmtDateTime(u.first) + ' · Última: ' + fmtDateTime(u.last) +
       (chips ? '<div class="chips">' + chips + '</div>' : '<div class="empty">No ha abierto ninguna ficha.</div>') +
@@ -796,7 +838,9 @@ function demoEvents() {
         const srcs = ['google', 'google', 'google', 'directo', 'whatsapp', 'facebook', 'tag:nevasport', 'web', 'reddit'];
         const src = platform === 'android' ? 'app' : srcs[Math.floor(rnd() * srcs.length)];
         const lps = ['/', '/estacion/baqueira-beret/', '/guias/pistas-mas-empinadas-espana-andorra/', '/app/', '/estacion/formigal/'];
+        const DEMO_TZ = ['Europe/Madrid', 'Europe/Madrid', 'Europe/Madrid', 'America/Denver', 'Europe/Zurich', 'Europe/London', 'Europe/Andorra', 'Asia/Tokyo', 'Europe/Paris'];
         out.push({ id: sid + 'o', t, y: 'open', u: uid, s: sid, p: platform, nw: first || undefined, src,
+          tz: u % 7 ? DEMO_TZ[u % DEMO_TZ.length] : undefined, lg: u % 7 ? undefined : 'en-US',
           ref: src === 'google' ? 'google.com' : src === 'web' ? 'blogdeesqui.es' : src === 'reddit' ? 'reddit.com' : undefined,
           lp: platform === 'android' ? '/' : lps[Math.floor(rnd() * lps.length)] });
         if (platform !== 'android' && rnd() < 0.3) out.push({ id: sid + 'p', t: t + 2000, y: 'page', u: uid, s: sid, p: platform, lp: '/guias/estaciones-de-esqui-cerca-de-madrid/' });

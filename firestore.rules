@@ -25,7 +25,7 @@ service cloud.firestore {
       allow create: if
         request.resource.data.keys().hasOnly(
           ['ts', 'exp', 'type', 'uid', 'sid', 'platform', 'isNew', 'lang', 'station', 'name', 'country', 'secs',
-           'src', 'ref', 'lp'])
+           'src', 'ref', 'lp', 'tz'])
         && request.resource.data.ts == request.time
         && request.resource.data.exp is timestamp
         && request.resource.data.exp > request.time + duration.value(390, 'd')
@@ -43,7 +43,8 @@ service cloud.firestore {
         && optString(request.resource.data, 'country', 4)
         && optString(request.resource.data, 'src', 40)
         && optString(request.resource.data, 'ref', 120)
-        && optString(request.resource.data, 'lp', 120);
+        && optString(request.resource.data, 'lp', 120)
+        && optString(request.resource.data, 'tz', 40);
     }
   }
 }

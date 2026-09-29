@@ -300,6 +300,28 @@
   .hero-action[hidden] { display: none; }
   .hero-action.is-fav svg { color: #ffd257; }
 
+  /* Phones: a preview of the piste map right under the station's hero, opening
+     the map tab (on desktop the map is always on screen next to the info). */
+  .map-preview-section { padding: 16px 18px 4px; }
+  .map-preview {
+    display: block; width: 100%; padding: 0; border: none; border-radius: 16px; overflow: hidden; cursor: pointer;
+    background: linear-gradient(160deg, #0f2a48, #173f6b); color: #fff; font: inherit; text-align: left;
+    box-shadow: 0 10px 26px -14px rgba(10,30,60,0.55);
+  }
+  .map-preview-art { display: block; width: 100%; height: auto; aspect-ratio: 320 / 168; }
+  .map-preview-bar {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 14px 13px;
+    background: rgba(0,0,0,0.22);
+  }
+  .map-preview-text { display: flex; flex-direction: column; min-width: 0; }
+  .map-preview-title { font-weight: 700; font-size: 15px; }
+  .map-preview-sub { font-size: 12.5px; opacity: 0.8; }
+  .map-preview-cta {
+    flex-shrink: 0; padding: 8px 14px; border-radius: 999px; background: #fff; color: #10263f;
+    font-size: 13px; font-weight: 700; white-space: nowrap;
+  }
+  @media (min-width: 1000px) { .map-preview-section { display: none; } }
+
   /* Language picker (mountLangPicker in docs/lang.js): top right of the home
      hero and of the station screen on phones, in the site header on desktop. */
   .lang-picker { position: relative; flex-shrink: 0; }
@@ -933,6 +955,16 @@
         </div>
       </div>
     </div>
+
+    <section class="map-preview-section" id="map-preview-section" hidden>
+      <button type="button" class="map-preview" id="map-preview">
+        <svg class="map-preview-art" id="map-preview-art" viewBox="0 0 320 168" preserveAspectRatio="xMidYMid meet" aria-hidden="true"></svg>
+        <span class="map-preview-bar">
+          <span class="map-preview-text"><span class="map-preview-title">Mapa de pistas</span><span class="map-preview-sub" id="map-preview-sub"></span></span>
+          <span class="map-preview-cta">Abrir mapa ›</span>
+        </span>
+      </button>
+    </section>
 
     <section id="trip-section" hidden>
       <div class="section-head"><h2>Planifica tu viaje</h2></div>
@@ -1917,6 +1949,81 @@
     reapplyMapSelection();
   }
 
+  // The phone's map preview: every run and lift drawn in their real shape, in
+  // the share images' colours (bright on navy), fitted into the card. Long
+  // resorts are thinned to a few thousand points; it's a picture, not the map.
+  var PREVIEW_COLORS = { novice: '#31c43f', easy: '#4ba3ef', intermediate: '#ec5b60', advanced: '#e6e6e6', expert: '#e6e6e6',
+    double: '#e6e6e6', freeride: '#f2a33a', extreme: '#f2a33a', other: '#8c8c8c' };
+  var PREVIEW_ORDER = ['other', 'novice', 'easy', 'intermediate', 'freeride', 'extreme', 'advanced', 'expert', 'double'];
+  function renderMapPreview(raw) {
+    var section = document.getElementById('map-preview-section');
+    var svg = document.getElementById('map-preview-art');
+    var runs = raw.runs.filter(function (r) { return r.geom && r.geom.length; });
+    var lifts = (raw.lifts || []).filter(function (l) { return l.geom && l.geom.length; });
+    var total = 0, minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, lat0 = raw.latitude || 0;
+    var k = Math.cos(lat0 * Math.PI / 180);
+    runs.concat(lifts).forEach(function (f) {
+      f.geom.forEach(function (part) {
+        total += part.length;
+        part.forEach(function (p) {
+          var x = p[0] * k, y = -p[1];
+          if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y;
+        });
+      });
+    });
+    if (!runs.length || !isFinite(minX)) { section.hidden = true; return; }
+    var W = 320, H = 168, pad = 12;
+    var scale = Math.min((W - 2 * pad) / Math.max(maxX - minX, 1e-9), (H - 2 * pad) / Math.max(maxY - minY, 1e-9));
+    var ox = (W - (maxX - minX) * scale) / 2, oy = (H - (maxY - minY) * scale) / 2;
+    var step = Math.max(1, Math.ceil(total / 5000));
+    var width = total < 1500 ? 2.4 : total < 6000 ? 1.9 : 1.6;
+    function d(part) {  // every step-th point, always ending on the last one
+      var out = '', last = part.length - 1;
+      for (var i = 0; ; i = Math.min(i + step, last)) {
+        var p = part[i];
+        out += (out ? 'L' : 'M') + ((p[0] * k - minX) * scale + ox).toFixed(1) + ' ' + ((-p[1] - minY) * scale + oy).toFixed(1);
+        if (i === last) break;
+      }
+      return out;
+    }
+    var html = lifts.map(function (l) {
+      return l.geom.filter(function (p) { return p.length > 1; }).map(function (p) {
+        return '<path d="' + d(p) + '" stroke="#a79ef0" stroke-width="0.9" stroke-dasharray="3 2" fill="none"/>';
+      }).join('');
+    }).join('');
+    runs.slice().sort(function (a, b) { return PREVIEW_ORDER.indexOf(diffKey(a.difficulty)) - PREVIEW_ORDER.indexOf(diffKey(b.difficulty)); })
+      .forEach(function (r) {
+        var color = PREVIEW_COLORS[diffKey(r.difficulty)] || PREVIEW_COLORS.other;
+        r.geom.forEach(function (p) {
+          if (p.length > 1) html += '<path d="' + d(p) + '" stroke="' + color + '" stroke-width="' + width + '" fill="none" stroke-linecap="round" stroke-linejoin="round"/>';
+        });
+      });
+    svg.innerHTML = html;
+    // Counted like the runs list: named runs (OSM splits many into several ways).
+    var named = {};
+    raw.runs.forEach(function (r) { if (r.name) named[r.name] = true; });
+    var nRuns = Object.keys(named).length || runs.length;
+    setText('map-preview-sub', T('{0} pistas y {1} remontes sobre satélite', nRuns, (raw.lifts || []).length));
+    section.hidden = false;
+  }
+
+  // "Map" in the stats means the map was actually used, the same on every
+  // screen: opened on a phone (tab or preview), or dragged, zoomed or tapped on
+  // desktop, where it is always on screen. Once per station view.
+  var mapUsedFor = null;
+  function trackMapUse() {
+    if (!currentRaw || mapUsedFor === currentRaw.id) return;
+    mapUsedFor = currentRaw.id;
+    track.map(currentRaw);
+  }
+  ['pointerdown', 'wheel', 'keydown'].forEach(function (type) {
+    mapViewportEl.addEventListener(type, function () { if (isDesktopLayout()) trackMapUse(); }, { passive: true });
+  });
+  document.getElementById('map-preview').addEventListener('click', function () {
+    trackMapUse();
+    showDashPane('map');
+  });
+
   function showDashPane(which) {
     paneInfo.hidden = which !== 'info';
     paneMap.hidden = which !== 'map';
@@ -1931,7 +2038,7 @@
   Array.prototype.forEach.call(document.querySelectorAll('.dash-tab'), function (t) {
     t.addEventListener('click', function () {
       var pane = t.getAttribute('data-pane');
-      if (pane === 'map' && paneMap.hidden && currentRaw) track.map(currentRaw);
+      if (pane === 'map' && paneMap.hidden) trackMapUse();
       showDashPane(pane);
     });
   });
@@ -1965,6 +2072,7 @@
     screenDashboard.hidden = false;
     document.getElementById('app').classList.add('dash-mode');
     currentRaw = null;
+    mapUsedFor = null;
     if (paintFav) paintFav();
     mapBuiltKey = null;
     mapState = null;
@@ -2010,7 +2118,8 @@
           renderDashboard(raw);
           installHint.maybeShow();
           track.station(raw);
-          if (isDesktopLayout()) track.map(raw);
+          // Arrived straight on the map (the station pages' "open the map" link).
+          if (!paneMap.hidden && !isDesktopLayout()) trackMapUse();
         });
       })
       .catch(function (err) {
@@ -3219,6 +3328,7 @@
     setText('map-station-name', raw.name || '');
     currentRaw = raw;
     if (paintFav) paintFav();
+    renderMapPreview(raw);
     ensureMapBuilt();
 
     var diffAgg = {};

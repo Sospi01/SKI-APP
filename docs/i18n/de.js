@@ -321,6 +321,9 @@ window.SKI_I18N = {
   "Mis estaciones": "Meine Skigebiete",
   "las que has guardado": "die du dir gemerkt hast",
   "nieve prevista en 7 días": "Schneeprognose für 7 Tage",
-  "O": "W"
+  "O": "W",
+  "Mapa de pistas": "Pistenplan",
+  "Abrir mapa ›": "Karte öffnen ›",
+  "{0} pistas y {1} remontes sobre satélite": "{0} Pisten und {1} Lifte auf Satellitenbild"
  }
 };

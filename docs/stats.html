@@ -146,6 +146,11 @@
   details.user summary::-webkit-details-marker { display: none; }
   .uid { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; font-weight: 600; }
   .badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px; background: var(--surface-2); color: var(--text-secondary); border: 1px solid var(--border); justify-self: start; }
+  .badges { display: flex; flex-wrap: wrap; gap: 4px; justify-self: start; }
+  .badge.src { background: color-mix(in srgb, var(--series-1) 14%, transparent); color: var(--series-1); border-color: color-mix(in srgb, var(--series-1) 35%, transparent); }
+  .badge.src.none { background: var(--surface-2); color: var(--text-muted); border-color: var(--border); font-weight: 600; }
+  .origin { margin-bottom: 2px; }
+  .origin strong { color: var(--text-primary); font-weight: 600; }
   .when { font-size: 11.5px; color: var(--text-muted); text-align: right; white-space: nowrap; }
   .user-meta { grid-column: 1 / -1; font-size: 11.5px; color: var(--text-secondary); }
   .user-body { padding: 0 0 12px; font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
@@ -376,10 +381,18 @@ function compute(now) {
   const yesterday = windowStatsRange(ev, startOfDay(now, 1), today0);
 
   // all-time (within the cached window) totals + platform
-  const firstSeen = new Map(), lastPlatform = new Map();
+  // Where each person came from: the first visit's source (resumed sessions
+  // and moves inside the site aren't a source), and those of their later visits.
+  const firstSeen = new Map(), lastPlatform = new Map(), firstOpen = new Map(), laterSrc = new Map();
   for (const e of ev) {
     if (!firstSeen.has(e.u)) firstSeen.set(e.u, e.t);
     lastPlatform.set(e.u, e.p);
+    if (e.y !== 'open' || e.src === 'reanudada' || e.src === 'interna') continue;
+    if (!firstOpen.has(e.u)) { firstOpen.set(e.u, e); continue; }
+    if (!e.src) continue;
+    let later = laterSrc.get(e.u);
+    if (!later) laterSrc.set(e.u, later = new Map());
+    later.set(e.src, (later.get(e.src) || 0) + 1);
   }
   let android = 0, web = 0;
   for (const p of lastPlatform.values()) { if (p === 'android') android++; else web++; }
@@ -405,7 +418,7 @@ function compute(now) {
       if (e.y === 'station') d.views++;
     }
     let u = perUser.get(e.u);
-    if (!u) { u = { uid: e.u, days: new Set(), sessions: new Set(), secs: 0, stations: new Map(), booked: new Map(), bookings: 0, maps: 0, first: firstSeen.get(e.u), last: e.t, platform: lastPlatform.get(e.u) }; perUser.set(e.u, u); }
+    if (!u) { u = { uid: e.u, days: new Set(), sessions: new Set(), secs: 0, stations: new Map(), booked: new Map(), bookings: 0, maps: 0, first: firstSeen.get(e.u), last: e.t, platform: lastPlatform.get(e.u), origin: firstOpen.get(e.u), laterSrc: laterSrc.get(e.u) }; perUser.set(e.u, u); }
     u.days.add(dayKey(e.t)); u.sessions.add(e.s); u.last = Math.max(u.last, e.t);
     if (e.y === 'time') {
       u.secs += e.sec || 0;
@@ -659,6 +672,26 @@ function sourceLabel(src) {
   if (src.indexOf('app:') === 0) return 'App ' + src.slice(4);
   return SOURCE_LABELS[src] || src;
 }
+// Short form for a person's row: the full labels explain themselves in the sources table.
+const SOURCE_SHORT = { directo: 'Directo', pwa: 'Icono en el móvil', app: 'App Android', web: 'Otra web' };
+function sourceShort(src, ref) {
+  if (!src) return 'Origen sin dato';
+  if (src === 'web' && ref) return ref;
+  return SOURCE_SHORT[src] || sourceLabel(src);
+}
+function originHtml(u) {
+  const o = u.origin;
+  let html = '<div class="origin">Llegó desde: <strong>' + esc(o ? (o.src ? sourceLabel(o.src) : 'sin dato (antes de medirlo)') : 'sin dato') + '</strong>';
+  // The referring site, where the label doesn't already name it (another web, a tagged link).
+  if (o && o.ref && (o.src === 'web' || !SOURCE_LABELS[o.src])) html += ' (' + esc(o.ref) + ')';
+  if (o && o.lp) html += ' · entró por ' + esc(o.lp === '/' ? 'la portada' : decodeURIComponent(o.lp));
+  html += '</div>';
+  if (u.laterSrc && u.laterSrc.size) {
+    html += '<div class="origin">Después volvió desde: ' + [...u.laterSrc.entries()].sort((a, b) => b[1] - a[1])
+      .map(([src, n]) => esc(sourceShort(src)) + (n > 1 ? ' ×' + n : '')).join(', ') + '</div>';
+  }
+  return html;
+}
 function renderSources() {
   const now = Date.now();
   const ev = events.filter((e) => !hidden.has(e.u));
@@ -710,11 +743,13 @@ function renderUsers(m) {
     const chips = stations.map(([name, n]) => '<span class="chip' + (u.booked.has(name) ? ' booked' : '') + '">' + esc(name) + (n > 1 ? ' ×' + n : '') + (u.booked.has(name) ? ' · Booking' : '') + '</span>').join('');
     return '<details class="user"><summary>' +
       '<span class="uid">#' + esc(u.uid.slice(0, 6)) + '</span>' +
-      '<span class="badge">' + (u.platform === 'android' ? 'App' : 'Web') + '</span>' +
+      '<span class="badges"><span class="badge">' + (u.platform === 'android' ? 'App' : 'Web') + '</span>' +
+      (u.origin && u.origin.src !== 'app' ? '<span class="badge src' + (u.origin.src ? '' : ' none') + '">' + esc(sourceShort(u.origin.src, u.origin.ref)) + '</span>' : '') + '</span>' +
       '<span class="when">' + ago(u.last, now) + '</span>' +
       '<span class="user-meta">' + u.days.size + (u.days.size === 1 ? ' día' : ' días') + ' · ' + u.sessions.size + (u.sessions.size === 1 ? ' sesión' : ' sesiones') + ' · ' + fmtDur(u.secs) +
       ' · ' + u.stations.size + (u.stations.size === 1 ? ' estación' : ' estaciones') + (u.bookings ? ' · ' + u.bookings + ' Booking' : '') + '</span>' +
       '</summary><div class="user-body">' +
+      originHtml(u) +
       'Primera visita: ' + fmtDateTime(u.first) + ' · Última: ' + fmtDateTime(u.last) +
       (chips ? '<div class="chips">' + chips + '</div>' : '<div class="empty">No ha abierto ninguna ficha.</div>') +
       '<button type="button" class="linkbtn" data-hide="' + esc(u.uid) + '">Ocultar este usuario (p. ej. si soy yo)</button>' +

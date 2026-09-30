@@ -690,6 +690,24 @@
   .home-result .r { font-size: 12px; color: var(--text-muted); }
   .home-result .km { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 16px; color: var(--accent); white-space: nowrap; }
   .home-empty { padding: 12px; font-size: 13px; color: var(--text-muted); }
+  .home-popular { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 12px; }
+  .home-popular[hidden] { display: none; }
+  .home-popular-label { font-size: 12px; font-weight: 600; opacity: 0.85; margin-right: 2px; }
+  .home-popular button {
+    padding: 6px 11px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.32); background: rgba(255,255,255,0.14);
+    color: #fff; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  }
+  .home-popular button:hover, .home-popular button:focus-visible { background: rgba(255,255,255,0.26); outline: none; }
+  .near-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 0 18px 10px; }
+  .near-actions[hidden] { display: none; }
+  .near-locate {
+    display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px; border-radius: 999px; border: 1px solid var(--border);
+    background: var(--surface-2); color: var(--accent); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .near-locate:hover { border-color: var(--accent); }
+  .near-locate[hidden] { display: none; }
+  .near-locate svg { width: 16px; height: 16px; }
+  .near-msg { font-size: 12px; color: var(--text-muted); }
   .home-stats { display: flex; gap: 26px; margin-top: 20px; }
   .home-app-link {
     display: inline-flex; align-items: center; gap: 7px; margin-top: 18px; padding: 8px 14px; border-radius: 999px;
@@ -776,6 +794,9 @@
     .home-section-head h2 { font-size: 26px; }
     .home-section .station-list { padding: 0 0 8px; }
     .snow-rank-chips { padding: 0 0 14px; }
+    .home-popular { max-width: 860px; margin-top: 14px; }
+    .home-popular button { font-size: 13.5px; padding: 7px 13px; }
+    .near-actions { padding: 0 0 14px; }
     .guide-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 0 0 8px; }
     .guide-card { background: var(--bg); padding: 12px; }
     .home-features { grid-template-columns: repeat(3, 1fr); gap: 16px; padding-top: 36px; padding-bottom: 20px; }
@@ -835,6 +856,7 @@
           <input type="search" id="global-search" placeholder="Busca una estación de esquí…" autocomplete="off" aria-label="Buscar estación" aria-controls="global-search-results">
           <div class="home-results" id="global-search-results" role="listbox" hidden></div>
         </div>
+        <div class="home-popular" id="home-popular" hidden><span class="home-popular-label">Populares:</span></div>
         <div class="home-stats">
           <div class="home-stat"><div class="v" id="home-stat-stations">–</div><div class="k">estaciones</div></div>
           <div class="home-stat"><div class="v" id="home-stat-countries">–</div><div class="k">países</div></div>
@@ -847,6 +869,15 @@
     <div class="home-section" id="favs-section" hidden>
       <div class="home-section-head"><h2>Mis estaciones</h2><span class="sub" id="favs-sub">las que has guardado</span></div>
       <div class="station-list snow-rank" id="favs-list"></div>
+    </div>
+
+    <div class="home-section" id="near-section" hidden>
+      <div class="home-section-head"><h2>Cerca de ti</h2><span class="sub" id="near-sub">según tu zona horaria</span></div>
+      <div class="near-actions">
+        <button type="button" class="near-locate" id="near-locate"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="3" fill="currentColor"/><circle cx="10" cy="10" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 1.5v2.5M10 16v2.5M1.5 10H4M16 10h2.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span id="near-locate-txt">Usar mi ubicación</span></button>
+        <span class="near-msg" id="near-msg" role="status"></span>
+      </div>
+      <div class="station-list" id="near-list"></div>
     </div>
 
     <div class="home-section" id="snow-rank-section" hidden>
@@ -1821,6 +1852,122 @@
     }
     render();
     return render;
+  })();
+
+  // ---- first visit: well-known stations one tap away, and the ones nearest
+  // to the visitor. Where they are is guessed from the device's time zone
+  // (its main city: no permission prompt, nothing sent anywhere) until they
+  // share their location, which is kept, rounded, in this browser only.
+  var TZ = (function () { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { return ''; } })();
+  var TZ_COORDS = {
+    'Europe/Madrid': [40.42, -3.70], 'Europe/Andorra': [42.51, 1.52], 'Europe/Lisbon': [38.72, -9.14], 'Europe/Paris': [48.86, 2.35],
+    'Europe/Brussels': [50.85, 4.35], 'Europe/Amsterdam': [52.37, 4.90], 'Europe/Luxembourg': [49.61, 6.13], 'Europe/Monaco': [43.74, 7.42],
+    'Europe/London': [51.51, -0.13], 'Europe/Dublin': [53.35, -6.26], 'Europe/Zurich': [47.38, 8.54], 'Europe/Vaduz': [47.14, 9.52],
+    'Europe/Berlin': [52.52, 13.40], 'Europe/Vienna': [48.21, 16.37], 'Europe/Rome': [41.90, 12.50], 'Europe/Ljubljana': [46.06, 14.51],
+    'Europe/Zagreb': [45.81, 15.98], 'Europe/Prague': [50.08, 14.44], 'Europe/Bratislava': [48.15, 17.11], 'Europe/Budapest': [47.50, 19.04],
+    'Europe/Warsaw': [52.23, 21.01], 'Europe/Copenhagen': [55.68, 12.57], 'Europe/Oslo': [59.91, 10.75], 'Europe/Stockholm': [59.33, 18.07],
+    'Europe/Helsinki': [60.17, 24.94], 'Europe/Belgrade': [44.79, 20.45], 'Europe/Sarajevo': [43.86, 18.41], 'Europe/Sofia': [42.70, 23.32],
+    'Europe/Bucharest': [44.43, 26.10], 'Europe/Athens': [37.98, 23.73], 'Europe/Istanbul': [41.01, 28.98], 'Europe/Kyiv': [50.45, 30.52],
+    'Europe/Kiev': [50.45, 30.52], 'Europe/Moscow': [55.76, 37.62], 'Atlantic/Reykjavik': [64.15, -21.94], 'Atlantic/Canary': [28.12, -15.43],
+    'Asia/Tbilisi': [41.72, 44.79], 'Asia/Yerevan': [40.18, 44.51], 'Asia/Beirut': [33.89, 35.50], 'Asia/Tehran': [35.69, 51.39],
+    'Asia/Almaty': [43.24, 76.89], 'Asia/Tokyo': [35.68, 139.69], 'Asia/Seoul': [37.57, 126.98], 'Asia/Shanghai': [39.90, 116.40],
+    'America/New_York': [40.71, -74.01], 'America/Toronto': [43.65, -79.38], 'America/Montreal': [45.50, -73.57], 'America/Halifax': [44.65, -63.58],
+    'America/Chicago': [41.88, -87.63], 'America/Detroit': [42.33, -83.05], 'America/Denver': [39.74, -104.99], 'America/Boise': [43.62, -116.20],
+    'America/Phoenix': [33.45, -112.07], 'America/Los_Angeles': [34.05, -118.24], 'America/Vancouver': [49.28, -123.12],
+    'America/Edmonton': [51.05, -114.07], 'America/Winnipeg': [49.90, -97.14], 'America/Anchorage': [61.22, -149.90],
+    'America/Mexico_City': [19.43, -99.13], 'America/Santiago': [-33.45, -70.67], 'America/Argentina/Buenos_Aires': [-34.60, -58.38],
+    'America/Sao_Paulo': [-23.55, -46.63], 'Australia/Sydney': [-33.87, 151.21], 'Australia/Melbourne': [-37.81, 144.96],
+    'Australia/Brisbane': [-27.47, 153.03], 'Australia/Perth': [-31.95, 115.86], 'Pacific/Auckland': [-36.85, 174.76]
+  };
+  var POPULAR = {
+    es: ['125d02338620dc079d5d635595a099370161bf83', 'de4f884c40976fe9d18c23d0bab174c1d6b79218', '5ee4bbf3ab3be8e91b05b56e05180dd4ee735335',
+         '0f46917975b8dab5e541edf6469105c3c091ec22', '6eebeff16c8b480fc1335c8bed596286706cb776', '1b306639a276ae1103bb8f7f682db30d717d65be'],
+    en: ['10811e37c10a12d51810c68dc7022f23ca4f9970', '68b126bc3175516c9263aed7635d14e37ff360dc', '66e672470add74c3e6a2bd8d4c1bb07cc4721728',
+         'c2fba992cc1711880d5f8d8ffa661f71eab950cf', 'a6e33a705cdc20bfc2dfa1e690f066bd8e1caa5b', '5b0f59702031fde8054a06b0c97a7b2d5593cf51'],
+    fr: ['b66cd0bd82cf0860c0b65dbe7ba26066f8463554', 'a6e33a705cdc20bfc2dfa1e690f066bd8e1caa5b', 'c2fba992cc1711880d5f8d8ffa661f71eab950cf',
+         '1164f5d49e7b6c2d5f7ae7db3943116e7e15438e', 'dec537b602584db89d89ab114a619f1ae356398e', '70b5c16a6a584808d97c9084dd340e4c8605acdb'],
+    de: ['53410fc611922a26e32535c74bb1d9364cef4ecd', '7c2f2690d339d9df6f820e7c6e596a9b0ba3dce5', '78e5f98d8527df7216b08962f372659abcd4f711',
+         '1eeb56a80185ff1dff644357f9f747842d0f620c', '180faeea32aba7b22fbe1438b0a3a82f6a2a4ad8', '10811e37c10a12d51810c68dc7022f23ca4f9970'],
+    it: ['10811e37c10a12d51810c68dc7022f23ca4f9970', '02196b1e0dd473176e265318bc9c06e22df53ace', '4c87ad2b81e6af13513c56907fa5850c59fa5e32',
+         'fd830ae87b04dcc7ab252d9b7f21cb21029dd61f', '04d84a3789b94eba19ce3c951fece8117d931c03', '35a6ed0e1f5424feddcbc15b62e84b1b97f07624'],
+    // Whatever the language, visitors from North America get its big names.
+    na: ['5b0f59702031fde8054a06b0c97a7b2d5593cf51', '88a22ba23468cf120025366ef40f004c9043546e', '3dad9d62b112c018cb658fd1eb49bcd41c96f257',
+         '1e76d148ff8a2f2bec3fea6b6852cd020b13c377', 'ba4944ecd2e640acedf666287f228427b607680e', '52fb26d3b0f3b270334fbcdb4510c6b2c20d2f95']
+  };
+  // Short names for the hero chips; the rest use their own name.
+  var POPULAR_LABEL = {
+    '125d02338620dc079d5d635595a099370161bf83': 'Baqueira', '5ee4bbf3ab3be8e91b05b56e05180dd4ee735335': 'Sierra Nevada',
+    '1b306639a276ae1103bb8f7f682db30d717d65be': 'Cerler', '10811e37c10a12d51810c68dc7022f23ca4f9970': LANG === 'it' ? 'Cervinia' : 'Zermatt',
+    '66e672470add74c3e6a2bd8d4c1bb07cc4721728': 'St. Anton', 'c2fba992cc1711880d5f8d8ffa661f71eab950cf': 'Chamonix',
+    'a6e33a705cdc20bfc2dfa1e690f066bd8e1caa5b': "Val d'Isère", '1164f5d49e7b6c2d5f7ae7db3943116e7e15438e': "Alpe d'Huez",
+    '70b5c16a6a584808d97c9084dd340e4c8605acdb': 'Portes du Soleil', '7c2f2690d339d9df6f820e7c6e596a9b0ba3dce5': 'Ischgl',
+    '180faeea32aba7b22fbe1438b0a3a82f6a2a4ad8': 'Saalbach', '02196b1e0dd473176e265318bc9c06e22df53ace': 'Cortina',
+    'fd830ae87b04dcc7ab252d9b7f21cb21029dd61f': 'Madonna di Campiglio', '5b0f59702031fde8054a06b0c97a7b2d5593cf51': 'Whistler',
+    '3dad9d62b112c018cb658fd1eb49bcd41c96f257': 'Park City', '1e76d148ff8a2f2bec3fea6b6852cd020b13c377': 'Jackson Hole',
+    'ba4944ecd2e640acedf666287f228427b607680e': 'Mammoth', '52fb26d3b0f3b270334fbcdb4510c6b2c20d2f95': 'Big Sky'
+  };
+  function kmBetween(a, b) {
+    var r = Math.PI / 180, dLat = (b[0] - a[0]) * r, dLon = (b[1] - a[1]) * r;
+    var h = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    return 12742 * Math.asin(Math.sqrt(h));
+  }
+
+  (function () {
+    var tzHome = TZ_COORDS[TZ] || null;
+    var inNorthAmerica = /^America\//.test(TZ) && (!tzHome || tzHome[0] > 15);
+    var box = document.getElementById('home-popular');
+    (POPULAR[inNorthAmerica ? 'na' : LANG] || POPULAR.en).map(stationById).filter(Boolean).forEach(function (s) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = POPULAR_LABEL[s.id] || s.name;
+      b.addEventListener('click', function () { goToStation(s.id); });
+      box.appendChild(b);
+    });
+    box.hidden = box.children.length < 2;
+  })();
+
+  (function () {
+    var section = document.getElementById('near-section');
+    var listEl = document.getElementById('near-list');
+    var btn = document.getElementById('near-locate');
+    var msg = document.getElementById('near-msg');
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem('si_loc') || 'null'); } catch (e) {}
+    // The Android app's WebView doesn't hand out the location.
+    var canLocate = !!navigator.geolocation && !/; wv\)/.test(navigator.userAgent);
+    function render(here, exact) {
+      listEl.innerHTML = '';
+      STATIONS.filter(function (s) { return (s.pisteKm || 0) >= 10 && s.lat != null; })
+        .map(function (s) { return { s: s, d: kmBetween(here, [s.lat, s.lon]) }; })
+        .sort(function (a, b) { return a.d - b.d; })
+        .slice(0, 6)
+        .forEach(function (r) {
+          var d = r.d < 10 ? '&lt;10' : fmt(Math.round(r.d / 10) * 10);
+          listEl.appendChild(homeStationCard(r.s, d + ' km', T('de distancia')));
+        });
+      setText('near-sub', exact ? T('según tu ubicación') : T('según tu zona horaria'));
+      btn.hidden = exact || !canLocate;
+      btn.parentNode.hidden = btn.hidden && !msg.textContent;
+      section.hidden = !listEl.children.length;
+    }
+    if (saved && saved.length === 2) render(saved, true);
+    else if (TZ_COORDS[TZ]) render(TZ_COORDS[TZ], false);
+    else if (canLocate) { section.hidden = false; setText('near-sub', T('las más cercanas a donde estés')); }
+    if (!canLocate) btn.hidden = btn.parentNode.hidden = true;
+    btn.addEventListener('click', function () {
+      btn.disabled = true;
+      msg.textContent = T('Buscando tu ubicación…');
+      navigator.geolocation.getCurrentPosition(function (pos) {
+        var here = [Math.round(pos.coords.latitude * 100) / 100, Math.round(pos.coords.longitude * 100) / 100];
+        try { localStorage.setItem('si_loc', JSON.stringify(here)); } catch (e) {}
+        msg.textContent = '';
+        btn.disabled = false;
+        render(here, true);
+      }, function () {
+        msg.textContent = T('No hemos podido obtener tu ubicación.');
+        btn.disabled = false;
+      }, { timeout: 10000, maximumAge: 3600000 });
+    });
   })();
 
   // ---- "Dónde va a nevar": ranking from snow.json, generated at deploy

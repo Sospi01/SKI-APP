@@ -324,6 +324,15 @@ window.SKI_I18N = {
   "O": "O",
   "Mapa de pistas": "Plan des pistes",
   "Abrir mapa": "Ouvrir la carte",
-  "{0} pistas · {1} remontes": "{0} pistes · {1} remontées"
+  "{0} pistas · {1} remontes": "{0} pistes · {1} remontées",
+  "Populares:": "Populaires :",
+  "Cerca de ti": "Près de chez vous",
+  "según tu zona horaria": "d'après votre fuseau horaire",
+  "según tu ubicación": "d'après votre position",
+  "Usar mi ubicación": "Utiliser ma position",
+  "de distancia": "de distance",
+  "las más cercanas a donde estés": "les plus proches de vous",
+  "Buscando tu ubicación…": "Recherche de votre position…",
+  "No hemos podido obtener tu ubicación.": "Impossible d'obtenir votre position."
  }
 };

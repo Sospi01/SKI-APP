@@ -333,6 +333,9 @@ window.SKI_I18N = {
   "de distancia": "away",
   "las más cercanas a donde estés": "the closest to wherever you are",
   "Buscando tu ubicación…": "Finding your location…",
-  "No hemos podido obtener tu ubicación.": "We couldn't get your location."
+  "No hemos podido obtener tu ubicación.": "We couldn't get your location.",
+  "Dificultad": "Difficulty",
+  "Pendiente": "Slope",
+  "Colorear las pistas por": "Colour runs by"
  }
 };

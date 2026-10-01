@@ -556,6 +556,28 @@
     font-family: 'IBM Plex Sans', sans-serif; backdrop-filter: blur(2px);
   }
   .map-controls button:active { background: rgba(20,24,28,0.9); }
+  /* "Colour runs by": difficulty (the piste's official colour) or the real
+     slope of each stretch. Sits top right with the zoom buttons below it. */
+  .map-mode {
+    position: absolute; top: 10px; right: 10px; z-index: 2; display: flex; padding: 3px; gap: 2px;
+    border-radius: 999px; background: rgba(20,24,28,0.72); backdrop-filter: blur(2px); box-shadow: 0 4px 12px -4px rgba(0,0,0,0.4);
+  }
+  .map-mode button {
+    border: none; border-radius: 999px; padding: 6px 11px; background: none; color: rgba(255,255,255,0.8);
+    font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
+  }
+  .map-mode button[aria-pressed="true"] { background: #fff; color: #10161c; }
+  #map-viewport .map-controls { top: 52px; }
+  #map-viewport .map-hint { top: auto; bottom: 28px; }
+  .map-slope { display: none; }
+  .map-slope polyline { fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; transition: stroke-width 0.1s ease; }
+  #map-svg.slope-mode .map-slope { display: inline; }
+  #map-svg.slope-mode .map-run { visibility: hidden; }
+  .map-run.run-hovered + .map-slope polyline, .map-hit:focus + .map-run + .map-slope polyline { stroke-width: 4; }
+  .map-run.run-selected + .map-slope polyline { stroke-width: 5; filter: drop-shadow(0 0 3px rgba(255,255,255,0.95)) drop-shadow(0 0 6px rgba(255,255,255,0.6)); }
+  #map-svg.has-selection .map-run:not(.run-selected) + .map-slope { opacity: 0.32; }
+  .map-legend .key.slope-key, .map-legend.slope-mode .key.diff-key { display: none; }
+  .map-legend.slope-mode .key.slope-key { display: inline-flex; }
   .map-controls button#map-zoom-reset { font-size: 13px; }
   .map-hint {
     position: absolute; left: 10px; top: 10px;
@@ -1082,6 +1104,10 @@
     </div>
     <div class="map-viewport" id="map-viewport">
       <svg id="map-svg" role="img" aria-label="Mapa interactivo de las pistas y remontes sobre imagen satelital del terreno, coloreado por dificultad"></svg>
+      <div class="map-mode" id="map-mode" role="group" aria-label="Colorear las pistas por">
+        <button type="button" data-mode="diff" aria-pressed="true">Dificultad</button>
+        <button type="button" data-mode="slope" aria-pressed="false">Pendiente</button>
+      </div>
       <div class="map-controls">
         <button type="button" id="map-zoom-in" aria-label="Acercar">+</button>
         <button type="button" id="map-zoom-out" aria-label="Alejar">–</button>
@@ -2718,6 +2744,7 @@
       feats.forEach(function (f) {
         f.el.classList.add(f.isLift ? 'lift-selected' : 'run-selected');
         f.el.parentNode.appendChild(f.el); // draw on top
+        if (f.slopeEl) f.el.parentNode.appendChild(f.slopeEl); // its slope colours stay right after it
         pts = pts.concat(f.points);
       });
       if (pan && feats.length) flyToPoints(pts);
@@ -3055,9 +3082,16 @@
     var present = DIFF_ORDER.filter(function (k) { return raw.runs.some(function (r) { return diffKey(r.difficulty) === k; }); });
     var legend = document.getElementById('map-legend');
     present.forEach(function (k) {
-      var item = document.createElement('span'); item.className = 'key';
+      var item = document.createElement('span'); item.className = 'key diff-key';
       var sw = document.createElement('span'); sw.className = 'swatch'; sw.style.background = DIFF[k].color;
       item.appendChild(sw); item.appendChild(document.createTextNode(DIFF[k].label));
+      legend.appendChild(item);
+    });
+    // Slope mode: the four pitch zones of the run profiles (profile.js).
+    PITCH_ZONES.forEach(function (z) {
+      var item = document.createElement('span'); item.className = 'key slope-key';
+      var sw = document.createElement('span'); sw.className = 'swatch'; sw.style.background = 'var(--diff-' + z.key + ')';
+      item.appendChild(sw); item.appendChild(document.createTextNode(z.label));
       legend.appendChild(item);
     });
     var liftItem = document.createElement('span'); liftItem.className = 'key';
@@ -3075,9 +3109,88 @@
       legend.appendChild(svcItem);
     });
 
-    mapState = { svg: svg, content: content, vbW: vbW, vbH: vbH, scale: scale, zoom: 1, tx: 0, ty: 0, angle: 0, updateScaleBar: updateScaleBar, features: features, liftStationDots: liftStationDots, serviceMarkers: serviceMarkers, serviceIcons: serviceIcons, directionArrows: directionArrows };
+    mapState = { project: project, svg: svg, content: content, vbW: vbW, vbH: vbH, scale: scale, zoom: 1, tx: 0, ty: 0, angle: 0, updateScaleBar: updateScaleBar, features: features, liftStationDots: liftStationDots, serviceMarkers: serviceMarkers, serviceIcons: serviceIcons, directionArrows: directionArrows };
     updateScaleBar(1);
+    setMapMode(mapMode || savedMapMode());
   }
+
+  // ---- map colour mode: by difficulty (the piste's official colour) or by
+  // the real slope of each stretch, from the elevation in the geometry and
+  // with the same smoothing and pitch zones as the run profiles (profile.js).
+  // The slope lines are drawn the first time that mode is shown, each right
+  // after its run's line so hover / selection styles reach it (CSS "+").
+  // No initial value: a station opened from the URL builds its map before
+  // this line runs, and must not have its choice reset.
+  var mapMode;
+  function savedMapMode() {
+    try { return localStorage.getItem('si_map_mode') === 'slope' ? 'slope' : 'diff'; } catch (e) { return 'diff'; }
+  }
+  function slopeStretches(part) {
+    var pts = part.filter(function (p) { return p && p.length >= 3 && p[2] != null; });
+    if (pts.length < 2) return [];
+    var prof = [{ dist: 0, ele: pts[0][2] }];
+    for (var i = 1; i < pts.length; i++) prof.push({ dist: prof[i - 1].dist + haversineM(pts[i - 1], pts[i]), ele: pts[i][2] });
+    // A wider window than the profile chart's: on the map a colour change
+    // only reads as such over a few dozen metres.
+    var sm = smoothProfile(prof, 60), out = [], cur = null;
+    for (var j = 1; j < pts.length; j++) {
+      var dd = sm[j].dist - sm[j - 1].dist;
+      var key = dd > 0.5 ? pitchZoneFor((sm[j].ele - sm[j - 1].ele) / dd * 100).key : (cur ? cur.key : 'novice');
+      if (!cur || cur.key !== key) { cur = { key: key, pts: [pts[j - 1]], len: 0 }; out.push(cur); }
+      cur.pts.push(pts[j]);
+      cur.len += prof[j].dist - prof[j - 1].dist;
+    }
+    // Fold stretches shorter than 40 m into the one before (or after, for
+    // the first), then join neighbours that ended up the same colour.
+    for (var k = 0; k < out.length && out.length > 1; k++) {
+      if (out[k].len >= 40) continue;
+      var into = k > 0 ? out[k - 1] : out[1];
+      into.pts = k > 0 ? into.pts.concat(out[k].pts.slice(1)) : out[k].pts.concat(into.pts.slice(1));
+      into.len += out[k].len;
+      out.splice(k, 1); k--;
+    }
+    return out.reduce(function (acc, st) {
+      var last = acc[acc.length - 1];
+      if (last && last.key === st.key) { last.pts = last.pts.concat(st.pts.slice(1)); last.len += st.len; }
+      else acc.push(st);
+      return acc;
+    }, []);
+  }
+  function drawSlopeLines() {
+    if (!mapState || mapState.slopeDrawn) return;
+    var SVGNS = 'http://www.w3.org/2000/svg';
+    mapState.features.forEach(function (f) {
+      if (f.isLift || !f.geomPart) return;
+      var g = document.createElementNS(SVGNS, 'g');
+      g.setAttribute('class', 'map-slope');
+      var stretches = slopeStretches(f.geomPart);
+      // No elevation in the data: keep the run's own colour.
+      if (!stretches.length) stretches = [{ color: DIFF[f.diffKey || 'other'].color, pts: f.geomPart }];
+      stretches.forEach(function (st) {
+        var pl = document.createElementNS(SVGNS, 'polyline');
+        pl.setAttribute('points', st.pts.map(function (p) { var q = mapState.project(p); return q[0].toFixed(1) + ',' + q[1].toFixed(1); }).join(' '));
+        pl.style.stroke = st.color || 'var(--diff-' + st.key + ')';
+        g.appendChild(pl);
+      });
+      f.el.parentNode.insertBefore(g, f.el.nextSibling);
+      f.slopeEl = g;
+    });
+    mapState.slopeDrawn = true;
+  }
+  function setMapMode(mode) {
+    mapMode = mode;
+    if (mode === 'slope') drawSlopeLines();
+    document.getElementById('map-svg').classList.toggle('slope-mode', mode === 'slope');
+    document.getElementById('map-legend').classList.toggle('slope-mode', mode === 'slope');
+    document.querySelectorAll('#map-mode button').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-mode') === mode ? 'true' : 'false'); });
+  }
+  document.querySelectorAll('#map-mode button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var mode = b.getAttribute('data-mode');
+      try { localStorage.setItem('si_map_mode', mode); } catch (e) {}
+      setMapMode(mode);
+    });
+  });
 
   // ============== country overview map (all stations of a country as pins) ==============
   var countryMapState = null;

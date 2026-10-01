@@ -333,6 +333,9 @@ window.SKI_I18N = {
   "de distancia": "di distanza",
   "las más cercanas a donde estés": "le più vicine a te",
   "Buscando tu ubicación…": "Ricerca della posizione…",
-  "No hemos podido obtener tu ubicación.": "Non siamo riusciti a ottenere la tua posizione."
+  "No hemos podido obtener tu ubicación.": "Non siamo riusciti a ottenere la tua posizione.",
+  "Dificultad": "Difficoltà",
+  "Pendiente": "Pendenza",
+  "Colorear las pistas por": "Colora le piste per"
  }
 };

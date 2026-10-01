@@ -108,6 +108,14 @@ async function exists(p) {
     await p.click('#map-preview'); await p.waitForTimeout(600);
     const map = await p.evaluate(() => ({ visible: !document.getElementById('pane-map').hidden, lines: document.querySelectorAll('#map-svg polyline').length }));
     check(map.visible && map.lines > 50, 'phone station: preview opens the map', map.lines + ' polylines');
+    await p.tap('#map-mode button[data-mode=slope]'); await p.waitForTimeout(400);
+    const slope = await p.evaluate(() => ({
+      on: document.getElementById('map-svg').classList.contains('slope-mode'),
+      groups: document.querySelectorAll('.map-slope').length, runs: document.querySelectorAll('.map-run').length,
+      colours: new Set([...document.querySelectorAll('.map-slope polyline')].map((e) => e.style.stroke)).size
+    }));
+    check(slope.on && slope.groups === slope.runs && slope.colours >= 3, 'phone station: map coloured by real slope', slope.groups + ' runs, ' + slope.colours + ' colours');
+    await p.tap('#map-mode button[data-mode=diff]');
     check(!p.errors.length, 'phone station: no JS errors', p.errors.join(' | '));
     await p.context().close();
   }

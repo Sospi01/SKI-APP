@@ -8,6 +8,12 @@
          "use my location" for nearby resorts; used on the device only. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Location permissions otherwise imply the GPS / location hardware is
+         required, which drops devices without it (some tablets) from Play.
+         The app works fine without it: location is an optional extra. -->
+    <uses-feature android:name="android.hardware.location" android:required="false" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+    <uses-feature android:name="android.hardware.location.network" android:required="false" />
 
     <!-- Firebase Analytics pulls in the advertising-ID permission transitively,
          but this app only uses Firebase for basic usage analytics (first_open,

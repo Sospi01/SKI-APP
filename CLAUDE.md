@@ -126,7 +126,7 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
 ### 3.5 App Android (`mobile-app/`)
 
 - Envoltorio mínimo: una sola `MainActivity.java` con un WebView que carga `https://skiinfoapp.com/`. Incluye el puente JS `SkiInfoAndroid.share` y Firebase Analytics.
-- Paquete `com.sospedra.skiinfo`, versión **1.0.6** (versionCode 8) en el repo; en Play sigue la 1.0.5 hasta que el usuario suba el AAB nuevo. minSdk 24, targetSdk 36.
+- Paquete `com.sospedra.skiinfo`, versión **1.0.6** (versionCode 9; la 8 se descartó porque excluía aparatos sin GPS) en el repo; en Play sigue la 1.0.5 hasta que el usuario suba el AAB nuevo. minSdk 24, targetSdk 36.
 - Desde 1.0.6:
   - permiso de ubicación (solo al pulsar "Dónde estoy" o "Usar mi ubicación"; se usa solo en el móvil);
   - `SkiInfoAndroid.hasLocation()` le dice a la web que la app da la ubicación (`canUseLocation()` en `index.html`); la 1.0.5 no lo tiene y la web oculta esos botones;

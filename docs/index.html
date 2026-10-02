@@ -2330,8 +2330,12 @@
     b.addEventListener('click', function () { showCatalog(b.getAttribute('data-catalog')); });
   });
 
+  // "Back" from a station returns to where it was picked: the country map
+  // (as it was left, zoom included) or else the station list.
+  var stationFromCountryMap = false;
   function selectStation(id) {
     var token = ++loadToken;
+    stationFromCountryMap = !screenCountryMap.hidden;
     screenCountry.hidden = true;
     screenList.hidden = true;
     screenCountryMap.hidden = true;
@@ -2406,7 +2410,8 @@
       screenDashboard.hidden = true;
       document.getElementById('app').classList.remove('dash-mode');
       document.title = HOME_TITLE;
-      screenList.hidden = false;
+      if (stationFromCountryMap) screenCountryMap.hidden = false;
+      else screenList.hidden = false;
     });
   });
 

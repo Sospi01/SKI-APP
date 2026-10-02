@@ -152,6 +152,11 @@ async function exists(p) {
     await p.goto(BASE + '/estacion/baqueira-beret/'); await p.waitForTimeout(800);
     const t = await p.title();
     check(/Baqueira/.test(t) && !p.errors.length, 'static page /estacion/baqueira-beret/', t);
+    // A station shared from the app's map (#mapa) opens straight on the map.
+    await p.goto('about:blank'); await p.goto(BASE + '/estacion/baqueira-beret/#mapa');
+    await p.waitForSelector('#pane-map:not([hidden]) #map-svg polyline', { timeout: 15000 }).catch(() => {});
+    check(await p.evaluate(() => !document.getElementById('pane-map').hidden && document.querySelectorAll('#map-svg polyline').length > 50),
+      'static page #mapa opens the station map', p.url());
     await p.context().close();
   } else console.log('skip  static pages (not built)');
 

@@ -461,6 +461,11 @@
   }
   .map-topbar { display: flex; align-items: center; gap: 12px; padding: 10px 14px; min-width: 0; }
   .map-topbar .back-btn { flex-shrink: 0; }
+  .map-share-btn {
+    flex-shrink: 0; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--border); border-radius: 50%; background: var(--surface-2); color: var(--text-primary); cursor: pointer;
+  }
+  .map-share-btn svg { width: 17px; height: 17px; }
   .map-topbar-title {
     flex: 1; min-width: 0; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 17px;
@@ -1105,6 +1110,7 @@
     <div class="map-topbar">
       <button type="button" class="back-btn js-back-btn"><span class="chev">‹</span> Estaciones</button>
       <span class="map-topbar-title" id="map-station-name"></span>
+      <button type="button" class="map-share-btn" id="map-share" aria-label="Compartir"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="14.5" cy="4.5" r="2.3" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="5.5" cy="10" r="2.3" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="14.5" cy="15.5" r="2.3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7.5 8.9l5-3.2M7.5 11.1l5 3.2" stroke="currentColor" stroke-width="1.6"/></svg></button>
     </div>
     <div class="map-viewport" id="map-viewport">
       <svg id="map-svg" role="img" aria-label="Mapa interactivo de las pistas y remontes sobre imagen satelital del terreno, coloreado por dificultad"></svg>
@@ -4007,8 +4013,11 @@
 
   // "Compartir": the station's own page (/estacion/<slug>/) is the link to
   // share -- it has the preview image and opens straight into its content.
+  // Shared while looking at the map (the phone's map tab, or desktop, where
+  // the map is always beside the info), it ends in #mapa so the page opens
+  // the map instead (static-pages.js).
   var slugsPromise = null;
-  document.getElementById('h-share').addEventListener('click', function () {
+  function shareCurrentStation(onMap) {
     var raw = currentRaw;
     if (!raw) return;
     if (!slugsPromise) {
@@ -4016,10 +4025,13 @@
     }
     slugsPromise.then(function (slugs) {
       var slug = slugs[raw.id];
-      var url = slug ? 'https://skiinfoapp.com' + PATHS.station + slug + '/' : 'https://skiinfoapp.com' + PATHS.home + '?estacion=' + raw.id;
+      var url = slug ? 'https://skiinfoapp.com' + PATHS.station + slug + '/' + (onMap ? '#mapa' : '')
+        : 'https://skiinfoapp.com' + PATHS.home + '?estacion=' + raw.id + (onMap ? '&vista=mapa' : '');
       shareStationLink(raw.name || T('Estación de esquí'), url);
     });
-  });
+  }
+  document.getElementById('h-share').addEventListener('click', function () { shareCurrentStation(isDesktopLayout()); });
+  document.getElementById('map-share').addEventListener('click', function () { shareCurrentStation(true); });
 
   function isDesktopLayout() { return window.matchMedia('(min-width: 1000px)').matches; }
 

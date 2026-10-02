@@ -3,6 +3,13 @@
 // profile.js from the station's data file, fetched on first expand). The page
 // is fully readable without this script -- it only adds the app's behaviour.
 (function () {
+  // A station shared from the app's map ends in #mapa: open the map straight
+  // away (the page's own "open the map" link). Link previews and search
+  // engines never see the #, so they still get this page.
+  if (location.hash === '#mapa') {
+    var mapLink = document.querySelector('a.hero-cta');
+    if (mapLink) { location.replace(mapLink.href); return; }
+  }
   var stationId = document.body.getAttribute('data-station');
   if (window.SkiTrack && stationId) {
     SkiTrack.station(stationId, document.body.getAttribute('data-name'), document.body.getAttribute('data-country'));

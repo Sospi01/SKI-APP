@@ -110,7 +110,17 @@ a { color: var(--accent); }
 .hero-action.is-fav svg { color: #ffd257; }
 .hero-action.is-fav svg path { fill: currentColor; }
 /* Phones: "Save" is just its star, so the three actions fit on one line in every language. */
-@media (max-width: 719px) { .hero-action.js-fav { flex: 0 0 auto; padding: 8px 11px; font-size: 0; gap: 0; } .hero-action.js-fav span { display: none; } }
+/* "Guardar" is the main action: solid yellow until saved; on phones it keeps its label and the others are icons. */
+.hero-action.js-fav { background: #ffd257; border-color: #ffd257; color: #10161c; }
+.hero-action.js-fav:hover { background: #ffdc7a; }
+.hero-action.js-fav svg { color: #10161c; }
+.hero-action.js-fav.is-fav { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.38); color: #fff; }
+.hero-action.js-fav.is-fav svg { color: #ffd257; }
+@media (max-width: 719px) {
+  .hero-action.js-fav { flex: 1 1 auto; }
+  .hero-action:not(.js-fav) { flex: 0 0 auto; padding: 8px 12px; font-size: 0; gap: 0; }
+  .hero-action:not(.js-fav) svg { width: 18px; height: 18px; }
+}
 
 /* sections */
 section { padding: 20px 18px; border-bottom: 1px solid var(--border); }

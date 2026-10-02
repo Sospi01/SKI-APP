@@ -367,8 +367,19 @@
   .lang-picker.in-hero { position: absolute; top: 14px; right: 16px; z-index: 3; }
   .lang-picker.in-header { margin-left: auto; }
   .hero-action.is-fav svg path { fill: currentColor; }
-  /* Phones: "Save" is just its star, so the three actions fit on one line in every language. */
-  @media (max-width: 999px) { .hero-action.fav-btn { flex: 0 0 auto; padding: 8px 11px; } .hero-action.fav-btn span { display: none; } }
+  /* "Guardar" is the main action (saved stations bring people back): solid
+     yellow until saved. On phones it keeps its label and the other two are
+     just their icons, so all three fit on one line in every language. */
+  .hero-action.fav-btn { background: #ffd257; border-color: #ffd257; color: #10161c; }
+  .hero-action.fav-btn:hover { background: #ffdc7a; }
+  .hero-action.fav-btn svg { color: #10161c; }
+  .hero-action.fav-btn.is-fav { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.38); color: #fff; }
+  .hero-action.fav-btn.is-fav svg { color: #ffd257; }
+  @media (max-width: 999px) {
+    .hero-action.fav-btn { flex: 1 1 auto; }
+    .hero-action:not(.fav-btn) { flex: 0 0 auto; padding: 8px 12px; font-size: 0; gap: 0; }
+    .hero-action:not(.fav-btn) svg { width: 18px; height: 18px; }
+  }
   .hero-action svg { width: 16px; height: 16px; }
 
   section { padding: 20px 18px; border-bottom: 1px solid var(--border); }
@@ -669,6 +680,12 @@
     box-shadow: 0 18px 40px -14px rgba(0,0,0,0.5);
   }
   .install-hint[hidden] { display: none; }
+  .fav-nudge { align-items: center; }
+  .fav-nudge .fav-nudge-star { width: 36px; height: 36px; border-radius: 10px; background: #ffd257; color: #10161c; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .fav-nudge .fav-nudge-star svg { width: 20px; height: 20px; }
+  .fav-nudge .fav-nudge-star svg path { fill: currentColor; }
+  .fav-nudge-save { border: none; border-radius: 999px; background: #ffd257; color: #10161c; font: inherit; font-size: 13px; font-weight: 700; padding: 8px 14px; cursor: pointer; flex-shrink: 0; }
+  @media (min-width: 1000px) { .fav-nudge { left: auto; right: 24px; bottom: 24px; margin: 0; width: 420px; } }
   .install-hint img { border-radius: 10px; flex-shrink: 0; }
   .install-hint-txt { flex: 1; min-width: 0; font-size: 12.5px; line-height: 1.45; color: var(--text-secondary); }
   .install-hint-txt strong { display: block; font-size: 14px; color: var(--text-primary); margin-bottom: 2px; }
@@ -1179,6 +1196,12 @@
 
 </div>
 
+<div class="install-hint fav-nudge" id="fav-nudge" role="dialog" aria-labelledby="fav-nudge-txt" hidden>
+  <span class="fav-nudge-star" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M10 2.6l2.3 4.7 5.2.8-3.8 3.7.9 5.2L10 14.5 5.4 17l.9-5.2-3.8-3.7 5.2-.8z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></span>
+  <div class="install-hint-txt" id="fav-nudge-txt"></div>
+  <button type="button" class="fav-nudge-save" id="fav-nudge-save">Guardar</button>
+  <button type="button" class="install-hint-close" id="fav-nudge-close" aria-label="Cerrar">×</button>
+</div>
 <div class="install-hint" id="install-hint" role="dialog" aria-label="Instalar Ski Info" hidden>
   <img src="/icons/icon-192.png" alt="" width="44" height="44">
   <div class="install-hint-txt">
@@ -2393,6 +2416,7 @@
     var token = ++loadToken;
     stationFromCountryMap = !screenCountryMap.hidden;
     locStop();
+    if (typeof favNudge !== 'undefined' && favNudge) favNudge.hide();
     screenCountry.hidden = true;
     screenList.hidden = true;
     screenCountryMap.hidden = true;
@@ -2447,6 +2471,7 @@
           raw.forecast = forecast;
           renderDashboard(raw);
           installHint.maybeShow();
+          favNudge.schedule(raw, token);
           track.station(raw);
           // Arrived straight on the map (the station pages' "open the map" link).
           if (!paneMap.hidden && !isDesktopLayout()) trackMapUse();
@@ -2465,6 +2490,7 @@
       hideTooltip();
       hideMapTapPopup();
       locStop();
+      favNudge.hide();
       screenDashboard.hidden = true;
       document.getElementById('app').classList.remove('dash-mode');
       document.title = HOME_TITLE;
@@ -4121,6 +4147,39 @@
 
   // iPhone/iPad: Safari can't offer installation itself, so explain how,
   // once, after the first station someone opens.
+  // "Guarda esta estación": after someone has spent a while on a station
+  // they haven't saved, a card offers to save it, since saved stations (with
+  // their snow forecast on the home page) are what bring people back. At most
+  // twice, on different days, and never once they have saved one.
+  var favNudge = (function () {
+    var el = document.getElementById('fav-nudge'), timer = null;
+    function state() { try { return JSON.parse(localStorage.getItem('si_fav_nudge') || '{}'); } catch (e) { return { n: 9 }; } }
+    function remember() { var st = state(); try { localStorage.setItem('si_fav_nudge', JSON.stringify({ n: (st.n || 0) + 1, d: new Date().toDateString() })); } catch (e) {} }
+    function hide() { el.hidden = true; }
+    document.getElementById('fav-nudge-close').addEventListener('click', hide);
+    document.getElementById('fav-nudge-save').addEventListener('click', function () {
+      hide();
+      if (currentRaw && !isFavStation(currentRaw.id)) document.getElementById('h-fav').click();
+    });
+    return {
+      schedule: function (raw, token) {
+        clearTimeout(timer);
+        hide();
+        var st = state();
+        if (favStations().length || (st.n || 0) >= 2 || st.d === new Date().toDateString()) return;
+        timer = setTimeout(function () {
+          if (token !== loadToken || isFavStation(raw.id) || favStations().length) return;
+          if (!document.getElementById('install-hint').hidden) return;
+          if (document.getElementById('screen-dashboard').hidden) return;
+          document.getElementById('fav-nudge-txt').textContent = T('Guarda {0} y verás su previsión de nieve cada vez que abras Ski Info.', raw.name || '');
+          el.hidden = false;
+          remember();
+        }, 25000);
+      },
+      hide: hide
+    };
+  })();
+
   var installHint = (function () {
     var el = document.getElementById('install-hint');
     var ua = navigator.userAgent || '';

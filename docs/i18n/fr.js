@@ -345,6 +345,7 @@ window.SKI_I18N = {
   "Buscando tu posición…": "Recherche de votre position…",
   "Activa el permiso de ubicación para ver dónde estás.": "Autorisez la localisation pour voir où vous êtes.",
   "Pendiente máxima: el tramo más empinado de al menos 50 m": "Pente maximale : le tronçon le plus raide d'au moins 50 m",
-  "máx. {0}%": "max {0} %"
+  "máx. {0}%": "max {0} %",
+  "Guarda {0} y verás su previsión de nieve cada vez que abras Ski Info.": "Enregistrez {0} et vous verrez ses prévisions de neige à chaque ouverture de Ski Info."
  }
 };

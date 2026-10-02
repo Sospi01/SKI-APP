@@ -609,6 +609,9 @@
     box-shadow: 0 8px 20px -8px rgba(0,0,0,0.4);
     pointer-events: none; overflow: hidden;
   }
+  /* The box lets taps through to the map, except its profile chart, which
+     you slide along (profile.js); there the finger shouldn't move the page. */
+  .map-tap-popup svg { pointer-events: auto; touch-action: none !important; }
   .map-tap-popup-head { padding: 9px 12px 7px; border-bottom: 1px solid var(--border); }
   .map-tap-popup-title { font-weight: 700; font-size: 12.5px; color: var(--text-primary); line-height: 1.25; }
   .map-tap-popup-meta { font-size: 10.5px; color: var(--text-secondary); margin-top: 2px; }
@@ -3208,6 +3211,17 @@
     dot.setAttribute('cx', q[0].toFixed(1)); dot.setAttribute('cy', q[1].toFixed(1));
     dot.setAttribute('r', (6 / (mapState.zoom || 1)).toFixed(2));
     dot.setAttribute('display', '');
+    // Phones: the tap popup sits right next to the run it shows, so it can
+    // hide the very point being read -- move it to the other half of the map.
+    if (!mapTapPopup.hidden) {
+      var d = dot.getBoundingClientRect(), b = mapTapPopup.getBoundingClientRect();
+      if (d.right > b.left - 8 && d.left < b.right + 8 && d.bottom > b.top - 8 && d.top < b.bottom + 8) {
+        var area = document.getElementById('map-viewport').getBoundingClientRect();
+        var top = d.top + d.height / 2 < area.top + area.height / 2
+          ? area.bottom - b.height - 10 : area.top + 60;
+        mapTapPopup.style.top = Math.max(10, top) + 'px';
+      }
+    }
   };
 
   // ============== country overview map (all stations of a country as pins) ==============

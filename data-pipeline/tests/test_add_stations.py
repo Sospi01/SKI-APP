@@ -86,3 +86,16 @@ def test_skips_a_small_part_of_a_bigger_station_nearby(tmp_path):
                                   "country": "US", "lat": a["latitude"] + 0.0225, "lon": a["longitude"]}])
     assert run(db_path, docs) == 0
     assert [s["id"] for s in catalogue(docs)] == ["big"]
+
+
+def test_skips_a_small_area_inside_a_bigger_stations_terrain(tmp_path):
+    db_path = us_db(tmp_path)
+    a = area(db_path, "skiarea-1")
+    lat, lon = a["latitude"], a["longitude"]
+    # A big station whose point is 10 km away but whose runs reach around skiarea-1.
+    docs = empty_docs(tmp_path, [{"id": "big", "name": "Big Resort", "region": None, "pisteKm": 5000,
+                                  "country": "US", "lat": lat + 0.09, "lon": lon}])
+    run_geom = [[[lon - 0.01, lat - 0.01, 2000], [lon + 0.01, lat + 0.1, 1500]]]
+    (docs / "data" / "big.json").write_text(json.dumps({"id": "big", "runs": [{"geom": run_geom}], "lifts": []}))
+    assert run(db_path, docs) == 0
+    assert [s["id"] for s in catalogue(docs)] == ["big"]

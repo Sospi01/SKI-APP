@@ -33,6 +33,24 @@ NEAR_KM = 1.5
 # zone or terrain park OpenStreetMap maps on its own, like Beaver Creek's
 # McCoy Park), not a resort of its own.
 PART_KM, PART_RATIO = 3.5, 0.2
+# ...or one that lies inside a much bigger station's terrain (the box around
+# its runs and lifts), however far from that station's own point.
+BOX_RATIO, BOX_PAD = 0.5, 0.003
+
+
+def terrain_boxes(docs: Path, stations: list[dict]) -> list[tuple]:
+    """(min_lon, min_lat, max_lon, max_lat, name, km) of each station's runs and lifts."""
+    boxes = []
+    for s in stations:
+        path = docs / "data" / f"{s['id']}.json"
+        if not path.exists():
+            continue
+        d = json.loads(path.read_text(encoding="utf-8"))
+        pts = [p for k in ("runs", "lifts") for r in d.get(k) or [] for part in (r.get("geom") or []) for p in part]
+        if pts:
+            boxes.append((min(p[0] for p in pts), min(p[1] for p in pts), max(p[0] for p in pts), max(p[1] for p in pts),
+                          s["name"], s.get("pisteKm") or 0))
+    return boxes
 
 
 def candidates(conn: sqlite3.Connection, country: str, min_km: float) -> list[dict]:
@@ -84,6 +102,7 @@ def main() -> int:
     known |= {p.stem for p in (args.docs / "data").glob("*.json")}
     known_pts = [(s["lat"], s["lon"], s["name"], s.get("pisteKm") or 0) for s in stations if s.get("lat") is not None]
 
+    boxes = terrain_boxes(args.docs, stations)
     added, near = [], []
     for c in candidates(conn, args.country, args.min_km):
         if c["id"] in known or c["latitude"] is None:
@@ -92,6 +111,9 @@ def main() -> int:
         close = next((n for la, lo, n, km in known_pts
                       if km_between(pt, (la, lo)) <= NEAR_KM
                       or (km_between(pt, (la, lo)) <= PART_KM and c["km"] < km * PART_RATIO)), None)
+        close = close or next((n for x0, y0, x1, y1, n, km in boxes
+                               if x0 - BOX_PAD <= pt[1] <= x1 + BOX_PAD and y0 - BOX_PAD <= pt[0] <= y1 + BOX_PAD
+                               and c["km"] < km * BOX_RATIO), None)
         if close:
             near.append((c["name"] or c["id"], c["km"], close))
             continue
@@ -114,7 +136,7 @@ def main() -> int:
         lines_md += [f"| {r['name']} | {r.get('region') or ''} | {downhill(r)[1]:.1f} | {downhill(r)[0]} | {len(r.get('lifts') or [])} |"
                      for r in added]
     if near:
-        lines_md += ["", "### Skipped (within 1.5 km of a station in the app, or a much smaller area within 3.5 km of one)", "| Candidate | km | Near |", "|---|---|---|"]
+        lines_md += ["", "### Skipped (the same as, or a part of, a station already in the app)", "| Candidate | km | Near |", "|---|---|---|"]
         lines_md += [f"| {n} | {k:.1f} | {c} |" for n, k, c in near[:100]]
     report = "\n".join(lines_md) + "\n"
     print(report)

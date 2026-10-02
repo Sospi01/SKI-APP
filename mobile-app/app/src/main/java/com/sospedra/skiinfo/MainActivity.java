@@ -1,11 +1,15 @@
 package com.sospedra.skiinfo;
 
+import android.Manifest;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
+import android.webkit.GeolocationPermissions;
 import android.webkit.JavascriptInterface;
+import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -15,9 +19,14 @@ import android.widget.Button;
 import android.widget.ProgressBar;
 
 import androidx.activity.OnBackPressedCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.browser.customtabs.CustomTabsClient;
 import androidx.browser.customtabs.CustomTabsIntent;
+import androidx.core.content.ContextCompat;
+
+import java.util.Locale;
 
 /**
  * The whole app is this one screen: a WebView pointed at the live Ski Info
@@ -37,6 +46,21 @@ public class MainActivity extends AppCompatActivity {
     private ProgressBar progressBar;
     private View errorView;
 
+    // The site asks for the location ("where am I" on the piste map, nearby
+    // resorts) through the browser API; the WebView hands that request here,
+    // and Android's own permission prompt answers it. Nothing is stored or
+    // sent by the app: the position only ever goes to the page on screen.
+    private GeolocationPermissions.Callback pendingGeoCallback;
+    private String pendingGeoOrigin;
+    private final ActivityResultLauncher<String[]> locationPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {
+                boolean granted = Boolean.TRUE.equals(result.get(Manifest.permission.ACCESS_FINE_LOCATION))
+                        || Boolean.TRUE.equals(result.get(Manifest.permission.ACCESS_COARSE_LOCATION));
+                if (pendingGeoCallback != null) pendingGeoCallback.invoke(pendingGeoOrigin, granted, false);
+                pendingGeoCallback = null;
+                pendingGeoOrigin = null;
+            });
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -53,10 +77,29 @@ public class MainActivity extends AppCompatActivity {
         settings.setLoadWithOverviewMode(true);
         settings.setUseWideViewPort(true);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        settings.setGeolocationEnabled(true);
         // Lets the site's "Compartir" button open Android's share sheet
         // (docs/station-actions.js looks for window.SkiInfoAndroid). Only the
         // app's own pages ever load here; everything else opens externally.
         webView.addJavascriptInterface(new ShareBridge(), "SkiInfoAndroid");
+
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
+                if (origin == null || !isAppPage(Uri.parse(origin))) {
+                    callback.invoke(origin, false, false);
+                    return;
+                }
+                if (hasLocationPermission()) {
+                    callback.invoke(origin, true, false);
+                    return;
+                }
+                pendingGeoOrigin = origin;
+                pendingGeoCallback = callback;
+                locationPermissionLauncher.launch(new String[] {
+                        Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION });
+            }
+        });
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -89,7 +132,7 @@ public class MainActivity extends AppCompatActivity {
         retryButton.setOnClickListener(v -> {
             errorView.setVisibility(View.GONE);
             webView.setVisibility(View.VISIBLE);
-            webView.loadUrl(APP_URL);
+            webView.loadUrl(startUrl());
         });
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
@@ -107,11 +150,39 @@ public class MainActivity extends AppCompatActivity {
         if (savedInstanceState != null) {
             webView.restoreState(savedInstanceState);
         } else {
-            webView.loadUrl(APP_URL);
+            webView.loadUrl(startUrl());
         }
     }
 
+    /**
+     * The home page in the phone's language: the Spanish home sends
+     * ?applang=xx on to /xx/ unless the person already picked a language on
+     * the site (docs/index.html, lang-redirect). Spanish and the other
+     * languages of Spain stay on the Spanish home; anything else not
+     * available gets English.
+     */
+    private static String startUrl() {
+        String lang = Locale.getDefault().getLanguage();
+        switch (lang) {
+            case "es": case "ca": case "eu": case "gl": return APP_URL;
+            case "fr": case "de": case "it": return APP_URL + "?applang=" + lang;
+            default: return APP_URL + "?applang=en";
+        }
+    }
+
+    private boolean hasLocationPermission() {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                || ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    }
+
     private class ShareBridge {
+        // Tells the site this app version answers location requests (1.0.6+),
+        // so it shows its "where am I" and "use my location" buttons here too.
+        @JavascriptInterface
+        public boolean hasLocation() {
+            return true;
+        }
+
         @JavascriptInterface
         public void share(String text, String url) {
             if (url == null || !url.startsWith("https://")) return;

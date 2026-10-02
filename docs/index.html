@@ -15,7 +15,7 @@
 <!-- Someone who chose English (a language link) gets the English app from the
      Spanish home too. Only an explicit choice: nothing is inferred, so search
      engines and first visits always see the page they asked for. -->
-<script id="lang-redirect">try{var l=localStorage.getItem('si_lang');if(location.pathname==='/'&&/^(en|fr|de|it)$/.test(l))location.replace('/'+l+'/'+location.search+location.hash);}catch(e){}</script>
+<script id="lang-redirect">try{var l=localStorage.getItem('si_lang'),q=location.search,m=/[?&]applang=(\w+)/.exec(q);if(m){q=q.replace(/[?&]applang=\w+/,'').replace(/^&/,'?');if(!l)l=m[1];}if(location.pathname==='/'&&/^(en|fr|de|it)$/.test(l))location.replace('/'+l+'/'+q+location.hash);else if(m)history.replaceState(null,'','/'+q+location.hash);}catch(e){}</script>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
@@ -574,6 +574,17 @@
   .map-mode button[aria-pressed="true"] { background: #fff; color: #10161c; }
   #map-viewport .map-controls { top: 52px; }
   #map-viewport .map-hint { top: auto; bottom: 28px; }
+  #map-locate[hidden] { display: none; }
+  #map-locate svg { width: 17px; height: 17px; display: block; margin: auto; }
+  #map-locate[aria-pressed="true"] { color: #4aa3ff; }
+  .map-loc-msg {
+    position: absolute; left: 50%; bottom: 58px; transform: translateX(-50%); z-index: 3; max-width: calc(100% - 24px);
+    padding: 6px 12px; border-radius: 999px; background: rgba(20,24,28,0.82); color: #fff; font-size: 12.5px; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none;
+  }
+  .map-loc-msg[hidden] { display: none; }
+  .map-loc-dot { fill: #1a73e8; stroke: #fff; stroke-width: 2.5; vector-effect: non-scaling-stroke; pointer-events: none; filter: drop-shadow(0 0 3px rgba(0,0,0,0.45)); }
+  .map-loc-acc { fill: rgba(26,115,232,0.16); stroke: rgba(26,115,232,0.5); stroke-width: 1; vector-effect: non-scaling-stroke; pointer-events: none; }
   .map-profile-point { fill: #fff; stroke: #10161c; stroke-width: 2.5; vector-effect: non-scaling-stroke; pointer-events: none; filter: drop-shadow(0 0 3px rgba(0,0,0,0.5)); }
   .map-slope { display: none; }
   .map-slope polyline { fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; transition: stroke-width 0.1s ease; }
@@ -629,12 +640,17 @@
 
   footer.credit { padding: 18px; font-size: 11px; color: var(--text-muted); text-align: center; line-height: 1.6; }
 
-  /* "Also available in <your language>" bar (docs/lang.js) */
+  /* "Also available in <your language>" bar (docs/lang.js). At the bottom,
+     above a station's tab bar on phones: at the top it covered the map's
+     back and share buttons. */
   .lang-hint {
-    position: fixed; top: 10px; left: 12px; right: 12px; z-index: 45; max-width: 460px; margin: 0 auto;
+    position: fixed; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); left: 12px; right: 12px; z-index: 45; max-width: 460px; margin: 0 auto;
     display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 14px; font-size: 13px;
     background: var(--bg); color: var(--text-primary); border: 1px solid var(--border); border-radius: 12px;
     box-shadow: 0 14px 30px -14px rgba(0,0,0,0.45);
+  }
+  @media (max-width: 999px) {
+    body:has(.app.dash-mode) .lang-hint { bottom: calc(var(--tabbar-h) + 10px + env(safe-area-inset-bottom, 0px)); }
   }
   .lang-hint span { flex: 1; min-width: 0; }
   .lang-hint a { font-weight: 700; color: var(--accent); text-decoration: none; white-space: nowrap; }
@@ -746,6 +762,7 @@
     font-size: 13px; font-weight: 600;
   }
   .home-app-link:hover { background: rgba(255,255,255,0.24); }
+  button.home-app-link { font-family: inherit; cursor: pointer; }
   .home-app-link[hidden] { display: none; }
   .home-app-link svg { width: 17px; height: 17px; }
   .home-stat .v { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 26px; line-height: 1; }
@@ -894,6 +911,7 @@
           <div class="home-stat"><div class="v" id="home-stat-km">–</div><div class="k">km de pistas</div></div>
         </div>
         <a class="home-app-link" id="home-app-link" href="/app/"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10.5 18.5h3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>Llévate Ski Info en el móvil ›</a>
+        <button type="button" class="home-app-link" id="home-install" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5v11M7.5 10.5l4.5 4.5 4.5-4.5M5 19.5h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Instalar Ski Info como app</button>
       </div>
     </div>
 
@@ -1122,7 +1140,9 @@
         <button type="button" id="map-zoom-in" aria-label="Acercar">+</button>
         <button type="button" id="map-zoom-out" aria-label="Alejar">–</button>
         <button type="button" id="map-zoom-reset" aria-label="Restablecer vista">⤢</button>
+        <button type="button" id="map-locate" aria-label="Dónde estoy" aria-pressed="false" hidden><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="3" fill="currentColor"/><circle cx="10" cy="10" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 1.5v2.5M10 16v2.5M1.5 10H4M16 10h2.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
       </div>
+      <div class="map-loc-msg" id="map-loc-msg" role="status" hidden></div>
       <div class="map-hint" id="map-hint">Arrastra para mover · pellizco para zoom · gira con dos dedos</div>
       <div class="map-empty" id="map-empty" hidden>No hay geometría de pistas ni remontes para esta estación.</div>
       <div class="map-run-panel" id="map-run-panel" role="dialog" aria-labelledby="map-run-panel-title" hidden>
@@ -1449,6 +1469,7 @@
   // ---- desktop: selected piste/lift (map highlight + fixed profile panel) ----
   // highlightFeatures is set up by the map controller (setupMapControlsOnce).
   var highlightFeatures = function () {};
+  var centerMapOn = function () {};
   var currentRunGroups = {};   // run name -> group from renderDashboard
   var selectedMapKey = null;   // 'run:<name>' | feature object for unnamed runs/lifts
   var runPanel = document.getElementById('map-run-panel');
@@ -1697,6 +1718,27 @@
     document.getElementById('home-app-link').hidden = true;
   }
 
+  // "Install as an app" (Chrome / Edge / Samsung Internet on Android, and
+  // desktop Chrome): offered only when the browser says it can install the
+  // site, in place of the link to the app page. Installed, it opens like an
+  // app from the home screen, which brings people back far more often.
+  (function () {
+    var btn = document.getElementById('home-install'), appLink = document.getElementById('home-app-link');
+    var deferred = null;
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      deferred = e;
+      btn.hidden = false;
+      appLink.hidden = true;
+    });
+    btn.addEventListener('click', function () {
+      if (!deferred) return;
+      deferred.prompt();
+      deferred.userChoice.then(function () { deferred = null; btn.hidden = true; }).catch(function () {});
+    });
+    window.addEventListener('appinstalled', function () { deferred = null; btn.hidden = true; });
+  })();
+
   var HOME_DATA = (function () {
     try { return JSON.parse(document.getElementById('home-data').textContent); } catch (e) { return null; }
   })();
@@ -1894,6 +1936,14 @@
   // to the visitor. Where they are is guessed from the device's time zone
   // (its main city: no permission prompt, nothing sent anywhere) until they
   // share their location, which is kept, rounded, in this browser only.
+  // The browser's location API, or the Android app's (it answers location
+  // requests from 1.0.6 on, and says so through its bridge).
+  function canUseLocation() {
+    if (!navigator.geolocation) return false;
+    if (!/; wv\)/.test(navigator.userAgent)) return true;
+    try { return !!(window.SkiInfoAndroid && typeof window.SkiInfoAndroid.hasLocation === 'function' && window.SkiInfoAndroid.hasLocation()); }
+    catch (e) { return false; }
+  }
   var TZ = (function () { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { return ''; } })();
   var TZ_COORDS = {
     'Europe/Madrid': [40.42, -3.70], 'Europe/Andorra': [42.51, 1.52], 'Europe/Lisbon': [38.72, -9.14], 'Europe/Paris': [48.86, 2.35],
@@ -1969,8 +2019,7 @@
     var msg = document.getElementById('near-msg');
     var saved = null;
     try { saved = JSON.parse(localStorage.getItem('si_loc') || 'null'); } catch (e) {}
-    // The Android app's WebView doesn't hand out the location.
-    var canLocate = !!navigator.geolocation && !/; wv\)/.test(navigator.userAgent);
+    var canLocate = canUseLocation();
     function render(here, exact) {
       listEl.innerHTML = '';
       STATIONS.filter(function (s) { return (s.pisteKm || 0) >= 10 && s.lat != null; })
@@ -2336,6 +2385,7 @@
   function selectStation(id) {
     var token = ++loadToken;
     stationFromCountryMap = !screenCountryMap.hidden;
+    locStop();
     screenCountry.hidden = true;
     screenList.hidden = true;
     screenCountryMap.hidden = true;
@@ -2407,6 +2457,7 @@
     btn.addEventListener('click', function () {
       hideTooltip();
       hideMapTapPopup();
+      locStop();
       screenDashboard.hidden = true;
       document.getElementById('app').classList.remove('dash-mode');
       document.title = HOME_TITLE;
@@ -2490,6 +2541,7 @@
         'translate(' + mapState.tx.toFixed(2) + ',' + mapState.ty.toFixed(2) + ') ' +
         'rotate(' + mapState.angle.toFixed(2) + ') scale(' + mapState.zoom.toFixed(3) + ')');
       mapState.updateScaleBar(mapState.zoom);
+      if (mapState.onZoom) mapState.onZoom(mapState.zoom);
       var liftR = liftStationRadius(mapState.zoom).toFixed(3);
       (mapState.liftStationDots || []).forEach(function (d) { d.setAttribute('r', liftR); });
       var svcR = serviceMarkerRadius(mapState.zoom).toFixed(3);
@@ -2750,6 +2802,20 @@
       mapState.zoom = saved.zoom; mapState.tx = saved.tx; mapState.ty = saved.ty;
       animateView(target);
     }
+    // Centre the map on a point (content coordinates), zooming in to at
+    // least 2.5x: "where am I" on the piste map.
+    centerMapOn = function (q) {
+      if (!mapState) return;
+      var r = rotateXY(q[0], q[1], mapState.angle), zoom = Math.max(mapState.zoom, 2.5);
+      var saved = { zoom: mapState.zoom, tx: mapState.tx, ty: mapState.ty };
+      mapState.zoom = zoom;
+      mapState.tx = mapState.vbW / 2 - r[0] * zoom;
+      mapState.ty = mapState.vbH / 2 - r[1] * zoom;
+      clamp();
+      var target = { zoom: mapState.zoom, tx: mapState.tx, ty: mapState.ty };
+      mapState.zoom = saved.zoom; mapState.tx = saved.tx; mapState.ty = saved.ty;
+      animateView(target);
+    };
     highlightFeatures = function (feats, pan) {
       if (!mapState) return;
       clearActiveFeature();
@@ -2995,7 +3061,7 @@
         var valueText = bits.join(' · ');
         wireFocusTooltip(hit, label, valueText);
         var projPts = part.map(project);
-        features.push({ el: pl, hoverClass: 'lift-hovered', points: projPts, label: label, valueText: valueText, isLift: true });
+        features.push({ el: pl, hoverClass: 'lift-hovered', points: projPts, label: label, valueText: valueText, isLift: true, geo: part });
         // Lifts carry people uphill.
         addDirectionArrow(content, directionArrows, projPts, partFlowSign(part, true));
       });
@@ -3234,6 +3300,67 @@
       }
     }
   };
+
+  // ---- "Dónde estoy": the device's position on the piste map, followed
+  // live while the button is on. The browser (or the Android app, from
+  // 1.0.6) asks for permission; the position stays on the device. It says
+  // which run or lift you're on, or how far you are if you're not at the
+  // resort, and centres the map on you the first time.
+  var locWatch = null, locCentered = false;
+  var locBtn = document.getElementById('map-locate'), locMsgEl = document.getElementById('map-loc-msg');
+  locBtn.hidden = !canUseLocation();
+  function locMsg(text) { locMsgEl.textContent = text || ''; locMsgEl.hidden = !text; }
+  function locStop() {
+    if (!locBtn) return;
+    if (locWatch != null) navigator.geolocation.clearWatch(locWatch);
+    locWatch = null;
+    locBtn.setAttribute('aria-pressed', 'false');
+    locMsg('');
+    if (mapState && mapState.loc) { mapState.loc.dot.remove(); mapState.loc.acc.remove(); mapState.loc = null; }
+  }
+  function locDraw(pos) {
+    if (!mapState) return;
+    var SVGNS = 'http://www.w3.org/2000/svg';
+    var loc = mapState.loc;
+    if (!loc) {
+      loc = mapState.loc = { acc: document.createElementNS(SVGNS, 'circle'), dot: document.createElementNS(SVGNS, 'circle') };
+      loc.acc.setAttribute('class', 'map-loc-acc');
+      loc.dot.setAttribute('class', 'map-loc-dot');
+    }
+    mapState.content.appendChild(loc.acc);
+    mapState.content.appendChild(loc.dot);
+    var pt = [pos.coords.longitude, pos.coords.latitude], q = mapState.project(pt);
+    loc.pt = pt;
+    [loc.acc, loc.dot].forEach(function (c) { c.setAttribute('cx', q[0].toFixed(1)); c.setAttribute('cy', q[1].toFixed(1)); });
+    // Accuracy radius: metres -> degrees of latitude -> map units.
+    loc.acc.setAttribute('r', Math.max(0, (pos.coords.accuracy || 0) / 111320 * mapState.scale).toFixed(1));
+    function size(z) { loc.dot.setAttribute('r', (7 / z).toFixed(2)); }
+    size(mapState.zoom || 1);
+    mapState.onZoom = size;
+    // Nearest run or lift, and how far it is.
+    var best = null, bestM = Infinity;
+    (mapState.features || []).forEach(function (f) {
+      (f.geomPart || f.geo || []).forEach(function (p) { var m = haversineM(p, pt); if (m < bestM) { bestM = m; best = f; } });
+    });
+    if (bestM > 2000) {
+      locMsg(T('Estás a {0} km de esta estación', fmt(Math.round(bestM / 1000))));
+      return;
+    }
+    locMsg(best && bestM <= 60 && best.label ? T('Estás en: {0}', best.label) : '');
+    if (!locCentered) { locCentered = true; centerMapOn(q); }
+  }
+  locBtn.addEventListener('click', function () {
+    if (locWatch != null) { locStop(); return; }
+    locCentered = false;
+    locBtn.setAttribute('aria-pressed', 'true');
+    locMsg(T('Buscando tu posición…'));
+    locWatch = navigator.geolocation.watchPosition(locDraw, function (err) {
+      var keep = locWatch;
+      locStop();
+      locMsg(err && err.code === 1 ? T('Activa el permiso de ubicación para ver dónde estás.') : T('No hemos podido obtener tu ubicación.'));
+      setTimeout(function () { if (locWatch == null && keep !== undefined) locMsg(''); }, 5000);
+    }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
+  });
 
   // ============== country overview map (all stations of a country as pins) ==============
   var countryMapState = null;

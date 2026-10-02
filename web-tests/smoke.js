@@ -120,6 +120,17 @@ async function exists(p) {
     await p.context().close();
   }
 
+  // ---- "where am I" on the piste map ----
+  {
+    const p = await newPage(browser, { ...devices['Pixel 7'], permissions: ['geolocation'], geolocation: { latitude: 42.68642, longitude: 0.97727, accuracy: 15 } });
+    await p.goto(BASE + '/?estacion=' + BAQUEIRA + '&vista=mapa');
+    await p.waitForSelector('#map-svg polyline', { timeout: 15000 }).catch(() => {});
+    await p.tap('#map-locate'); await p.waitForTimeout(1200);
+    const loc = await p.evaluate(() => ({ dot: document.querySelectorAll('.map-loc-dot').length, msg: document.getElementById('map-loc-msg').textContent }));
+    check(loc.dot === 1 && /Muguet/.test(loc.msg), 'phone station: "where am I" shows the position and the run you are on', loc.msg);
+    await p.context().close();
+  }
+
   // ---- station on desktop ----
   {
     const p = await newPage(browser, { viewport: { width: 1440, height: 900 } });

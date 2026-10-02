@@ -50,7 +50,7 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
 | `sw.js` | Service worker, `VERSION = 'v6'`. Las navegaciones y los datos se piden primero a la red y, si falla, a la caché. Sube `VERSION` si cambia la lista de archivos del shell. |
 | `track.js` | Contador de uso anónimo, sin cookies (ver 3.4). |
 | `stats.html` | Panel privado de estadísticas (ver 3.4). |
-| `privacy.html` | Política de privacidad. **Solo existe en español.** |
+| `privacy.html`, `privacy-{en,fr,de,it}.html` | Política de privacidad en los 5 idiomas (archivos fijos, enlazados por idioma con `LOC[lang]['privacy']` de `build_seo_pages.py`). |
 | `flags/*.svg`, `icons/`, `fonts/` | Recursos. Las fuentes se sirven desde la propia web: Barlow Condensed e IBM Plex Sans. |
 
 **Generado en cada despliegue (está en `.gitignore`, no se commitea):**
@@ -82,6 +82,8 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
   - Japón: *easy* → verde.
   - Lo replican `build_guides.py`, `build_seo_pages.py` y `build_share_images.py`.
 - `renderFavs`: sección "Mis estaciones" de la portada, con la nieve a 7 días.
+- Portada para quien llega por primera vez: botones "Populares" (`POPULAR`, por idioma o Norteamérica) y "Cerca de ti" (por zona horaria, `TZ_COORDS`, o ubicación real guardada redondeada en `si_loc`). Botón "Instalar como app" (`beforeinstallprompt`).
+- Mapa de estación: modo de color "Dificultad | Pendiente" (`setMapMode`, `si_map_mode`), botón "Dónde estoy" (`locDraw`, `watchPosition`), compartir desde el mapa (`#mapa` al final de la URL de la ficha: `static-pages.js` salta al mapa), y el perfil de cada pista se puede recorrer con el dedo (`addProfileScrubber` en `profile.js`, que marca el punto en el mapa con `window.onProfilePoint`).
 - Portada: buscador `#global-search`, ranking de nieve, destacadas y guías. `#home-data` es el JSON que inyecta el despliegue.
 
 ### 3.2 Pipeline (`data-pipeline/`)
@@ -124,7 +126,11 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
 ### 3.5 App Android (`mobile-app/`)
 
 - Envoltorio mínimo: una sola `MainActivity.java` con un WebView que carga `https://skiinfoapp.com/`. Incluye el puente JS `SkiInfoAndroid.share` y Firebase Analytics.
-- Paquete `com.sospedra.skiinfo`, versión **1.0.5** (versionCode 7), minSdk 24, targetSdk 36.
+- Paquete `com.sospedra.skiinfo`, versión **1.0.6** (versionCode 8) en el repo; en Play sigue la 1.0.5 hasta que el usuario suba el AAB nuevo. minSdk 24, targetSdk 36.
+- Desde 1.0.6:
+  - permiso de ubicación (solo al pulsar "Dónde estoy" o "Usar mi ubicación"; se usa solo en el móvil);
+  - `SkiInfoAndroid.hasLocation()` le dice a la web que la app da la ubicación (`canUseLocation()` en `index.html`); la 1.0.5 no lo tiene y la web oculta esos botones;
+  - abre la web en el idioma del móvil con `/?applang=xx`, que el script `lang-redirect` de `index.html` respeta salvo que el usuario ya haya elegido idioma (`si_lang`).
 - En Google Play está en **prueba cerrada** (hacen falta 14 días con 12 testers). Terminaría hacia el **7–8 de octubre**; después, el usuario solicita el acceso a producción.
 - Verificación de desarrollador de Android: hecha. Los dos paquetes de la cuenta están registrados.
 - `mobile-app/STORE_LISTING.md` tiene los textos de la ficha de Play en español e inglés, y los pasos del formulario de seguridad de los datos.

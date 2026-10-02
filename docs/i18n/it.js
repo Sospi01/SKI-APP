@@ -337,6 +337,12 @@ window.SKI_I18N = {
   "Dificultad": "Difficoltà",
   "Pendiente": "Pendenza",
   "Colorear las pistas por": "Colora le piste per",
-  "Desliza por el perfil para ver la distancia desde la salida, la altitud y la pendiente de cada punto.": "Scorri lungo il profilo per vedere la distanza dalla partenza, l'altitudine e la pendenza in ogni punto."
+  "Desliza por el perfil para ver la distancia desde la salida, la altitud y la pendiente de cada punto.": "Scorri lungo il profilo per vedere la distanza dalla partenza, l'altitudine e la pendenza in ogni punto.",
+  "Instalar Ski Info como app": "Installa Ski Info come app",
+  "Dónde estoy": "Dove sono",
+  "Estás a {0} km de esta estación": "Sei a {0} km da questa stazione",
+  "Estás en: {0}": "Sei su: {0}",
+  "Buscando tu posición…": "Ricerca della posizione…",
+  "Activa el permiso de ubicación para ver dónde estás.": "Consenti l'accesso alla posizione per vedere dove sei."
  }
 };

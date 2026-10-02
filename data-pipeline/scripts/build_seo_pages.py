@@ -223,16 +223,16 @@ def pill(text: str) -> str:
 
 # Where each language's pages live, and a few head values.
 LOC = {
-    "es": {"html": "es", "og": "es_ES", "home": "/", "station": "/estacion/", "countries": "/pais/", "guides": "/guias/",
+    "es": {"privacy": "/privacy.html", "html": "es", "og": "es_ES", "home": "/", "station": "/estacion/", "countries": "/pais/", "guides": "/guias/",
            "app": "/app/", "og_dir": "/og/"},
-    "en": {"html": "en", "og": "en_GB", "home": "/en/", "station": "/en/resort/", "countries": "/en/country/",
+    "en": {"privacy": "/privacy-en.html", "html": "en", "og": "en_GB", "home": "/en/", "station": "/en/resort/", "countries": "/en/country/",
            "guides": "/en/guides/", "app": "/en/app/", "og_dir": "/og/en/"},
     # These three reuse the English share images (their own would double the site's size).
-    "fr": {"html": "fr", "og": "fr_FR", "home": "/fr/", "station": "/fr/station/", "countries": "/fr/pays/",
+    "fr": {"privacy": "/privacy-fr.html", "html": "fr", "og": "fr_FR", "home": "/fr/", "station": "/fr/station/", "countries": "/fr/pays/",
            "guides": "/fr/guides/", "app": "/fr/app/", "og_dir": "/og/en/"},
-    "de": {"html": "de", "og": "de_DE", "home": "/de/", "station": "/de/skigebiet/", "countries": "/de/land/",
+    "de": {"privacy": "/privacy-de.html", "html": "de", "og": "de_DE", "home": "/de/", "station": "/de/skigebiet/", "countries": "/de/land/",
            "guides": "/de/ratgeber/", "app": "/de/app/", "og_dir": "/og/en/"},
-    "it": {"html": "it", "og": "it_IT", "home": "/it/", "station": "/it/stazione/", "countries": "/it/paese/",
+    "it": {"privacy": "/privacy-it.html", "html": "it", "og": "it_IT", "home": "/it/", "station": "/it/stazione/", "countries": "/it/paese/",
            "guides": "/it/guide/", "app": "/it/app/", "og_dir": "/og/en/"},
 }
 LANG_NAMES = {"es": "Español", "en": "English", "fr": "Français", "de": "Deutsch", "it": "Italiano"}
@@ -444,7 +444,7 @@ def page(*, title: str, description: str, url: str, body: str, body_attrs: str =
 <div class="app">
 {body}
 <footer class="credit">
-<a href="{loc['home']}">Ski Info</a> · <a href="{loc['countries']}">{tx['f_countries']}</a> · <a href="{loc['guides']}">{tx['f_guides']}</a> · <a href="{loc['app']}">{tx['f_app']}</a> · <a href="/privacy.html">{tx['f_privacy']}</a><br>
+<a href="{loc['home']}">Ski Info</a> · <a href="{loc['countries']}">{tx['f_countries']}</a> · <a href="{loc['guides']}">{tx['f_guides']}</a> · <a href="{loc['app']}">{tx['f_app']}</a> · <a href="{loc['privacy']}">{tx['f_privacy']}</a><br>
 <span class="lang-links">{lang_links}</span><br>
 {tx['f_data']}
 </footer>
@@ -1113,7 +1113,7 @@ def build_localized_app(index_html: str, i18n: dict, lang: str, base_url: str) -
             missing.append(t)
         return m.group(0)
     markup = re.sub(r'(placeholder|aria-label|title)="([^"]+)"', tr_attr, markup)
-    for page_key, es_path in (("countries", "/pais/"), ("guides", "/guias/"), ("app", "/app/")):
+    for page_key, es_path in (("countries", "/pais/"), ("guides", "/guias/"), ("app", "/app/"), ("privacy", "/privacy.html")):
         markup = markup.replace(f'href="{es_path}"', f'href="{loc[page_key]}"')
     if lang in HUNDREDS:
         markup = markup.replace('<span id="home-station-count">1.200+</span>', f'<span id="home-station-count">{HUNDREDS[lang]}</span>')

@@ -4,6 +4,10 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Asked only when the person taps "where am I" on the piste map or
+         "use my location" for nearby resorts; used on the device only. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <!-- Firebase Analytics pulls in the advertising-ID permission transitively,
          but this app only uses Firebase for basic usage analytics (first_open,

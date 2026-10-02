@@ -88,7 +88,7 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
 
 ### 3.2 Pipeline (`data-pipeline/`)
 
-- `ski_pipeline/`: CLI que descarga el GeoJSON de OpenSkiMap y crea un SQLite: `python -m ski_pipeline.cli --db data/ski_info.db -v`. Tests: `cd data-pipeline && python3 -m pytest -q` (34 pasan).
+- `ski_pipeline/`: CLI que descarga el GeoJSON de OpenSkiMap y crea un SQLite: `python -m ski_pipeline.cli --db data/ski_info.db -v`. Tests: `cd data-pipeline && python3 -m pytest -q` (37 pasan).
 - `scripts/`:
   - `build_seo_pages.py`: fichas, países, página `/app`, sitemap, copias por idioma de la app y datos de la portada. Opciones: `--inject-home` (solo en el despliegue), `--write-slugs` para estaciones nuevas y `--base-url`.
   - `build_guides.py`: guías generadas con los datos; los textos están en `guide_texts.py`.
@@ -97,6 +97,7 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
   - `build_share_images.py`: imágenes OG. Necesita Pillow y tarda unos 3 minutos.
   - `refresh_stations.py`: actualización semanal de `docs/data` desde OpenSkiMap. Nunca añade ni quita estaciones. Si una estación pierde más de la mitad de pistas o km, la deja como estaba. Si más del 20 % parecen rotas, no escribe nada. Detecta estaciones cuyo id ha cambiado. Tiene sus tests.
   - `detect_domain_groups.py`: agrupa las estaciones que forman un mismo dominio esquiable.
+  - `add_stations.py`: añade estaciones que faltan de un país (mismo criterio que el catálogo original, con un mínimo de km), salta las que ya están o quedan a menos de 1,5 km de una existente y crea su ficha sin servicios. Se lanza con el workflow manual `add-stations.yml` (primero en modo prueba, que solo lista; luego de verdad, que commitea y despliega). Tiene sus tests.
 - `station_slugs.json`: id → slug. Es estable: no cambies slugs existentes, rompería URLs indexadas.
 
 ### 3.3 GitHub Actions (`.github/workflows/`)
@@ -104,6 +105,7 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
 - **`deploy-pages.yml`:** se lanza con cada push a la rama si cambian `docs/**` o los scripts de build y textos. Además, se ejecuta a diario a las **04:17 y 11:07 UTC** para refrescar la previsión; las ejecuciones programadas de GitHub no están garantizadas, por eso hay dos. Pasos: previsión, luego `build_seo_pages.py --inject-home`, luego imágenes OG (en caché, clave `og-v2-…`), luego Pages. `concurrency: pages` cancela los despliegues antiguos.
 - **`refresh-stations.yml`:** los **lunes a las 02:37 UTC**. Commitea los datos actualizados y lanza el despliegue (un push hecho con `GITHUB_TOKEN` no lanza workflows).
 - **`build-android.yml`:** compila el AAB y el APK firmados con los secretos `SKIINFO_KEYSTORE_*` y los deja como artifact `ski-info-release`, que dura 14 días.
+- **`add-stations.yml`:** manual. Añade las estaciones que faltan de un país (`add_stations.py`); por defecto `dry_run` (solo lista en el resumen de la ejecución).
 - `fetch-stations.yml`, `data-analysis.yml` y `pipeline-smoke-test.yml`: utilidades del pipeline, de lanzamiento manual o por rutas.
 
 ### 3.4 Estadísticas propias (sin Google Analytics en la web)

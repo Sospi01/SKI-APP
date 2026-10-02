@@ -1,6 +1,6 @@
 # Ski Info — guía para Claude
 
-Web y app de estaciones de esquí: **https://skiinfoapp.com**. Tiene mapa de pistas sobre satélite, el perfil de pendiente de cada pista, remontes, servicios y la previsión de nieve a 7 días de **1.276 estaciones en 45 países**, en 5 idiomas (es, en, fr, de, it). Los datos vienen de OpenStreetMap a través de OpenSkiMap (licencia ODbL: siempre hay que atribuirlos). También hay una app Android que es un envoltorio WebView de la web.
+Web y app de estaciones de esquí: **https://skiinfoapp.com**. Tiene mapa de pistas sobre satélite, el perfil de pendiente de cada pista, remontes, servicios y la previsión de nieve a 7 días de **1.409 estaciones en 45 países**, en 5 idiomas (es, en, fr, de, it). Los datos vienen de OpenStreetMap a través de OpenSkiMap (licencia ODbL: siempre hay que atribuirlos). También hay una app Android que es un envoltorio WebView de la web.
 
 El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico. **Háblale siempre en español**, claro y sin jerga. Cuando tenga que hacer algo en una consola (Play Console, Firebase, Search Console, GitHub), dale los pasos exactos uno a uno.
 
@@ -56,7 +56,7 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
 **Generado en cada despliegue (está en `.gitignore`, no se commitea):**
 - `estacion/`, `pais/`, `guias/`, `app/`, `en/`, `fr/`, `de/`, `it/`;
 - `og/` (imágenes para compartir);
-- `sitemap.xml` (~6.700 URLs), `snow.json`, `slugs.json`, `guias.json`.
+- `sitemap.xml` (~7.400 URLs), `snow.json`, `slugs.json`, `guias.json`.
 
 **Rutas por idioma:**
 
@@ -185,6 +185,7 @@ cd data-pipeline && python3 -m pytest -q                       # si tocas el pip
 - dos despliegues diarios.
 
 **Hechos que conviene saber:**
+- 2 de octubre: se añadieron 133 estaciones pequeñas de EE. UU. (al menos 3 km de pistas, entre ellas Liberty Mountain) con `add-stations.yml`; aún no tienen servicios. EE. UU. pasó de 216 a 349 estaciones.
 - Algunas redes de empresa (incluida la del usuario) bloquean skiinfoapp.com por ser un dominio nuevo: `ERR_NAME_NOT_RESOLVED`. No es un fallo de la web.
 - Decisión sobre legalidad: aviso legal y consentimiento de estadísticas **aplazados** hasta activar ingresos (afiliados o publicidad) o hacer promoción fuerte. Entonces habrá que añadir el aviso Aceptar/Rechazar y el aviso legal con los datos del titular.
 - Search Console: el sitemap está enviado. El usuario pide unas 10 indexaciones manuales al día. La última lectura del sitemap que vimos era de 2.701 URLs; ahora tiene ~6.700.

@@ -156,6 +156,32 @@ function findSteepestSection(smoothed, windowM) {
   return best;
 }
 
+// A run's steepest stretch of at least 50 m, in % (the profile's "Tramo más
+// pronunciado", over all its segments), or null without elevation data.
+// OpenStreetMap's labels mean different things in different countries; this
+// is the figure skiers compare. Mirrored by run_max_pitch() in
+// build_seo_pages.py for the generated station pages.
+function runMaxPitch(geomParts) {
+  var best = null;
+  buildElevationProfiles(geomParts).forEach(function (p) {
+    var st = findSteepestSection(smoothProfile(p, 30), 50);
+    if (st && (best == null || Math.abs(st.pitchPct) > best)) best = Math.abs(st.pitchPct);
+  });
+  return best;
+}
+// The badge shown next to a run's name: "máx. 38%" with a dot in that
+// slope's colour (the profile's pitch zones), beside the official colour.
+function maxPitchBadge(pct) {
+  var span = document.createElement('span');
+  span.className = 'max-pitch';
+  span.title = T('Pendiente máxima: el tramo más empinado de al menos 50 m');
+  var dot = document.createElement('i');
+  dot.style.background = 'var(--diff-' + pitchZoneFor(pct).key + ')';
+  span.appendChild(dot);
+  span.appendChild(document.createTextNode(T('máx. {0}%', Math.round(pct))));
+  return span;
+}
+
 function buildProfileChart(raw) {
   var smoothed = smoothProfile(raw, 30);
   var totalDist = smoothed[smoothed.length - 1].dist;

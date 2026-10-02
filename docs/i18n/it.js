@@ -343,6 +343,8 @@ window.SKI_I18N = {
   "Estás a {0} km de esta estación": "Sei a {0} km da questa stazione",
   "Estás en: {0}": "Sei su: {0}",
   "Buscando tu posición…": "Ricerca della posizione…",
-  "Activa el permiso de ubicación para ver dónde estás.": "Consenti l'accesso alla posizione per vedere dove sei."
+  "Activa el permiso de ubicación para ver dónde estás.": "Consenti l'accesso alla posizione per vedere dove sei.",
+  "Pendiente máxima: el tramo más empinado de al menos 50 m": "Pendenza massima: il tratto più ripido di almeno 50 m",
+  "máx. {0}%": "max {0}%"
  }
 };

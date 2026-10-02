@@ -188,6 +188,53 @@ def haversine_km(a: tuple, b: tuple) -> float:
     return 2 * 6371 * math.asin(math.sqrt(h))
 
 
+def run_max_pitch(parts) -> float | None:
+    """A run's steepest stretch of at least 50 m, in % (None without elevation).
+    Mirrors runMaxPitch() in docs/profile.js: distance along each segment,
+    elevation smoothed over a 30 m window, then the steepest 50 m window."""
+    best = None
+    for part in parts or []:
+        pts = [p for p in part if p and len(p) >= 3 and p[2] is not None]
+        if len(pts) < 2:
+            continue
+        prof = [(0.0, pts[0][2])]
+        for a, b in zip(pts, pts[1:]):
+            prof.append((prof[-1][0] + haversine_km((a[1], a[0]), (b[1], b[0])) * 1000, b[2]))
+        if prof[-1][0] < 15:
+            continue
+        n = len(prof)
+        sm = []
+        for i, (d, _) in enumerate(prof):
+            lo = hi = i
+            while lo > 0 and d - prof[lo - 1][0] < 15:
+                lo -= 1
+            while hi < n - 1 and prof[hi + 1][0] - d < 15:
+                hi += 1
+            sm.append((d, sum(e for _, e in prof[lo:hi + 1]) / (hi - lo + 1)))
+        for i in range(n):
+            j = i
+            while j < n - 1 and sm[j + 1][0] - sm[i][0] < 50:
+                j += 1
+            if j == i:
+                j = min(i + 1, n - 1)
+            if j == i:
+                continue
+            dd = sm[j][0] - sm[i][0]
+            if dd <= 0:
+                continue
+            pct = abs(sm[i][1] - sm[j][1]) / dd * 100
+            if best is None or pct > best:
+                best = pct
+    return best
+
+
+def max_pitch_badge(pct: float, tx: dict, f) -> str:
+    """"máx. 38%" with a dot in that slope's colour (profile.js's pitch zones)."""
+    zone = "novice" if pct < 15 else "easy" if pct < 25 else "intermediate" if pct < 40 else "advanced"
+    return (f'<span class="max-pitch" title="{html.escape(tx["max_grad_title"])}">'
+            f'<i style="background:var(--diff-{zone})"></i>{html.escape(tx["max_grad"].format(f(round(pct))))}</span>')
+
+
 def base_location(raw: dict):
     """Where "Cómo llegar" should point: the lowest lift end (the base area, where
     the car park usually is) -- the station's centre is often up the mountain.
@@ -253,6 +300,7 @@ TX = {
                    "en el mapa interactivo las verás sobre imagen de satélite.",
         "intro_h2": "{0}: mapa de pistas y datos", "terrain": "Terreno por dificultad", "lifts_by_type": "Remontes por tipo",
         "other": "Otro", "vert_m": "desnivel {0} m", "avg_grad": "pend. media {0}%", "alt_range": "{0}–{1} m alt.",
+        "max_grad": "máx. {0}%", "max_grad_title": "Pendiente máxima: el tramo más empinado de al menos 50 m",
         "sections": "{0} tramos", "floodlit": "Nocturna", "glades": "Arbolada", "all_f": "Todas", "unclassified": "Sin clasif.",
         "pph": "{0} p/h", "seats": "{0} plazas", "ride": "{0} de trayecto", "unnamed": "Sin nombre",
         "detachable": "Desembragable", "bubble": "Burbuja", "heated": "Calefactado", "private": "Privado", "all_m": "Todos",
@@ -306,6 +354,7 @@ TX = {
                    "the interactive map shows them on satellite imagery.",
         "intro_h2": "{0}: piste map and stats", "terrain": "Terrain by difficulty", "lifts_by_type": "Lifts by type",
         "other": "Other", "vert_m": "{0} m vertical", "avg_grad": "avg. gradient {0}%", "alt_range": "{0}–{1} m altitude",
+        "max_grad": "max {0}%", "max_grad_title": "Max slope: the steepest stretch of at least 50 m",
         "sections": "{0} sections", "floodlit": "Floodlit", "glades": "Tree skiing", "all_f": "All", "unclassified": "Unclassified",
         "pph": "{0} p/h", "seats": "{0} seats", "ride": "{0} ride", "unnamed": "Unnamed",
         "detachable": "Detachable", "bubble": "Bubble", "heated": "Heated seats", "private": "Private", "all_m": "All",
@@ -553,7 +602,7 @@ def station_page(raw: dict, meta: dict, ctx: dict, lang: str = "es") -> tuple[st
             continue
         g = groups.setdefault(nm, {"name": nm, "difficulty": r.get("difficulty"), "length_m": 0.0, "vertical_m": 0.0,
                                    "lit": 0, "gladed": 0, "segments": 0, "ref": None, "grooming": None,
-                                   "min": None, "max": None})
+                                   "min": None, "max": None, "parts": []})
         g["length_m"] += r.get("length_m") or 0
         g["vertical_m"] += r.get("vertical_m") or 0
         g["lit"] = g["lit"] or (1 if r.get("lit") == 1 else 0)
@@ -565,6 +614,7 @@ def station_page(raw: dict, meta: dict, ctx: dict, lang: str = "es") -> tuple[st
         if r.get("max_elevation_m") is not None:
             g["max"] = r["max_elevation_m"] if g["max"] is None else max(g["max"], r["max_elevation_m"])
         g["segments"] += 1
+        g["parts"].extend(r.get("geom") or [])
     run_groups = sorted(groups.values(), key=lambda g: (meta["diff_order"].index(diff_key(g["difficulty"])), -g["length_m"]))
 
     intro = [tx["intro_1"].format(e(short), tx["intro_in"].format(e(place_full)) if place_full else "")]
@@ -618,10 +668,13 @@ def station_page(raw: dict, meta: dict, ctx: dict, lang: str = "es") -> tuple[st
             bits.append(tx["sections"].format(g["segments"]))
         pills = (pill(tx["floodlit"]) if g["lit"] else "") + (pill(tx["glades"]) if g["gladed"] else "")
         label = (f'{g["ref"]} · ' if g["ref"] else "") + g["name"]
+        if "max_pitch" not in g:
+            g["max_pitch"] = run_max_pitch(g["parts"])
+        badge = max_pitch_badge(g["max_pitch"], tx, f) if g["max_pitch"] is not None else ""
         run_items.append(
             f'<div class="item run-item" data-key="{k}" data-run="{e(g["name"])}" role="button" tabindex="0" aria-expanded="false">'
             f'<span class="dot" style="background:{diff_color(k)}"></span><div class="item-main">'
-            f'<div class="item-name">{e(label)}</div><div class="item-meta">{e(" · ".join(bits))}{pills}</div></div>'
+            f'<div class="item-name">{e(label)}{badge}</div><div class="item-meta">{e(" · ".join(bits))}{pills}</div></div>'
             f'<span class="item-chevron" aria-hidden="true">›</span></div><div class="run-profile" hidden></div>')
     run_filters = [("all", tx["all_f"], ["all"]), ("novice", meta["diff"]["novice"], ["novice"]),
                    ("easy", meta["diff"]["easy"], ["easy"]), ("intermediate", meta["diff"]["intermediate"], ["intermediate"]),

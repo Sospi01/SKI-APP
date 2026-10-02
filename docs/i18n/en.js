@@ -343,6 +343,8 @@ window.SKI_I18N = {
   "Estás a {0} km de esta estación": "You're {0} km from this resort",
   "Estás en: {0}": "You're on: {0}",
   "Buscando tu posición…": "Finding your position…",
-  "Activa el permiso de ubicación para ver dónde estás.": "Allow location access to see where you are."
+  "Activa el permiso de ubicación para ver dónde estás.": "Allow location access to see where you are.",
+  "Pendiente máxima: el tramo más empinado de al menos 50 m": "Max slope: the steepest stretch of at least 50 m",
+  "máx. {0}%": "max {0}%"
  }
 };

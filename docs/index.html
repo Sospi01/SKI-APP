@@ -569,6 +569,7 @@
   .map-mode button[aria-pressed="true"] { background: #fff; color: #10161c; }
   #map-viewport .map-controls { top: 52px; }
   #map-viewport .map-hint { top: auto; bottom: 28px; }
+  .map-profile-point { fill: #fff; stroke: #10161c; stroke-width: 2.5; vector-effect: non-scaling-stroke; pointer-events: none; filter: drop-shadow(0 0 3px rgba(0,0,0,0.5)); }
   .map-slope { display: none; }
   .map-slope polyline { fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; transition: stroke-width 0.1s ease; }
   #map-svg.slope-mode .map-slope { display: inline; }
@@ -3191,6 +3192,23 @@
       setMapMode(mode);
     });
   });
+
+  // While a finger slides along a run's profile (profile.js), the same
+  // point is marked on the map.
+  window.onProfilePoint = function (pt) {
+    if (!mapState) return;
+    var dot = mapState.profilePoint;
+    if (!pt) { if (dot) dot.setAttribute('display', 'none'); return; }
+    if (!dot || !dot.isConnected) {
+      dot = mapState.profilePoint = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      dot.setAttribute('class', 'map-profile-point');
+    }
+    mapState.content.appendChild(dot); // on top of everything, selection included
+    var q = mapState.project(pt);
+    dot.setAttribute('cx', q[0].toFixed(1)); dot.setAttribute('cy', q[1].toFixed(1));
+    dot.setAttribute('r', (6 / (mapState.zoom || 1)).toFixed(2));
+    dot.setAttribute('display', '');
+  };
 
   // ============== country overview map (all stations of a country as pins) ==============
   var countryMapState = null;

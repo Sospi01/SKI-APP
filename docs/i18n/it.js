@@ -336,6 +336,7 @@ window.SKI_I18N = {
   "No hemos podido obtener tu ubicación.": "Non siamo riusciti a ottenere la tua posizione.",
   "Dificultad": "Difficoltà",
   "Pendiente": "Pendenza",
-  "Colorear las pistas por": "Colora le piste per"
+  "Colorear las pistas por": "Colora le piste per",
+  "Desliza por el perfil para ver la distancia desde la salida, la altitud y la pendiente de cada punto.": "Scorri lungo il profilo per vedere la distanza dalla partenza, l'altitudine e la pendenza in ogni punto."
  }
 };

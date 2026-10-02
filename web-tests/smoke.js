@@ -131,6 +131,17 @@ async function exists(p) {
       previewShown: getComputedStyle(document.getElementById('map-preview-section')).display !== 'none'
     }));
     check(d.lines > 50 && !d.previewShown, 'desktop station: map beside the info, no preview card', d.lines + ' polylines');
+    await p.click('#runs-list .run-item'); await p.waitForTimeout(800);
+    const prof = await p.$('#map-run-panel svg');
+    if (prof) {
+      const pb = await prof.boundingBox();
+      await p.mouse.move(pb.x + pb.width * 0.5, pb.y + pb.height * 0.6); await p.waitForTimeout(150);
+    }
+    const scrub = await p.evaluate(() => ({
+      text: (document.querySelector('#map-run-panel svg g[pointer-events] text') || {}).textContent || '',
+      marker: !!document.querySelector('.map-profile-point:not([display="none"])')
+    }));
+    check(/m · \d+ m · \d+%/.test(scrub.text) && scrub.marker, 'desktop station: sliding along a profile shows the point and marks it on the map', scrub.text);
     check(!p.errors.length, 'desktop station: no JS errors', p.errors.join(' | '));
     await p.context().close();
   }

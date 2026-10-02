@@ -336,6 +336,7 @@ window.SKI_I18N = {
   "No hemos podido obtener tu ubicación.": "We couldn't get your location.",
   "Dificultad": "Difficulty",
   "Pendiente": "Slope",
-  "Colorear las pistas por": "Colour runs by"
+  "Colorear las pistas por": "Colour runs by",
+  "Desliza por el perfil para ver la distancia desde la salida, la altitud y la pendiente de cada punto.": "Slide along the profile to see the distance from the start, the altitude and the slope at each point."
  }
 };

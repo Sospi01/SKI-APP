@@ -68,11 +68,11 @@ function buildElevationProfiles(geomParts) {
   function addProfile(pts) {
     if (pts.length < 2) return;
     if (pts[pts.length - 1][2] > pts[0][2]) pts = pts.slice().reverse();
-    var profile = [{ dist: 0, ele: pts[0][2] }];
+    var profile = [{ dist: 0, ele: pts[0][2], lon: pts[0][0], lat: pts[0][1] }];
     var cum = 0;
     for (var i = 1; i < pts.length; i++) {
       cum += haversineM(pts[i - 1], pts[i]);
-      profile.push({ dist: cum, ele: pts[i][2] });
+      profile.push({ dist: cum, ele: pts[i][2], lon: pts[i][0], lat: pts[i][1] });
     }
     // Drop degenerate slivers (near-duplicate points, mapping noise) too
     // short to show a meaningful profile of their own.
@@ -164,7 +164,8 @@ function buildProfileChart(raw) {
   if (maxEle === minEle) maxEle = minEle + 1;
 
   var SVGNS = 'http://www.w3.org/2000/svg';
-  var W = 320, H = 128, padL = 30, padR = 8, padT = 10, padB = 20;
+  // padT leaves room above the profile for the scrubber's readout.
+  var W = 320, H = 140, padL = 30, padR = 8, padT = 22, padB = 20;
   function x(d) { return padL + (d / totalDist) * (W - padL - padR); }
   function y(e) { return padT + (1 - (e - minEle) / (maxEle - minEle)) * (H - padT - padB); }
 
@@ -266,6 +267,8 @@ function buildProfileChart(raw) {
   endLabel.textContent = endLabelText;
   svg.appendChild(endLabel);
 
+  addProfileScrubber(svg, raw, smoothed, totalDist, W, padL, padR, padT, x, y, minEle);
+
   var ariaLabel = T('Perfil de altitud de la pista, de {0} a {1} metros a lo largo de {2} metros.', Math.round(smoothed[0].ele), Math.round(smoothed[smoothed.length - 1].ele), Math.round(totalDist));
   if (steepest) {
     var ariaRange = fmtDistRange(steepest.startDist, steepest.endDist);
@@ -274,6 +277,67 @@ function buildProfileChart(raw) {
   svg.setAttribute('aria-label', ariaLabel);
 
   return { svg: svg, steepest: steepest };
+}
+
+// Sliding a finger (or the mouse) along the chart shows, for that point,
+// the distance from the start, the altitude and the slope of that stretch
+// (the same pitch that colours it). Pages with a map can follow along:
+// window.onProfilePoint gets the point's [lon, lat], or null when it's gone.
+function addProfileScrubber(svg, raw, smoothed, totalDist, W, padL, padR, padT, x, y, minEle) {
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  function el(tag, attrs) {
+    var e = document.createElementNS(SVGNS, tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  var g = el('g', { 'pointer-events': 'none', display: 'none' });
+  var line = el('line', { y1: padT, y2: y(minEle), stroke: 'var(--text-primary)', 'stroke-width': 1, 'stroke-dasharray': '2 2' });
+  var dot = el('circle', { r: 3.4, stroke: 'var(--bg, #fff)', 'stroke-width': 1.5 });
+  var box = el('rect', { y: 0, height: 15, rx: 4, fill: 'var(--bg, #fff)', stroke: 'var(--border, #ccc)', 'stroke-width': 0.8 });
+  var text = el('text', { y: 10.5, 'text-anchor': 'middle', 'font-size': 9, 'font-weight': 600, 'font-family': "'IBM Plex Sans', sans-serif", fill: 'var(--text-primary)' });
+  var tDist = el('tspan', {}), tPct = el('tspan', {});
+  text.appendChild(tDist); text.appendChild(tPct);
+  g.appendChild(line); g.appendChild(dot); g.appendChild(box); g.appendChild(text);
+  svg.appendChild(g);
+  svg.style.touchAction = 'pan-y';
+  svg.style.cursor = 'crosshair';
+
+  function showAt(clientX) {
+    var r = svg.getBoundingClientRect();
+    if (!r.width) return;
+    var vx = (clientX - r.left) / r.width * W;
+    var d = Math.max(0, Math.min(totalDist, (vx - padL) / (W - padL - padR) * totalDist));
+    var i = 0;
+    while (i < smoothed.length - 2 && smoothed[i + 1].dist < d) i++;
+    var a = smoothed[i], b = smoothed[i + 1], span = b.dist - a.dist;
+    var f = span > 0 ? (d - a.dist) / span : 0;
+    var ele = a.ele + (b.ele - a.ele) * f;
+    var pct = span > 0 ? Math.abs((a.ele - b.ele) / span * 100) : 0;
+    var color = 'var(--diff-' + pitchZoneFor(pct).key + ')';
+    var px = x(d), py = y(ele);
+    line.setAttribute('x1', px); line.setAttribute('x2', px);
+    dot.setAttribute('cx', px); dot.setAttribute('cy', py); dot.setAttribute('fill', color);
+    tDist.textContent = fmtDist(d) + ' · ' + Math.round(ele) + ' m · ';
+    tPct.textContent = Math.round(pct) + '%';
+    tPct.setAttribute('fill', color);
+    g.setAttribute('display', '');
+    var w = text.getComputedTextLength ? text.getComputedTextLength() + 12 : 110;
+    var cx = Math.max(padL + w / 2, Math.min(W - padR - w / 2, px));
+    // In the strip above the profile, so it never hides the profile itself.
+    box.setAttribute('x', cx - w / 2); box.setAttribute('width', w); box.setAttribute('y', padT - 19);
+    text.setAttribute('x', cx); text.setAttribute('y', padT - 8.5);
+    if (typeof window.onProfilePoint === 'function') {
+      var ra = raw[i], rb = raw[i + 1] || ra;
+      if (ra && ra.lon != null) window.onProfilePoint([ra.lon + (rb.lon - ra.lon) * f, ra.lat + (rb.lat - ra.lat) * f]);
+    }
+  }
+  function hide() {
+    g.setAttribute('display', 'none');
+    if (typeof window.onProfilePoint === 'function') window.onProfilePoint(null);
+  }
+  svg.addEventListener('pointerdown', function (e) { showAt(e.clientX); });
+  svg.addEventListener('pointermove', function (e) { if (e.pointerType === 'mouse' || e.buttons || e.pressure) showAt(e.clientX); });
+  svg.addEventListener('pointerleave', function (e) { if (e.pointerType === 'mouse') hide(); });
 }
 
 function renderRunProfile(container, group) {
@@ -315,5 +379,9 @@ function renderRunProfile(container, group) {
   note.style.marginTop = '4px';
   note.textContent = T('El color indica la inclinación real en cada punto del perfil, no la dificultad oficial de la pista.');
   caption.appendChild(note);
+  var tip = document.createElement('div');
+  tip.style.marginTop = '2px';
+  tip.textContent = T('Desliza por el perfil para ver la distancia desde la salida, la altitud y la pendiente de cada punto.');
+  caption.appendChild(tip);
   container.appendChild(caption);
 }

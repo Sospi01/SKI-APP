@@ -336,6 +336,7 @@ window.SKI_I18N = {
   "No hemos podido obtener tu ubicación.": "Dein Standort konnte nicht ermittelt werden.",
   "Dificultad": "Schwierigkeit",
   "Pendiente": "Gefälle",
-  "Colorear las pistas por": "Pisten einfärben nach"
+  "Colorear las pistas por": "Pisten einfärben nach",
+  "Desliza por el perfil para ver la distancia desde la salida, la altitud y la pendiente de cada punto.": "Fahre über das Profil, um für jeden Punkt die Entfernung vom Start, die Höhe und das Gefälle zu sehen."
  }
 };

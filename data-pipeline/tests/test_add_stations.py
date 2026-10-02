@@ -76,3 +76,13 @@ def test_skips_stations_already_in_the_app_or_right_next_to_one(tmp_path):
                                          "country": "US", "lat": a["latitude"] + 0.0045, "lon": a["longitude"]}])
     assert run(db_path, docs2) == 0
     assert [s["id"] for s in catalogue(docs2)] == ["other"]
+
+
+def test_skips_a_small_part_of_a_bigger_station_nearby(tmp_path):
+    db_path = us_db(tmp_path)
+    a = area(db_path, "skiarea-1")
+    # A station 50 times bigger 2.5 km away: skiarea-1 is a part of it.
+    docs = empty_docs(tmp_path, [{"id": "big", "name": "Big Resort", "region": None, "pisteKm": 5000,
+                                  "country": "US", "lat": a["latitude"] + 0.0225, "lon": a["longitude"]}])
+    assert run(db_path, docs) == 0
+    assert [s["id"] for s in catalogue(docs)] == ["big"]

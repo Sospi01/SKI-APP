@@ -88,7 +88,7 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
 
 ### 3.2 Pipeline (`data-pipeline/`)
 
-- `ski_pipeline/`: CLI que descarga el GeoJSON de OpenSkiMap y crea un SQLite: `python -m ski_pipeline.cli --db data/ski_info.db -v`. Tests: `cd data-pipeline && python3 -m pytest -q` (37 pasan).
+- `ski_pipeline/`: CLI que descarga el GeoJSON de OpenSkiMap y crea un SQLite: `python -m ski_pipeline.cli --db data/ski_info.db -v`. Tests: `cd data-pipeline && python3 -m pytest -q` (38 pasan).
 - `scripts/`:
   - `build_seo_pages.py`: fichas, países, página `/app`, sitemap, copias por idioma de la app y datos de la portada. Opciones: `--inject-home` (solo en el despliegue), `--write-slugs` para estaciones nuevas y `--base-url`.
   - `build_guides.py`: guías generadas con los datos; los textos están en `guide_texts.py`.
@@ -97,7 +97,7 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
   - `build_share_images.py`: imágenes OG. Necesita Pillow y tarda unos 3 minutos.
   - `refresh_stations.py`: actualización semanal de `docs/data` desde OpenSkiMap. Nunca añade ni quita estaciones. Si una estación pierde más de la mitad de pistas o km, la deja como estaba. Si más del 20 % parecen rotas, no escribe nada. Detecta estaciones cuyo id ha cambiado. Tiene sus tests.
   - `detect_domain_groups.py`: agrupa las estaciones que forman un mismo dominio esquiable.
-  - `add_stations.py`: añade estaciones que faltan de un país (mismo criterio que el catálogo original, con un mínimo de km), salta las que ya están o quedan a menos de 1,5 km de una existente y crea su ficha sin servicios. Se lanza con el workflow manual `add-stations.yml` (primero en modo prueba, que solo lista; luego de verdad, que commitea y despliega). Tiene sus tests.
+  - `add_stations.py`: añade estaciones que faltan de un país (mismo criterio que el catálogo original, con un mínimo de km), salta las que ya están, las que quedan a menos de 1,5 km de una existente y las mucho más pequeñas a menos de 3,5 km (partes de otra estación), y las que no tienen remontes en funcionamiento; crea su ficha sin servicios. Se lanza con el workflow manual `add-stations.yml` (primero en modo prueba, que solo lista; luego de verdad, que commitea y despliega). Tiene sus tests.
 - `station_slugs.json`: id → slug. Es estable: no cambies slugs existentes, rompería URLs indexadas.
 
 ### 3.3 GitHub Actions (`.github/workflows/`)

@@ -29,6 +29,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from refresh_stations import REPO, downhill, station_record  # noqa: E402
 
 NEAR_KM = 1.5
+# A much smaller area this close to a station is a part of it (a beginner
+# zone or terrain park OpenStreetMap maps on its own, like Beaver Creek's
+# McCoy Park), not a resort of its own.
+PART_KM, PART_RATIO = 3.5, 0.2
 
 
 def candidates(conn: sqlite3.Connection, country: str, min_km: float) -> list[dict]:
@@ -78,14 +82,16 @@ def main() -> int:
     lines, line_no, stations = read_catalogue(cat_path)
     known = {s["id"] for s in stations}
     known |= {p.stem for p in (args.docs / "data").glob("*.json")}
-    known_pts = [(s["lat"], s["lon"], s["name"]) for s in stations if s.get("lat") is not None]
+    known_pts = [(s["lat"], s["lon"], s["name"], s.get("pisteKm") or 0) for s in stations if s.get("lat") is not None]
 
     added, near = [], []
     for c in candidates(conn, args.country, args.min_km):
         if c["id"] in known or c["latitude"] is None:
             continue
         pt = (c["latitude"], c["longitude"])
-        close = next((n for la, lo, n in known_pts if km_between(pt, (la, lo)) <= NEAR_KM), None)
+        close = next((n for la, lo, n, km in known_pts
+                      if km_between(pt, (la, lo)) <= NEAR_KM
+                      or (km_between(pt, (la, lo)) <= PART_KM and c["km"] < km * PART_RATIO)), None)
         if close:
             near.append((c["name"] or c["id"], c["km"], close))
             continue
@@ -95,20 +101,20 @@ def main() -> int:
         if record is None or not record.get("name"):
             continue
         runs, km = downhill(record)
-        if not runs:
+        if not runs or not record.get("lifts"):  # no operating lift: not a ski area to show
             continue
         record["services"] = []
         added.append(record)
-        known_pts.append((pt[0], pt[1], record["name"]))
+        known_pts.append((pt[0], pt[1], record["name"], km))
 
     lines_md = [f"## Add stations: {args.country}, at least {args.min_km:g} km" + (" (dry run)" if args.dry_run else ""),
-                f"- **{len(added)} new** · {len(near)} skipped as too close to a station already in the app"]
+                f"- **{len(added)} new** · {len(near)} skipped as part of, or the same as, a station already in the app"]
     if added:
         lines_md += ["", "### New", "| Station | Region | Downhill km | Runs | Lifts |", "|---|---|---|---|---|"]
         lines_md += [f"| {r['name']} | {r.get('region') or ''} | {downhill(r)[1]:.1f} | {downhill(r)[0]} | {len(r.get('lifts') or [])} |"
                      for r in added]
     if near:
-        lines_md += ["", "### Skipped (within 1.5 km of a station already in the app)", "| Candidate | km | Near |", "|---|---|---|"]
+        lines_md += ["", "### Skipped (within 1.5 km of a station in the app, or a much smaller area within 3.5 km of one)", "| Candidate | km | Near |", "|---|---|---|"]
         lines_md += [f"| {n} | {k:.1f} | {c} |" for n, k, c in near[:100]]
     report = "\n".join(lines_md) + "\n"
     print(report)

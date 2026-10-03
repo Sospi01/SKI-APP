@@ -119,7 +119,7 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
 - **`firestore.rules`:** solo permite crear eventos bien formados. Leer y borrar solo puede hacerlo el propietario. **Hay que publicarlas a mano** en Firebase → Firestore Database → Reglas; la versión publicada ya incluye `fav` y `tz`.
 - **`docs/stats.html`:** panel con acceso por Google (solo el propietario), en `/stats.html`.
   - Muestra resumen, gráficos, web o app, procedencia, países, Booking, fidelización y tiempo de uso.
-  - Lista de usuarios con país, procedencia y estaciones vistas, y botón "Ocultar este usuario".
+  - Lista de usuarios con país, procedencia, estaciones vistas y guardadas (⭐), y botón "Ocultar este usuario". En Fidelización, "Guardan alguna estación"; en Estaciones más vistas, cuántos la guardan.
   - Guarda en caché local `si_stats_cache_v2`. Los usuarios ocultos se guardan en localStorage.
   - `?demo=1` muestra datos de ejemplo, útil para probar sin Firebase.
   - `BOT_FILTER_SINCE` separa los usuarios sin actividad (probables robots) de antes y después del filtro.

@@ -1,0 +1,994 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0b2036">
+<title>Ski Info · Estadísticas</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="fonts.css">
+<style>
+  :root {
+    color-scheme: light;
+    --page: #eef1f4;
+    --surface: #ffffff;
+    --surface-2: #f3f5f7;
+    --border: #e1e5e9;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #6f7a85;
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    --good: #0ca30c;
+    --grid: #e6e9ec;
+    --hero-1: #0b2036;
+    --hero-2: #164a80;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #0f1112;
+      --surface: #1a1a19;
+      --surface-2: #232321;
+      --border: #33332f;
+      --text-primary: #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted: #9a998f;
+      --series-1: #3987e5;
+      --series-2: #d95926;
+      --grid: #2c2c29;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0f1112;
+    --surface: #1a1a19;
+    --surface-2: #232321;
+    --border: #33332f;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #9a998f;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --grid: #2c2c29;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page); color: var(--text-primary);
+    font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif; font-size: 14px;
+    -webkit-text-size-adjust: 100%;
+  }
+  h1, h2 { font-family: 'Barlow Condensed', sans-serif; margin: 0; }
+  .wrap { max-width: 560px; margin: 0 auto; padding: env(safe-area-inset-top, 0px) 0 calc(24px + env(safe-area-inset-bottom, 0px)); }
+
+  header.top {
+    background: linear-gradient(160deg, var(--hero-1), var(--hero-2) 130%); color: #fff;
+    padding: 16px 16px 14px;
+  }
+  .top-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .top h1 { font-size: 24px; font-weight: 700; line-height: 1.1; }
+  .eyebrow { font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; opacity: 0.75; }
+  .top-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .top-actions button {
+    border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.1); color: #fff;
+    border-radius: 999px; padding: 6px 11px; font: inherit; font-size: 12px; cursor: pointer;
+  }
+  .top-actions button[hidden] { display: none; }
+  .live { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; opacity: 0.9; }
+  .live .dot { width: 8px; height: 8px; border-radius: 50%; background: #9aa4ae; flex-shrink: 0; }
+  .live.on .dot { background: #3ddc3d; box-shadow: 0 0 0 3px rgba(61,220,61,0.25); }
+  .demo-banner { background: #fab219; color: #111; font-weight: 700; text-align: center; font-size: 12px; padding: 6px 10px; letter-spacing: 0.3px; }
+
+  .gate { margin: 16px; padding: 22px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; text-align: center; line-height: 1.5; }
+  .gate p { margin: 0 0 12px; color: var(--text-secondary); }
+  .gate code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; border: none; border-radius: 999px; cursor: pointer;
+    background: var(--series-1); color: #fff; font: inherit; font-weight: 600; padding: 10px 18px;
+  }
+
+  main { padding: 0 12px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 14px 12px; margin-top: 12px; }
+  .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+  .card-head h2 { font-size: 18px; font-weight: 600; }
+  .card-head .sub { font-size: 11.5px; color: var(--text-muted); text-align: right; }
+  .note { font-size: 11.5px; color: var(--text-muted); line-height: 1.45; margin: 8px 0 0; }
+
+  .kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px; }
+  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px 12px 10px; }
+  .kpi .v { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 30px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .kpi .k { font-size: 11.5px; color: var(--text-secondary); margin-top: 4px; }
+  .kpi .d { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  table.grid { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  table.grid th { font-size: 11px; font-weight: 600; color: var(--text-muted); text-align: right; padding: 0 0 6px; text-transform: uppercase; letter-spacing: 0.3px; }
+  table.grid th:first-child { text-align: left; }
+  table.grid td { padding: 7px 0; border-top: 1px solid var(--border); text-align: right; font-size: 14px; font-weight: 600; }
+  table.grid td:first-child { text-align: left; font-weight: 400; color: var(--text-secondary); font-size: 13px; }
+  table.grid td.hl { color: var(--text-primary); }
+
+  .chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .chart .axis-label { font-size: 10px; fill: var(--text-muted); font-family: 'IBM Plex Sans', sans-serif; }
+  .chart .gridline { stroke: var(--grid); stroke-width: 1; }
+  .chart .baseline { stroke: var(--text-muted); stroke-width: 1; opacity: 0.5; }
+  .chart .bar-hit { fill: transparent; cursor: pointer; }
+  .chart .bar.active { opacity: 0.75; }
+  .legend { display: flex; gap: 14px; font-size: 11.5px; color: var(--text-secondary); margin-bottom: 6px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  details.data { margin-top: 6px; font-size: 12px; color: var(--text-muted); }
+  details.data summary { cursor: pointer; }
+  details.data table { width: 100%; border-collapse: collapse; margin-top: 6px; font-variant-numeric: tabular-nums; }
+  details.data td, details.data th { padding: 3px 0; text-align: right; border-top: 1px solid var(--border); }
+  details.data td:first-child, details.data th:first-child { text-align: left; }
+
+  .hbars { display: flex; flex-direction: column; gap: 8px; }
+  .hbar { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; }
+  .hbar .lbl { font-size: 12.5px; color: var(--text-secondary); }
+  .hbar .val { font-size: 12.5px; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+  .hbar .track { grid-column: 1 / -1; height: 10px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+  .hbar .fill { height: 100%; border-radius: 0 4px 4px 0; background: var(--series-1); }
+
+  .list { display: flex; flex-direction: column; }
+  .row { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 9px 0; border-top: 1px solid var(--border); }
+  .row:first-child { border-top: none; }
+  .row .name { font-size: 13.5px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .nums { font-size: 12px; color: var(--text-secondary); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .row .meta { grid-column: 1 / -1; font-size: 11.5px; color: var(--text-muted); }
+  .empty { color: var(--text-muted); font-size: 12.5px; padding: 8px 0; }
+
+  details.user { border-top: 1px solid var(--border); }
+  details.user:first-of-type { border-top: none; }
+  details.user summary { list-style: none; cursor: pointer; padding: 9px 0; display: grid; grid-template-columns: auto 1fr auto; gap: 2px 8px; align-items: center; }
+  details.user summary::-webkit-details-marker { display: none; }
+  .uid { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; font-weight: 600; }
+  .badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px; background: var(--surface-2); color: var(--text-secondary); border: 1px solid var(--border); justify-self: start; }
+  .badges { display: flex; flex-wrap: wrap; gap: 4px; justify-self: start; }
+  .badge.src { background: color-mix(in srgb, var(--series-1) 14%, transparent); color: var(--series-1); border-color: color-mix(in srgb, var(--series-1) 35%, transparent); }
+  .badge.src.none { background: var(--surface-2); color: var(--text-muted); border-color: var(--border); font-weight: 600; }
+  .origin { margin-bottom: 2px; }
+  .flag { width: 16px; height: 12px; border-radius: 2px; vertical-align: -1px; margin-right: 5px; object-fit: cover; box-shadow: 0 0 0 1px rgba(0,0,0,0.12); }
+  .badge .flag { width: 13px; height: 10px; margin-right: 4px; }
+  .origin strong { color: var(--text-primary); font-weight: 600; }
+  .when { font-size: 11.5px; color: var(--text-muted); text-align: right; white-space: nowrap; }
+  .user-meta { grid-column: 1 / -1; font-size: 11.5px; color: var(--text-secondary); }
+  .user-body { padding: 0 0 12px; font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0; }
+  .chip { font-size: 11.5px; padding: 3px 9px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-primary); }
+  .chip.booked { border-color: var(--series-2); }
+  .chip.saved { border-color: #e0b100; }
+  .badge.saved { background: rgba(255,210,87,0.18); color: inherit; }
+  .linkbtn { background: none; border: none; padding: 0; color: var(--series-1); font: inherit; font-size: 12px; cursor: pointer; text-decoration: underline; }
+  .hidden-bar { display: flex; justify-content: space-between; gap: 8px; font-size: 11.5px; color: var(--text-muted); margin: -2px 0 6px; }
+  .more { margin-top: 8px; text-align: center; }
+
+  .tip {
+    position: fixed; z-index: 30; pointer-events: none; background: var(--text-primary); color: var(--surface);
+    font-size: 12px; padding: 6px 9px; border-radius: 7px; line-height: 1.35; white-space: nowrap;
+    box-shadow: 0 6px 16px -6px rgba(0,0,0,0.4); transform: translate(-50%, calc(-100% - 10px));
+  }
+  .tip[hidden] { display: none; }
+  footer { margin: 16px 12px 0; font-size: 11px; color: var(--text-muted); text-align: center; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="demo-banner" id="demo-banner" hidden>DATOS DE EJEMPLO · no son reales</div>
+  <header class="top">
+    <div class="top-row">
+      <div>
+        <div class="eyebrow">Ski Info</div>
+        <h1>Estadísticas</h1>
+      </div>
+      <div class="top-actions">
+        <button type="button" id="signout-btn" hidden>Salir</button>
+      </div>
+    </div>
+    <div class="live" id="live"><span class="dot"></span><span id="live-text">Conectando…</span></div>
+  </header>
+
+  <div class="gate" id="gate" hidden></div>
+
+  <main id="dash" hidden>
+    <div class="kpis">
+      <div class="kpi"><div class="v" id="k-now">–</div><div class="k">Activos ahora</div><div class="d">últimos 15 min</div></div>
+      <div class="kpi"><div class="v" id="k-today">–</div><div class="k">Usuarios hoy</div><div class="d" id="k-today-d"></div></div>
+      <div class="kpi"><div class="v" id="k-book">–</div><div class="k">Clics en Booking hoy</div><div class="d" id="k-book-d"></div></div>
+      <div class="kpi"><div class="v" id="k-total">–</div><div class="k">Usuarios totales</div><div class="d" id="k-total-d"></div></div>
+    </div>
+
+    <section class="card">
+      <div class="card-head"><h2>Resumen</h2><span class="sub">hoy · últimos 7 y 30 días</span></div>
+      <table class="grid" id="summary"></table>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>Usuarios activos por día</h2><span class="sub">últimos 30 días</span></div>
+      <div class="chart" id="chart-users"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>Web o app</h2><span class="sub">de dónde vienen las visitas</span></div>
+      <table class="grid" id="platform-split"></table>
+      <div class="card-head" style="margin-top:14px"><h2 style="font-size:15px">Visitas por día</h2><span class="sub">últimos 30 días</span></div>
+      <div class="chart" id="chart-platform"></div>
+      <p class="note">Una visita es una sesión: se abre la web o la app y se usa sin parar más de 30 minutos. "App" es la app Android de Google Play; "Web" es cualquier navegador (ordenador o móvil).</p>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>De dónde vienen</h2><span class="sub">visitas por procedencia</span></div>
+      <table class="grid" id="sources"></table>
+      <div class="card-head" style="margin-top:14px"><h2 style="font-size:15px">Páginas de entrada</h2><span class="sub">últimos 30 días</span></div>
+      <div class="list" id="landing"></div>
+      <div class="card-head" style="margin-top:14px"><h2 style="font-size:15px">Países</h2><span class="sub">usuarios, últimos 30 días</span></div>
+      <div class="list" id="countries"></div>
+      <p class="note">Por la zona horaria del dispositivo (sin usar la IP). Las visitas anteriores al 29 de septiembre se estiman por el idioma del navegador, que es menos fiable: muchos navegadores vienen en inglés de EE. UU. aunque la persona esté en otro país.</p>
+      <div class="card-head" style="margin-top:14px"><h2 style="font-size:15px">Webs que te enlazan</h2><span class="sub">últimos 30 días</span></div>
+      <div class="list" id="referrers"></div>
+      <div class="card-head" style="margin-top:14px"><h2 style="font-size:15px">Guías y páginas vistas</h2><span class="sub">últimos 30 días</span></div>
+      <div class="list" id="pages"></div>
+      <p class="note">Qué buscó cada persona en Google no se puede saber desde la web (Google no lo comparte): míralo en <strong>Search Console → Rendimiento → Consultas</strong>. Para saber qué publicación te trae visitas, añade <strong>?ref=nombre</strong> al enlace que compartas (p. ej. skiinfoapp.com/app/?ref=nevasport): aparecerá aquí como «Enlace marcado: nevasport».</p>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>Booking</h2><span class="sub">últimos 30 días</span></div>
+      <table class="grid" id="booking-summary"></table>
+      <div class="card-head" style="margin-top:14px"><h2 style="font-size:15px">Embudo hasta Booking</h2><span class="sub">% sobre usuarios activos</span></div>
+      <div class="hbars" id="funnel"></div>
+      <div class="card-head" style="margin-top:14px"><h2 style="font-size:15px">Clics en Booking por día</h2></div>
+      <div class="chart" id="chart-booking"></div>
+      <p class="note">Mientras no esté activo el enlace de afiliado solo se ven los clics, no las reservas.</p>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>Instalaciones y plataforma</h2><span class="sub" id="since-sub"></span></div>
+      <table class="grid" id="platform"></table>
+      <p class="note">"App Android" = instalaciones que han abierto la app desde que se activaron las estadísticas. Las descargas exactas de Google Play se ven en la app <strong>Play Console</strong>.</p>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>Fidelización</h2><span class="sub">últimos 30 días</span></div>
+      <table class="grid" id="loyalty"></table>
+      <p class="note" id="idle-note" hidden></p>
+      <div class="card-head" style="margin-top:14px"><h2 style="font-size:15px">Sesiones por usuario</h2></div>
+      <div class="hbars" id="sessions-dist"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>Tiempo de uso</h2><span class="sub">últimos 30 días</span></div>
+      <table class="grid" id="time"></table>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>Estaciones más vistas</h2><span class="sub">últimos 30 días</span></div>
+      <div class="list" id="stations"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>Usuarios</h2><span class="sub">activos en 30 días, del más reciente</span></div>
+      <div class="hidden-bar" id="hidden-bar" hidden></div>
+      <div id="users"></div>
+    </section>
+
+    <footer id="footer"></footer>
+  </main>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script type="module">
+// Web app config from Firebase console -> Project settings -> Your apps -> Web app.
+// Not secret: access is enforced by firestore.rules (only the owner's Google account can read).
+const FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyCg1A0Ga42jvNjMQK1vF0k_9enEePINIbA',
+  authDomain: 'ski-info-9910e.firebaseapp.com',
+  projectId: 'ski-info-9910e',
+  appId: '1:254160061971:web:3832f5f88f5899bceca1e6'
+};
+const SDK = 'https://www.gstatic.com/firebasejs/10.12.5/';
+const CACHE_KEY = 'si_stats_cache_v2';
+// When track.js started skipping search engines and automated browsers.
+const BOT_FILTER_SINCE = Date.UTC(2026, 8, 29, 22, 0);  // v2: events keep lang and tz (the country)
+const DEMO = new URLSearchParams(location.search).has('demo');
+const HIDDEN_KEY = DEMO ? 'si_stats_hidden_uids_demo' : 'si_stats_hidden_uids';
+const KEEP_DAYS = 120;
+const DAY = 86400000;
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const nf = new Intl.NumberFormat('es-ES');
+const fmtN = (n) => nf.format(Math.round(n || 0));
+const fmtPct = (n) => (isFinite(n) ? (Math.round(n * 1000) / 10).toLocaleString('es-ES') + '%' : '–');
+
+// ---------- local cache (only this device) ----------
+let events = [];
+let seenIds = new Set();
+let hidden = new Set();
+function storeGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+function storeSet(key, val) { try { localStorage.setItem(key, val); } catch (e) {} }
+function loadCache() {
+  try { events = JSON.parse(storeGet(CACHE_KEY) || '[]'); } catch (e) { events = []; }
+  trimOld();
+  seenIds = new Set(events.map((e) => e.id));
+  try { hidden = new Set(JSON.parse(storeGet(HIDDEN_KEY) || '[]')); } catch (e) { hidden = new Set(); }
+}
+function trimOld() {
+  const cutoff = Date.now() - KEEP_DAYS * DAY;
+  events = events.filter((e) => e.t >= cutoff);
+}
+let saveTimer = null;
+function saveCache() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => { trimOld(); storeSet(CACHE_KEY, JSON.stringify(events)); }, 800);
+}
+function saveHidden() { storeSet(HIDDEN_KEY, JSON.stringify([...hidden])); }
+
+function compact(id, d) {
+  return {
+    id, t: d.ts.toMillis(), y: d.type, u: d.uid, s: d.sid, p: d.platform,
+    st: d.station || undefined, n: d.name || undefined, c: d.country || undefined,
+    sec: d.secs != null ? Number(d.secs) : undefined, nw: d.isNew || undefined,
+    src: d.src || undefined, ref: d.ref || undefined, lp: d.lp || undefined,
+    lg: d.lang || undefined, tz: d.tz || undefined
+  };
+}
+
+// ---------- dates ----------
+function startOfDay(ts, daysBack = 0) { const d = new Date(ts); return new Date(d.getFullYear(), d.getMonth(), d.getDate() - daysBack).getTime(); }
+function dayKey(ts) { const d = new Date(ts); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+function ago(ts, now) {
+  const m = Math.round((now - ts) / 60000);
+  if (m < 1) return 'ahora';
+  if (m < 60) return 'hace ' + m + ' min';
+  const h = Math.round(m / 60);
+  if (h < 24) return 'hace ' + h + ' h';
+  const d = Math.round(h / 24);
+  return 'hace ' + d + (d === 1 ? ' día' : ' días');
+}
+function fmtDate(ts) { return new Date(ts).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }); }
+function fmtDateTime(ts) { return new Date(ts).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); }
+function fmtDur(secs) {
+  if (!secs) return '0 s';
+  if (secs < 60) return Math.round(secs) + ' s';
+  const m = secs / 60;
+  if (m < 60) return (m < 10 ? (Math.round(m * 10) / 10).toLocaleString('es-ES') : Math.round(m)) + ' min';
+  const h = Math.floor(m / 60), mm = Math.round(m % 60);
+  return h + ' h' + (mm ? ' ' + mm + ' min' : '');
+}
+
+// ---------- metrics ----------
+function compute(now) {
+  const ev = events.filter((e) => !hidden.has(e.u));
+  const today0 = startOfDay(now), w7 = startOfDay(now, 6), w30 = startOfDay(now, 29);
+  const windows = { hoy: today0, d7: w7, d30: w30 };
+
+  function windowStats(from) {
+    const users = new Set(), sessions = new Set(), viewUsers = new Set(), mapUsers = new Set(), bookUsers = new Set(), favUsers = new Set();
+    let newUsers = 0, views = 0, maps = 0, bookings = 0, favs = 0;
+    // Same counts split by where the visit came from: the Android app or a browser.
+    const by = { app: plat(), web: plat() };
+    for (const e of ev) {
+      if (e.t < from) continue;
+      users.add(e.u); sessions.add(e.s);
+      const b = by[e.p === 'android' ? 'app' : 'web'];
+      b.users.add(e.u); b.sessions.add(e.s);
+      if (e.y === 'booking') b.bookings++;
+      if (e.y === 'open' && e.nw) newUsers++;
+      else if (e.y === 'station') { views++; viewUsers.add(e.u); }
+      else if (e.y === 'map') { maps++; mapUsers.add(e.u); }
+      else if (e.y === 'booking') { bookings++; bookUsers.add(e.u); }
+      else if (e.y === 'fav') { favs++; favUsers.add(e.u); }
+    }
+    return { users: users.size, sessions: sessions.size, newUsers, views, maps, bookings, favs,
+      viewUsers: viewUsers.size, mapUsers: mapUsers.size, bookUsers: bookUsers.size, favUsers: favUsers.size, by };
+  }
+  function plat() { return { users: new Set(), sessions: new Set(), bookings: 0 }; }
+  const w = {};
+  for (const k in windows) w[k] = windowStats(windows[k]);
+
+  const nowUsers = new Set(ev.filter((e) => e.t >= now - 15 * 60000).map((e) => e.u)).size;
+  const yesterday = windowStatsRange(ev, startOfDay(now, 1), today0);
+
+  // all-time (within the cached window) totals + platform
+  // Where each person came from: the first visit's source (resumed sessions
+  // and moves inside the site aren't a source), and those of their later visits.
+  const firstSeen = new Map(), lastPlatform = new Map(), firstOpen = new Map(), laterSrc = new Map(), userCountry = new Map();
+  for (const e of ev) {
+    if (!firstSeen.has(e.u)) firstSeen.set(e.u, e.t);
+    lastPlatform.set(e.u, e.p);
+    if (e.y === 'open') {
+      // The latest visit's country; a time zone beats a guess from the language.
+      const c = eventCountry(e), had = userCountry.get(e.u);
+      if (c && (c.how === 'tz' || !had || had.how === 'lang')) userCountry.set(e.u, c);
+    }
+    if (e.y !== 'open' || e.src === 'reanudada' || e.src === 'interna') continue;
+    if (!firstOpen.has(e.u)) { firstOpen.set(e.u, e); continue; }
+    if (!e.src) continue;
+    let later = laterSrc.get(e.u);
+    if (!later) laterSrc.set(e.u, later = new Map());
+    later.set(e.src, (later.get(e.src) || 0) + 1);
+  }
+  let android = 0, web = 0;
+  for (const p of lastPlatform.values()) { if (p === 'android') android++; else web++; }
+  const activeAndroid30 = new Set(ev.filter((e) => e.t >= w30 && e.p === 'android').map((e) => e.u)).size;
+  const activeWeb30 = new Set(ev.filter((e) => e.t >= w30 && e.p !== 'android').map((e) => e.u)).size;
+
+  // daily series (30 days)
+  const days = [];
+  for (let i = 29; i >= 0; i--) {
+    const from = startOfDay(now, i);
+    days.push({ from, users: new Set(), sessions: new Set(), appSessions: new Set(), webSessions: new Set(), bookings: 0, views: 0 });
+  }
+  const dayIndex = (t) => { for (let i = days.length - 1; i >= 0; i--) if (t >= days[i].from) return i; return -1; };
+  const perUser = new Map(), perSession = new Map(), perStation = new Map();
+  for (const e of ev) {
+    if (e.t < w30) continue;
+    const di = dayIndex(e.t);
+    if (di >= 0) {
+      const d = days[di];
+      d.users.add(e.u); d.sessions.add(e.s);
+      (e.p === 'android' ? d.appSessions : d.webSessions).add(e.s);
+      if (e.y === 'booking') d.bookings++;
+      if (e.y === 'station') d.views++;
+    }
+    let u = perUser.get(e.u);
+    if (!u) { u = { uid: e.u, days: new Set(), sessions: new Set(), secs: 0, stations: new Map(), booked: new Map(), saved: new Set(), bookings: 0, maps: 0, first: firstSeen.get(e.u), last: e.t, platform: lastPlatform.get(e.u), origin: firstOpen.get(e.u), laterSrc: laterSrc.get(e.u), country: userCountry.get(e.u) }; perUser.set(e.u, u); }
+    u.days.add(dayKey(e.t)); u.sessions.add(e.s); u.last = Math.max(u.last, e.t);
+    if (e.y !== 'open' && e.y !== 'page' && e.y !== 'time') u.acts = (u.acts || 0) + 1;
+    if (e.y === 'time') {
+      u.secs += e.sec || 0;
+      perSession.set(e.s, (perSession.get(e.s) || 0) + (e.sec || 0));
+    } else if (e.y === 'station' || e.y === 'booking' || e.y === 'map' || e.y === 'fav') {
+      const key = e.st || e.n;
+      if (!key) continue;
+      let s = perStation.get(key);
+      if (!s) { s = { name: e.n || key, country: e.c, views: 0, users: new Set(), bookings: 0, bookUsers: new Set(), maps: 0, favUsers: new Set() }; perStation.set(key, s); }
+      if (e.y === 'station') { s.views++; s.users.add(e.u); u.stations.set(s.name, (u.stations.get(s.name) || 0) + 1); }
+      else if (e.y === 'map') { s.maps++; u.maps++; }
+      else if (e.y === 'fav') { s.favUsers.add(e.u); u.saved.add(s.name); }
+      else { s.bookings++; s.bookUsers.add(e.u); u.bookings++; u.booked.set(s.name, (u.booked.get(s.name) || 0) + 1); }
+    }
+  }
+
+  // loyalty
+  const users30 = [...perUser.values()];
+  const returning = users30.filter((u) => u.days.size >= 2).length;
+  // One visit, no time on screen and nothing opened: before the robot filter
+  // (track.js, 29 Sept) mostly search engines rendering pages; after it, people
+  // who left at once.
+  const idle = users30.filter((u) => u.sessions.size === 1 && !u.secs && !u.acts);
+  const idleBefore = idle.filter((u) => u.first < BOT_FILTER_SINCE).map((u) => u.uid);
+  const buckets = [
+    { label: '1 sesión', test: (n) => n === 1 },
+    { label: '2–3 sesiones', test: (n) => n >= 2 && n <= 3 },
+    { label: '4–9 sesiones', test: (n) => n >= 4 && n <= 9 },
+    { label: '10 o más', test: (n) => n >= 10 }
+  ].map((b) => ({ label: b.label, value: users30.filter((u) => b.test(u.sessions.size)).length }));
+  const avgDaysPerUser = users30.length ? users30.reduce((a, u) => a + u.days.size, 0) / users30.length : 0;
+
+  // time
+  const durations = [...perSession.values()].filter((s) => s > 0).sort((a, b) => a - b);
+  const totalSecs = durations.reduce((a, b) => a + b, 0);
+  const median = durations.length ? (durations.length % 2 ? durations[(durations.length - 1) / 2] : (durations[durations.length / 2 - 1] + durations[durations.length / 2]) / 2) : 0;
+  const userDays = days.reduce((a, d) => a + d.users.size, 0);
+
+  const stations = [...perStation.values()].sort((a, b) => b.views - a.views || b.bookings - a.bookings);
+  const usersList = users30.sort((a, b) => b.last - a.last);
+
+  return {
+    now, w, yesterday, nowUsers,
+    totalUsers: firstSeen.size, android, web, activeAndroid30, activeWeb30,
+    since: ev.length ? ev[0].t : null, eventCount: ev.length,
+    days, returning, buckets, avgDaysPerUser, users30Count: users30.length,
+    idleBefore, idleAfter: idle.length - idleBefore.length,
+    durations, totalSecs, median, avgSession: durations.length ? totalSecs / durations.length : 0,
+    avgPerUserDay: userDays ? totalSecs / userDays : 0,
+    stations, usersList
+  };
+}
+function windowStatsRange(ev, from, to) {
+  const users = new Set(); let bookings = 0;
+  for (const e of ev) { if (e.t < from || e.t >= to) continue; users.add(e.u); if (e.y === 'booking') bookings++; }
+  return { users: users.size, bookings };
+}
+
+// ---------- rendering ----------
+function tableRows(el, head, rows) {
+  el.innerHTML = (head ? '<tr>' + head.map((h) => '<th>' + esc(h) + '</th>').join('') + '</tr>' : '') +
+    rows.map((r) => '<tr>' + r.map((c, i) => '<td' + (i === 1 ? ' class="hl"' : '') + '>' + esc(c) + '</td>').join('') + '</tr>').join('');
+}
+function hbars(el, items, color) {
+  const max = Math.max(1, ...items.map((i) => i.value));
+  el.innerHTML = items.map((i) =>
+    '<div class="hbar"><span class="lbl">' + esc(i.label) + '</span><span class="val">' + esc(i.text != null ? i.text : fmtN(i.value)) + '</span>' +
+    '<div class="track"><div class="fill" style="width:' + (i.value ? Math.max(2, (i.value / max) * 100) : 0) + '%;' + (color ? 'background:' + color : '') + '"></div></div></div>'
+  ).join('');
+}
+
+const tip = $('tip');
+function showTip(x, y, html) {
+  tip.innerHTML = html; tip.style.top = y + 'px'; tip.hidden = false;
+  // Centered on x (see .tip transform) but kept inside the window.
+  const half = tip.offsetWidth / 2, margin = 8;
+  tip.style.left = Math.max(margin + half, Math.min(x, window.innerWidth - margin - half)) + 'px';
+}
+function hideTip() { tip.hidden = true; }
+document.addEventListener('scroll', hideTip, { passive: true });
+
+function niceMax(v) {
+  if (v <= 4) return Math.max(1, Math.ceil(v));
+  const p = Math.pow(10, Math.floor(Math.log10(v)));
+  for (const m of [1, 2, 2.5, 5, 10]) if (m * p >= v) return m * p;
+  return 10 * p;
+}
+// Daily bar chart. `series` is [{ label, color, valueOf }]; with more than one
+// they're stacked and a legend is added (a single series is named by the card
+// title). Every bar has a full-height hit area with a tooltip, and a data
+// table follows.
+function barChart(el, days, series, unit) {
+  const W = 340, H = 150, padL = 26, padR = 4, padT = 8, padB = 20;
+  const perSeries = series.map((se) => days.map(se.valueOf));
+  const values = days.map((_, i) => perSeries.reduce((a, v) => a + v[i], 0));
+  const max = niceMax(Math.max(...values, 0));
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const slot = plotW / days.length, gap = 2, bw = Math.max(1, slot - gap);
+  const y = (v) => padT + plotH - (v / max) * plotH;
+  let svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(unit) + ' por día, últimos 30 días">';
+  [0, max / 2, max].forEach((g) => {
+    const gy = y(g);
+    svg += '<line class="' + (g === 0 ? 'baseline' : 'gridline') + '" x1="' + padL + '" x2="' + (W - padR) + '" y1="' + gy + '" y2="' + gy + '"/>';
+    svg += '<text class="axis-label" x="' + (padL - 5) + '" y="' + (gy + 3) + '" text-anchor="end">' + fmtN(g) + '</text>';
+  });
+  days.forEach((d, i) => {
+    const x = padL + i * slot + gap / 2;
+    let acc = 0;
+    const lastSeries = perSeries.map((v) => v[i] > 0).lastIndexOf(true);
+    perSeries.forEach((vals, si) => {
+      const v = vals[i];
+      if (!(v > 0)) return;
+      const bottom = y(acc), top = y(acc + v);
+      acc += v;
+      // Only the topmost segment gets rounded corners; 1px gap between segments.
+      const r = si === lastSeries ? Math.min(4, bw / 2, bottom - top) : 0;
+      const b = si > 0 && acc > v ? bottom - 1 : bottom;
+      svg += '<path class="bar" data-i="' + i + '" fill="' + series[si].color + '" d="M' + x + ',' + b + 'V' + (top + r) + 'Q' + x + ',' + top + ' ' + (x + r) + ',' + top +
+        'H' + (x + bw - r) + 'Q' + (x + bw) + ',' + top + ' ' + (x + bw) + ',' + (top + r) + 'V' + b + 'Z"/>';
+    });
+    if ((days.length - 1 - i) % 7 === 0) {
+      svg += '<text class="axis-label" x="' + (x + bw / 2) + '" y="' + (H - 5) + '" text-anchor="middle">' + new Date(d.from).getDate() + '</text>';
+    }
+    svg += '<rect class="bar-hit" data-i="' + i + '" x="' + (padL + i * slot) + '" y="' + padT + '" width="' + slot + '" height="' + plotH + '"/>';
+  });
+  svg += '</svg>';
+  const multi = series.length > 1;
+  const legend = multi ? '<div class="legend">' + series.map((se) =>
+    '<span><i style="background:' + se.color + '"></i>' + esc(se.label) + '</span>').join('') + '</div>' : '';
+  const cols = multi ? series.map((se) => se.label).concat(['Total']) : [unit];
+  const table = '<details class="data"><summary>Ver datos</summary><table><tr><th>Día</th>' + cols.map((c) => '<th>' + esc(c) + '</th>').join('') + '</tr>' +
+    days.map((d, i) => i).reverse().map((i) => '<tr><td>' + fmtDate(days[i].from) + '</td>' +
+      (multi ? perSeries.map((v) => v[i]).concat([values[i]]) : [values[i]]).map((v) => '<td>' + fmtN(v) + '</td>').join('') + '</tr>').join('') +
+    '</table></details>';
+  el.innerHTML = legend + svg + table;
+  el.querySelectorAll('.bar-hit').forEach((hit) => {
+    const i = Number(hit.getAttribute('data-i'));
+    const onEnter = (e) => {
+      el.querySelectorAll('.bar.active').forEach((b) => b.classList.remove('active'));
+      const bars = el.querySelectorAll('.bar[data-i="' + i + '"]');
+      bars.forEach((b) => b.classList.add('active'));
+      const top = bars.length ? Math.min(...[...bars].map((b) => b.getBoundingClientRect().top)) : null;
+      const r = hit.getBoundingClientRect();
+      const label = new Date(days[i].from).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+      const detail = multi ? '<br>' + series.map((se, si) => esc(se.label) + ': ' + fmtN(perSeries[si][i])).join(' · ') : '';
+      showTip(r.left + r.width / 2, top != null ? top : r.bottom, esc(label) + ' · <strong>' + fmtN(values[i]) + '</strong> ' + esc(unit) + detail);
+    };
+    hit.addEventListener('pointerenter', onEnter);
+    hit.addEventListener('pointerdown', onEnter);
+    hit.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') { hideTip(); el.querySelectorAll('.bar.active').forEach((b) => b.classList.remove('active')); } });
+  });
+}
+
+let usersShown = 30;
+function render() {
+  const m = compute(Date.now());
+  const { w } = m;
+  $('k-now').textContent = fmtN(m.nowUsers);
+  $('k-today').textContent = fmtN(w.hoy.users);
+  $('k-today-d').textContent = 'app ' + fmtN(w.hoy.by.app.users.size) + ' · web ' + fmtN(w.hoy.by.web.users.size) + ' · ayer ' + fmtN(m.yesterday.users);
+  $('k-book').textContent = fmtN(w.hoy.bookings);
+  $('k-book-d').textContent = 'ayer: ' + fmtN(m.yesterday.bookings);
+  $('k-total').textContent = fmtN(m.totalUsers);
+  $('k-total-d').textContent = m.since ? 'desde el ' + fmtDate(m.since) : 'sin datos aún';
+
+  tableRows($('summary'), ['', 'Hoy', '7 días', '30 días'], [
+    ['Usuarios activos', fmtN(w.hoy.users), fmtN(w.d7.users), fmtN(w.d30.users)],
+    ['Usuarios nuevos', fmtN(w.hoy.newUsers), fmtN(w.d7.newUsers), fmtN(w.d30.newUsers)],
+    ['Sesiones', fmtN(w.hoy.sessions), fmtN(w.d7.sessions), fmtN(w.d30.sessions)],
+    ['Fichas de estación vistas', fmtN(w.hoy.views), fmtN(w.d7.views), fmtN(w.d30.views)],
+    ['Aperturas del mapa', fmtN(w.hoy.maps), fmtN(w.d7.maps), fmtN(w.d30.maps)],
+    ['Clics en Booking', fmtN(w.hoy.bookings), fmtN(w.d7.bookings), fmtN(w.d30.bookings)],
+    ['Estaciones guardadas', fmtN(w.hoy.favs), fmtN(w.d7.favs), fmtN(w.d30.favs)],
+    ['Usuarios que guardan alguna', fmtN(w.hoy.favUsers), fmtN(w.d7.favUsers), fmtN(w.d30.favUsers)]
+  ]);
+
+  barChart($('chart-users'), m.days, [{ valueOf: (d) => d.users.size, color: 'var(--series-1)' }], 'usuarios');
+  barChart($('chart-booking'), m.days, [{ valueOf: (d) => d.bookings, color: 'var(--series-2)' }], 'clics');
+  barChart($('chart-platform'), m.days, [
+    { label: 'App Android', valueOf: (d) => d.appSessions.size, color: 'var(--series-1)' },
+    { label: 'Web', valueOf: (d) => d.webSessions.size, color: 'var(--series-2)' }
+  ], 'visitas');
+
+  tableRows($('booking-summary'), ['', 'Hoy', '7 días', '30 días'], [
+    ['Clics en Booking', fmtN(w.hoy.bookings), fmtN(w.d7.bookings), fmtN(w.d30.bookings)],
+    ['Clics / fichas vistas', fmtPct(w.hoy.bookings / w.hoy.views), fmtPct(w.d7.bookings / w.d7.views), fmtPct(w.d30.bookings / w.d30.views)],
+    ['Usuarios que pulsan', fmtN(w.hoy.bookUsers), fmtN(w.d7.bookUsers), fmtN(w.d30.bookUsers)],
+    ['% de usuarios activos', fmtPct(w.hoy.bookUsers / w.hoy.users), fmtPct(w.d7.bookUsers / w.d7.users), fmtPct(w.d30.bookUsers / w.d30.users)]
+  ]);
+  const a = w.d30.users;
+  hbars($('funnel'), [
+    { label: 'Usuarios activos', value: a, text: fmtN(a) },
+    { label: 'Abren una ficha de estación', value: w.d30.viewUsers, text: fmtN(w.d30.viewUsers) + ' · ' + fmtPct(w.d30.viewUsers / a) },
+    { label: 'Abren el mapa', value: w.d30.mapUsers, text: fmtN(w.d30.mapUsers) + ' · ' + fmtPct(w.d30.mapUsers / a) },
+    { label: 'Pulsan Booking', value: w.d30.bookUsers, text: fmtN(w.d30.bookUsers) + ' · ' + fmtPct(w.d30.bookUsers / a) }
+  ]);
+
+  const split = (k, f) => [w.hoy, w.d7, w.d30].map((x) => f(x.by[k]));
+  const appShare = (f) => [w.hoy, w.d7, w.d30].map((x) => fmtPct(f(x.by.app) / (f(x.by.app) + f(x.by.web))));
+  const n = (f) => (x) => fmtN(f(x));
+  const ses = (x) => x.sessions.size, usr = (x) => x.users.size;
+  tableRows($('platform-split'), ['', 'Hoy', '7 días', '30 días'], [
+    ['Visitas desde la app'].concat(split('app', n(ses))),
+    ['Visitas desde la web'].concat(split('web', n(ses))),
+    ['% en la app'].concat(appShare(ses)),
+    ['Usuarios en la app'].concat(split('app', n(usr))),
+    ['Usuarios en la web'].concat(split('web', n(usr))),
+    ['Booking desde la app'].concat(split('app', n((x) => x.bookings))),
+    ['Booking desde la web'].concat(split('web', n((x) => x.bookings)))
+  ]);
+
+  $('since-sub').textContent = m.since ? 'desde el ' + fmtDate(m.since) : '';
+  tableRows($('platform'), ['', 'Total', 'Activos 30 d'], [
+    ['App Android', fmtN(m.android), fmtN(m.activeAndroid30)],
+    ['Web (navegador)', fmtN(m.web), fmtN(m.activeWeb30)],
+    ['Total', fmtN(m.totalUsers), fmtN(w.d30.users)]
+  ]);
+
+  tableRows($('loyalty'), null, [
+    ['Usuarios que vuelven (2 días o más)', fmtN(m.returning) + ' · ' + fmtPct(m.returning / m.users30Count)],
+    ['Guardan alguna estación', fmtN(w.d30.favUsers) + ' · ' + fmtPct(w.d30.favUsers / m.users30Count)],
+    ['Días de uso medios por usuario', (Math.round(m.avgDaysPerUser * 10) / 10).toLocaleString('es-ES')],
+    ['Usuarios activos / mes', fmtN(m.users30Count)],
+    ['Sin actividad antes del filtro de robots (probables robots)', fmtN(m.idleBefore.length) + ' · ' + fmtPct(m.idleBefore.length / m.users30Count)],
+    ['Sin actividad desde el filtro (se van al momento)', fmtN(m.idleAfter) + ' · ' + fmtPct(m.idleAfter / m.users30Count)]
+  ]);
+  const idleNote = $('idle-note');
+  idleNote.hidden = !m.idleBefore.length;
+  if (m.idleBefore.length) {
+    idleNote.innerHTML = '«Sin actividad» = una sola visita, 0 segundos y sin abrir ninguna estación. Hasta el 29 de septiembre por la noche el contador no distinguía a los robots de Google, Search Console o PageSpeed, que cargan la web como un navegador: casi todos los de antes de esa fecha lo son. '
+      + '<button type="button" class="linkbtn" id="hide-idle">Ocultar esos ' + fmtN(m.idleBefore.length) + ' de todas las cifras</button>';
+    $('hide-idle').onclick = () => { m.idleBefore.forEach((uid) => hidden.add(uid)); saveHidden(); render(); };
+  }
+  hbars($('sessions-dist'), m.buckets.map((b) => ({ label: b.label, value: b.value, text: fmtN(b.value) + ' · ' + fmtPct(b.value / m.users30Count) })));
+
+  tableRows($('time'), null, [
+    ['Duración media de sesión', fmtDur(m.avgSession)],
+    ['Duración mediana de sesión', fmtDur(m.median)],
+    ['Tiempo diario por usuario activo', fmtDur(m.avgPerUserDay)],
+    ['Tiempo total en la app', fmtDur(m.totalSecs)],
+    ['Sesiones con tiempo medido', fmtN(m.durations.length)]
+  ]);
+
+  const st = m.stations.slice(0, 20);
+  $('stations').innerHTML = st.length ? st.map((s) =>
+    '<div class="row"><span class="name">' + esc(s.name) + '</span>' +
+    '<span class="nums">' + fmtN(s.views) + ' vistas · ' + fmtN(s.users.size) + ' usuarios</span>' +
+    '<span class="meta">' + fmtN(s.maps) + ' mapas · ' + (s.favUsers.size ? '⭐ ' + fmtN(s.favUsers.size) + (s.favUsers.size === 1 ? ' la guarda' : ' la guardan') + ' · ' : '') + fmtN(s.bookings) + ' clics Booking' + (s.views ? ' (' + fmtPct(s.bookings / s.views) + ')' : '') + (s.country ? ' · ' + esc(s.country) : '') + '</span></div>'
+  ).join('') : '<div class="empty">Todavía no hay estaciones vistas.</div>';
+
+  renderUsers(m);
+  renderSources();
+
+  $('footer').innerHTML = fmtN(m.eventCount) + ' eventos en este dispositivo' + (m.since ? ' · desde el ' + fmtDateTime(m.since) : '') +
+    '<br>Actualizado ' + new Date(m.now).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+}
+
+// ---------- where visits come from ----------
+const SOURCE_LABELS = {
+  google: 'Google', bing: 'Bing', duckduckgo: 'DuckDuckGo', yahoo: 'Yahoo', ecosia: 'Ecosia', qwant: 'Qwant',
+  facebook: 'Facebook', instagram: 'Instagram', x: 'X (Twitter)', reddit: 'Reddit', nevasport: 'Nevasport',
+  whatsapp: 'WhatsApp', telegram: 'Telegram', gmail: 'Gmail', linkedin: 'LinkedIn', tiktok: 'TikTok', youtube: 'YouTube',
+  app: 'App Android', pwa: 'Web instalada (icono en el móvil)', directo: 'Directo (escrita, favorito o app sin datos)',
+  reanudada: 'Vuelve tras una pausa', interna: 'Desde la propia web', web: 'Otra web'
+};
+function sourceLabel(src) {
+  if (!src) return 'Sin dato (antes de medirlo)';
+  if (src.indexOf('tag:') === 0) return 'Enlace marcado: ' + src.slice(4);
+  if (src.indexOf('app:') === 0) return 'App ' + src.slice(4);
+  return SOURCE_LABELS[src] || src;
+}
+// ---------- country ----------
+// From the device's time zone (sent since 29 Sept; IANA zone.tab, with the old
+// aliases some browsers still report), or, for earlier visits, roughly from the
+// browser's language region ("en-US"). Never from the IP.
+const TZ_COUNTRY = new Map();
+'AD:Europe/Andorra;AE:Asia/Dubai;AF:Asia/Kabul;AG:America/Antigua;AI:America/Anguilla;AL:Europe/Tirane;AM:Asia/Yerevan;AO:Africa/Luanda;AQ:Antarctica/Casey,Antarctica/Davis,Antarctica/DumontDUrville,Antarctica/Mawson,Antarctica/McMurdo,Antarctica/Palmer,Antarctica/Rothera,Antarctica/South_Pole,Antarctica/Syowa,Antarctica/Troll,Antarctica/Vostok;AR:America/Argentina/Buenos_Aires,America/Argentina/Catamarca,America/Argentina/ComodRivadavia,America/Argentina/Cordoba,America/Argentina/Jujuy,America/Argentina/La_Rioja,America/Argentina/Mendoza,America/Argentina/Rio_Gallegos,America/Argentina/Salta,America/Argentina/San_Juan,America/Argentina/San_Luis,America/Argentina/Tucuman,America/Argentina/Ushuaia,America/Buenos_Aires,America/Catamarca,America/Cordoba,America/Jujuy,America/Mendoza,America/Rosario;AS:Pacific/Pago_Pago,Pacific/Samoa,US/Samoa;AT:Europe/Vienna;AU:Antarctica/Macquarie,Australia/ACT,Australia/Adelaide,Australia/Brisbane,Australia/Broken_Hill,Australia/Canberra,Australia/Currie,Australia/Darwin,Australia/Eucla,Australia/Hobart,Australia/LHI,Australia/Lindeman,Australia/Lord_Howe,Australia/Melbourne,Australia/NSW,Australia/North,Australia/Perth,Australia/Queensland,Australia/South,Australia/Sydney,Australia/Tasmania,Australia/Victoria,Australia/West,Australia/Yancowinna;AW:America/Aruba;AX:Europe/Mariehamn;AZ:Asia/Baku;BA:Europe/Sarajevo;BB:America/Barbados;BD:Asia/Dacca,Asia/Dhaka;BE:Europe/Brussels;BF:Africa/Ouagadougou;BG:Europe/Sofia;BH:Asia/Bahrain;BI:Africa/Bujumbura;BJ:Africa/Porto-Novo;BL:America/St_Barthelemy;BM:Atlantic/Bermuda;BN:Asia/Brunei;BO:America/La_Paz;BQ:America/Kralendijk;BR:America/Araguaina,America/Bahia,America/Belem,America/Boa_Vista,America/Campo_Grande,America/Cuiaba,America/Eirunepe,America/Fortaleza,America/Maceio,America/Manaus,America/Noronha,America/Porto_Acre,America/Porto_Velho,America/Recife,America/Rio_Branco,America/Santarem,America/Sao_Paulo,Brazil/Acre,Brazil/DeNoronha,Brazil/East,Brazil/West;BS:America/Nassau;BT:Asia/Thimbu,Asia/Thimphu;BW:Africa/Gaborone;BY:Europe/Minsk;BZ:America/Belize;CA:America/Atikokan,America/Blanc-Sablon,America/Cambridge_Bay,America/Coral_Harbour,America/Creston,America/Dawson,America/Dawson_Creek,America/Edmonton,America/Fort_Nelson,America/Glace_Bay,America/Goose_Bay,America/Halifax,America/Inuvik,America/Iqaluit,America/Moncton,America/Montreal,America/Nipigon,America/Pangnirtung,America/Rainy_River,America/Rankin_Inlet,America/Regina,America/Resolute,America/St_Johns,America/Swift_Current,America/Thunder_Bay,America/Toronto,America/Vancouver,America/Whitehorse,America/Winnipeg,America/Yellowknife,Canada/Atlantic,Canada/Central,Canada/Eastern,Canada/Mountain,Canada/Newfoundland,Canada/Pacific,Canada/Saskatchewan,Canada/Yukon;CC:Indian/Cocos;CD:Africa/Kinshasa,Africa/Lubumbashi;CF:Africa/Bangui;CG:Africa/Brazzaville;CH:Europe/Zurich;CI:Africa/Abidjan;CK:Pacific/Rarotonga;CL:America/Coyhaique,America/Punta_Arenas,America/Santiago,Chile/Continental,Chile/EasterIsland,Pacific/Easter;CM:Africa/Douala;CN:Asia/Chongqing,Asia/Chungking,Asia/Harbin,Asia/Kashgar,Asia/Shanghai,Asia/Urumqi,PRC;CO:America/Bogota;CR:America/Costa_Rica;CU:America/Havana,Cuba;CV:Atlantic/Cape_Verde;CW:America/Curacao;CX:Indian/Christmas;CY:Asia/Famagusta,Asia/Nicosia,Europe/Nicosia;CZ:Europe/Prague;DE:Europe/Berlin,Europe/Busingen;DJ:Africa/Djibouti;DK:Europe/Copenhagen;DM:America/Dominica;DO:America/Santo_Domingo;DZ:Africa/Algiers;EC:America/Guayaquil,Pacific/Galapagos;EE:Europe/Tallinn;EG:Africa/Cairo,Egypt;EH:Africa/El_Aaiun;ER:Africa/Asmara,Africa/Asmera;ES:Africa/Ceuta,Atlantic/Canary,Europe/Madrid;ET:Africa/Addis_Ababa;FI:Europe/Helsinki;FJ:Pacific/Fiji;FK:Atlantic/Stanley;FM:Pacific/Chuuk,Pacific/Kosrae,Pacific/Pohnpei,Pacific/Ponape,Pacific/Truk,Pacific/Yap;FO:Atlantic/Faeroe,Atlantic/Faroe;FR:Europe/Paris;GA:Africa/Libreville;GB:Europe/Belfast,Europe/London,GB,GB-Eire;GD:America/Grenada;GE:Asia/Tbilisi;GF:America/Cayenne;GG:Europe/Guernsey;GH:Africa/Accra;GI:Europe/Gibraltar;GL:America/Danmarkshavn,America/Godthab,America/Nuuk,America/Scoresbysund,America/Thule;GM:Africa/Banjul;GN:Africa/Conakry;GP:America/Guadeloupe;GQ:Africa/Malabo;GR:Europe/Athens;GS:Atlantic/South_Georgia;GT:America/Guatemala;GU:Pacific/Guam;GW:Africa/Bissau;GY:America/Guyana;HK:Asia/Hong_Kong,Hongkong;HN:America/Tegucigalpa;HR:Europe/Zagreb;HT:America/Port-au-Prince;HU:Europe/Budapest;ID:Asia/Jakarta,Asia/Jayapura,Asia/Makassar,Asia/Pontianak,Asia/Ujung_Pandang;IE:Eire,Europe/Dublin;IL:Asia/Jerusalem,Asia/Tel_Aviv,Israel;IM:Europe/Isle_of_Man;IN:Asia/Calcutta,Asia/Kolkata;IO:Indian/Chagos;IQ:Asia/Baghdad;IR:Asia/Tehran,Iran;IS:Atlantic/Reykjavik,Iceland;IT:Europe/Rome;JE:Europe/Jersey;JM:America/Jamaica,Jamaica;JO:Asia/Amman;JP:Asia/Tokyo,Japan;KE:Africa/Nairobi;KG:Asia/Bishkek;KH:Asia/Phnom_Penh;KI:Pacific/Enderbury,Pacific/Kanton,Pacific/Kiritimati,Pacific/Tarawa;KM:Indian/Comoro;KN:America/St_Kitts;KP:Asia/Pyongyang;KR:Asia/Seoul,ROK;KW:Asia/Kuwait;KY:America/Cayman;KZ:Asia/Almaty,Asia/Aqtau,Asia/Aqtobe,Asia/Atyrau,Asia/Oral,Asia/Qostanay,Asia/Qyzylorda;LA:Asia/Vientiane;LB:Asia/Beirut;LC:America/St_Lucia;LI:Europe/Vaduz;LK:Asia/Colombo;LR:Africa/Monrovia;LS:Africa/Maseru;LT:Europe/Vilnius;LU:Europe/Luxembourg;LV:Europe/Riga;LY:Africa/Tripoli,Libya;MA:Africa/Casablanca;MC:Europe/Monaco;MD:Europe/Chisinau,Europe/Tiraspol;ME:Europe/Podgorica;MF:America/Marigot;MG:Indian/Antananarivo;MH:Kwajalein,Pacific/Kwajalein,Pacific/Majuro;MK:Europe/Skopje;ML:Africa/Bamako,Africa/Timbuktu;MM:Asia/Rangoon,Asia/Yangon;MN:Asia/Choibalsan,Asia/Hovd,Asia/Ulaanbaatar,Asia/Ulan_Bator;MO:Asia/Macao,Asia/Macau;MP:Pacific/Saipan;MQ:America/Martinique;MR:Africa/Nouakchott;MS:America/Montserrat;MT:Europe/Malta;MU:Indian/Mauritius;MV:Indian/Maldives;MW:Africa/Blantyre;MX:America/Bahia_Banderas,America/Cancun,America/Chihuahua,America/Ciudad_Juarez,America/Ensenada,America/Hermosillo,America/Matamoros,America/Mazatlan,America/Merida,America/Mexico_City,America/Monterrey,America/Ojinaga,America/Santa_Isabel,America/Tijuana,Mexico/BajaNorte,Mexico/BajaSur,Mexico/General;MY:Asia/Kuala_Lumpur,Asia/Kuching;MZ:Africa/Maputo;NA:Africa/Windhoek;NC:Pacific/Noumea;NE:Africa/Niamey;NF:Pacific/Norfolk;NG:Africa/Lagos;NI:America/Managua;NL:Europe/Amsterdam;NO:Atlantic/Jan_Mayen,Europe/Oslo;NP:Asia/Kathmandu,Asia/Katmandu;NR:Pacific/Nauru;NU:Pacific/Niue;NZ:NZ,NZ-CHAT,Pacific/Auckland,Pacific/Chatham;OM:Asia/Muscat;PA:America/Panama;PE:America/Lima;PF:Pacific/Gambier,Pacific/Marquesas,Pacific/Tahiti;PG:Pacific/Bougainville,Pacific/Port_Moresby;PH:Asia/Manila;PK:Asia/Karachi;PL:Europe/Warsaw,Poland;PM:America/Miquelon;PN:Pacific/Pitcairn;PR:America/Puerto_Rico;PS:Asia/Gaza,Asia/Hebron;PT:Atlantic/Azores,Atlantic/Madeira,Europe/Lisbon,Portugal;PW:Pacific/Palau;PY:America/Asuncion;QA:Asia/Qatar;RE:Indian/Reunion;RO:Europe/Bucharest;RS:Europe/Belgrade;RU:Asia/Anadyr,Asia/Barnaul,Asia/Chita,Asia/Irkutsk,Asia/Kamchatka,Asia/Khandyga,Asia/Krasnoyarsk,Asia/Magadan,Asia/Novokuznetsk,Asia/Novosibirsk,Asia/Omsk,Asia/Sakhalin,Asia/Srednekolymsk,Asia/Tomsk,Asia/Ust-Nera,Asia/Vladivostok,Asia/Yakutsk,Asia/Yekaterinburg,Europe/Astrakhan,Europe/Kaliningrad,Europe/Kirov,Europe/Moscow,Europe/Samara,Europe/Saratov,Europe/Ulyanovsk,Europe/Volgograd,W-SU;RW:Africa/Kigali;SA:Asia/Riyadh;SB:Pacific/Guadalcanal;SC:Indian/Mahe;SD:Africa/Khartoum;SE:Europe/Stockholm;SG:Asia/Singapore,Singapore;SH:Atlantic/St_Helena;SI:Europe/Ljubljana;SJ:Arctic/Longyearbyen;SK:Europe/Bratislava;SL:Africa/Freetown;SM:Europe/San_Marino;SN:Africa/Dakar;SO:Africa/Mogadishu;SR:America/Paramaribo;SS:Africa/Juba;ST:Africa/Sao_Tome;SV:America/El_Salvador;SX:America/Lower_Princes;SY:Asia/Damascus;SZ:Africa/Mbabane;TC:America/Grand_Turk;TD:Africa/Ndjamena;TF:Indian/Kerguelen;TG:Africa/Lome;TH:Asia/Bangkok;TJ:Asia/Dushanbe;TK:Pacific/Fakaofo;TL:Asia/Dili;TM:Asia/Ashgabat,Asia/Ashkhabad;TN:Africa/Tunis;TO:Pacific/Tongatapu;TR:Asia/Istanbul,Europe/Istanbul,Turkey;TT:America/Port_of_Spain;TV:Pacific/Funafuti;TW:Asia/Taipei,ROC;TZ:Africa/Dar_es_Salaam;UA:Europe/Kiev,Europe/Kyiv,Europe/Simferopol,Europe/Uzhgorod,Europe/Zaporozhye;UG:Africa/Kampala;UM:Pacific/Midway,Pacific/Wake;US:America/Adak,America/Anchorage,America/Atka,America/Boise,America/Chicago,America/Denver,America/Detroit,America/Fort_Wayne,America/Indiana/Indianapolis,America/Indiana/Knox,America/Indiana/Marengo,America/Indiana/Petersburg,America/Indiana/Tell_City,America/Indiana/Vevay,America/Indiana/Vincennes,America/Indiana/Winamac,America/Indianapolis,America/Juneau,America/Kentucky/Louisville,America/Kentucky/Monticello,America/Knox_IN,America/Los_Angeles,America/Louisville,America/Menominee,America/Metlakatla,America/New_York,America/Nome,America/North_Dakota/Beulah,America/North_Dakota/Center,America/North_Dakota/New_Salem,America/Phoenix,America/Shiprock,America/Sitka,America/Yakutat,Navajo,Pacific/Honolulu,Pacific/Johnston,US/Alaska,US/Aleutian,US/Arizona,US/Central,US/East-Indiana,US/Eastern,US/Hawaii,US/Indiana-Starke,US/Michigan,US/Mountain,US/Pacific;UY:America/Montevideo;UZ:Asia/Samarkand,Asia/Tashkent;VA:Europe/Vatican;VC:America/St_Vincent;VE:America/Caracas;VG:America/Tortola;VI:America/St_Thomas,America/Virgin;VN:Asia/Ho_Chi_Minh,Asia/Saigon;VU:Pacific/Efate;WF:Pacific/Wallis;WS:Pacific/Apia;YE:Asia/Aden;YT:Indian/Mayotte;ZA:Africa/Johannesburg;ZM:Africa/Lusaka;ZW:Africa/Harare'.split(';').forEach((g) => { const [cc, zones] = g.split(':'); zones.split(',').forEach((z) => TZ_COUNTRY.set(z, cc)); });
+const FLAGS = new Set('AD AM AR AT AU AZ BA BG CA CH CL CN CZ DE ES FI FR GB GE GR HR IN IR IS IT JP KG KR KZ LB LI ME MK NO NZ PL RO RS RU SE SI SK TR UA US'.split(' '));
+const regionNames = (() => { try { return new Intl.DisplayNames(['es'], { type: 'region' }); } catch (e) { return null; } })();
+function countryName(cc) { try { return (regionNames && regionNames.of(cc)) || cc; } catch (e) { return cc; } }
+// { cc, how: 'tz' | 'lang', detail } for an 'open' event, or null.
+function eventCountry(e) {
+  if (e.tz && TZ_COUNTRY.has(e.tz)) return { cc: TZ_COUNTRY.get(e.tz), how: 'tz', detail: e.tz };
+  const m = /^[a-z]{2,3}-([A-Z]{2})$/.exec(e.lg || '');
+  if (m) return { cc: m[1], how: 'lang', detail: e.lg };
+  return null;
+}
+function countryHtml(cc) {
+  return (FLAGS.has(cc) ? '<img class="flag" src="flags/' + cc.toLowerCase() + '.svg" alt="" width="16" height="12">' : '') + esc(countryName(cc));
+}
+
+// Short form for a person's row: the full labels explain themselves in the sources table.
+const SOURCE_SHORT = { directo: 'Directo', pwa: 'Icono en el móvil', app: 'App Android', web: 'Otra web' };
+function sourceShort(src, ref) {
+  if (!src) return 'Origen sin dato';
+  if (src === 'web' && ref) return ref;
+  return SOURCE_SHORT[src] || sourceLabel(src);
+}
+function originHtml(u) {
+  const o = u.origin;
+  let html = '<div class="origin">Llegó desde: <strong>' + esc(o ? (o.src ? sourceLabel(o.src) : 'sin dato (antes de medirlo)') : 'sin dato') + '</strong>';
+  // The referring site, where the label doesn't already name it (another web, a tagged link).
+  if (o && o.ref && (o.src === 'web' || !SOURCE_LABELS[o.src])) html += ' (' + esc(o.ref) + ')';
+  if (o && o.lp) html += ' · entró por ' + esc(o.lp === '/' ? 'la portada' : decodeURIComponent(o.lp));
+  html += '</div>';
+  if (u.laterSrc && u.laterSrc.size) {
+    html += '<div class="origin">Después volvió desde: ' + [...u.laterSrc.entries()].sort((a, b) => b[1] - a[1])
+      .map(([src, n]) => esc(sourceShort(src)) + (n > 1 ? ' ×' + n : '')).join(', ') + '</div>';
+  }
+  return html;
+}
+function renderSources() {
+  const now = Date.now();
+  const ev = events.filter((e) => !hidden.has(e.u));
+  const from = { hoy: startOfDay(now), d7: startOfDay(now, 6), d30: startOfDay(now, 29) };
+  const counts = new Map();
+  const landing = new Map(), refs = new Map(), pages = new Map(), userCc = new Map();
+  for (const e of ev) {
+    if (e.t < from.d30) continue;
+    if (e.y === 'open') {
+      const key = sourceLabel(e.src);
+      let c = counts.get(key);
+      if (!c) { c = { hoy: 0, d7: 0, d30: 0 }; counts.set(key, c); }
+      c.d30++;
+      if (e.t >= from.d7) c.d7++;
+      if (e.t >= from.hoy) c.hoy++;
+      if (e.lp) landing.set(e.lp, (landing.get(e.lp) || 0) + 1);
+      const ec = eventCountry(e), had = userCc.get(e.u);
+      if (ec && (ec.how === 'tz' || !had || had.how === 'lang')) userCc.set(e.u, ec);
+      if (e.ref && e.src !== 'interna') refs.set(e.ref, (refs.get(e.ref) || 0) + 1);
+    } else if (e.y === 'page' && e.lp) {
+      pages.set(e.lp, (pages.get(e.lp) || 0) + 1);
+    }
+  }
+  const rows = [...counts.entries()].sort((a, b) => b[1].d30 - a[1].d30 || b[1].d7 - a[1].d7);
+  tableRows($('sources'), ['', 'Hoy', '7 días', '30 días'],
+    rows.length ? rows.map(([k, c]) => [k, fmtN(c.hoy), fmtN(c.d7), fmtN(c.d30)]) : [['Todavía no hay visitas', '', '', '']]);
+  const list = (el, map, empty, label) => {
+    const top = [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12);
+    el.innerHTML = top.length ? top.map(([k, n]) =>
+      '<div class="row"><span class="name">' + esc(label ? label(k) : k) + '</span><span class="nums">' + fmtN(n) + '</span></div>').join('')
+      : '<div class="empty">' + esc(empty) + '</div>';
+  };
+  const pathLabel = (p) => p === '/' ? 'Portada (/)' : decodeURIComponent(p);
+  list($('landing'), landing, 'Aún sin datos: se registra desde esta versión.', pathLabel);
+  list($('referrers'), refs, 'Todavía ninguna web externa te ha enviado visitas.');
+  list($('pages'), pages, 'Aún sin datos: se registra desde esta versión.', pathLabel);
+  const countries = new Map();
+  for (const c of userCc.values()) countries.set(c.cc, (countries.get(c.cc) || 0) + 1);
+  const topCc = [...countries.entries()].sort((a, b) => b[1] - a[1]).slice(0, 15);
+  $('countries').innerHTML = topCc.length ? topCc.map(([cc, n]) =>
+    '<div class="row"><span class="name">' + countryHtml(cc) + '</span><span class="nums">' + fmtN(n) + '</span></div>').join('')
+    : '<div class="empty">Aún sin datos.</div>';
+}
+
+function renderUsers(m) {
+  const now = m.now;
+  const hb = $('hidden-bar');
+  if (hidden.size) {
+    hb.hidden = false;
+    hb.innerHTML = '<span>' + hidden.size + (hidden.size === 1 ? ' usuario oculto' : ' usuarios ocultos') + ' (excluidos de todas las cifras)</span><button type="button" class="linkbtn" id="unhide-all">Mostrar</button>';
+    $('unhide-all').onclick = () => { hidden.clear(); saveHidden(); render(); };
+  } else hb.hidden = true;
+
+  const list = m.usersList.slice(0, usersShown);
+  const html = list.map((u) => {
+    const stations = [...u.stations.entries()].sort((a, b) => b[1] - a[1]);
+    const chips = stations.map(([name, n]) => '<span class="chip' + (u.booked.has(name) ? ' booked' : '') + (u.saved.has(name) ? ' saved' : '') + '">' + (u.saved.has(name) ? '⭐ ' : '') + esc(name) + (n > 1 ? ' ×' + n : '') + (u.booked.has(name) ? ' · Booking' : '') + '</span>').join('');
+    return '<details class="user"><summary>' +
+      '<span class="uid">#' + esc(u.uid.slice(0, 6)) + '</span>' +
+      '<span class="badges"><span class="badge">' + (u.platform === 'android' ? 'App' : 'Web') + '</span>' +
+      (u.country ? '<span class="badge country"' + (u.country.how === 'lang' ? ' title="Aproximado, por el idioma del navegador">≈ ' : '>') + countryHtml(u.country.cc) + '</span>' : '') +
+      (u.origin && u.origin.src !== 'app' ? '<span class="badge src' + (u.origin.src ? '' : ' none') + '">' + esc(sourceShort(u.origin.src, u.origin.ref)) + '</span>' : '') +
+      (u.saved.size ? '<span class="badge saved" title="Estaciones guardadas">⭐ ' + u.saved.size + '</span>' : '') + '</span>' +
+      '<span class="when">' + ago(u.last, now) + '</span>' +
+      '<span class="user-meta">' + u.days.size + (u.days.size === 1 ? ' día' : ' días') + ' · ' + u.sessions.size + (u.sessions.size === 1 ? ' sesión' : ' sesiones') + ' · ' + fmtDur(u.secs) +
+      ' · ' + u.stations.size + (u.stations.size === 1 ? ' estación' : ' estaciones') + (u.bookings ? ' · ' + u.bookings + ' Booking' : '') + (u.saved.size ? ' · ' + u.saved.size + (u.saved.size === 1 ? ' guardada' : ' guardadas') : '') + '</span>' +
+      '</summary><div class="user-body">' +
+      (u.country ? '<div class="origin">País: <strong>' + countryHtml(u.country.cc) + '</strong> ' +
+        esc(u.country.how === 'tz' ? '(zona horaria ' + u.country.detail + ')' : '(aproximado, por el idioma del navegador ' + u.country.detail + ')') + '</div>' : '') +
+      originHtml(u) +
+      'Primera visita: ' + fmtDateTime(u.first) + ' · Última: ' + fmtDateTime(u.last) +
+      (chips ? '<div class="chips">' + chips + '</div>' : '<div class="empty">No ha abierto ninguna ficha.</div>') +
+      '<button type="button" class="linkbtn" data-hide="' + esc(u.uid) + '">Ocultar este usuario (p. ej. si soy yo)</button>' +
+      '</div></details>';
+  }).join('');
+  $('users').innerHTML = (html || '<div class="empty">Todavía no hay usuarios.</div>') +
+    (m.usersList.length > usersShown ? '<div class="more"><button type="button" class="linkbtn" id="more-users">Ver más (' + (m.usersList.length - usersShown) + ')</button></div>' : '');
+  $('users').querySelectorAll('[data-hide]').forEach((b) => b.onclick = () => { hidden.add(b.getAttribute('data-hide')); saveHidden(); render(); });
+  const more = $('more-users');
+  if (more) more.onclick = () => { usersShown += 50; render(); };
+}
+
+// ---------- states ----------
+function setLive(on, text) {
+  $('live').classList.toggle('on', !!on);
+  $('live-text').textContent = text || (on ? 'En directo' : 'Sin conexión');
+}
+function showGate(html) {
+  $('gate').innerHTML = html; $('gate').hidden = false; $('dash').hidden = true;
+}
+function showDash() { $('gate').hidden = true; $('dash').hidden = false; }
+
+// ---------- demo data ----------
+function demoEvents() {
+  const names = [['a1', 'Baqueira-Beret', 'ES'], ['a2', 'Sierra Nevada', 'ES'], ['a3', 'Formigal', 'ES'], ['a4', 'Grandvalira', 'AD'],
+    ['a5', 'La Molina', 'ES'], ['a6', 'Cerler', 'ES'], ['a7', 'Val Thorens', 'FR'], ['a8', 'Chamonix', 'FR'], ['a9', 'Zermatt', 'CH'], ['a10', 'Astún', 'ES']];
+  let seed = 7;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const out = [];
+  const now = Date.now();
+  for (let u = 0; u < 90; u++) {
+    const uid = Math.floor(rnd() * 1e12).toString(36).padEnd(8, 'x');
+    const platform = rnd() < 0.7 ? 'android' : 'web';
+    const firstDay = Math.floor(rnd() * 40);
+    const loyal = rnd();
+    let first = true;
+    for (let d = firstDay; d >= 0; d--) {
+      if (d !== firstDay && rnd() > loyal * 0.5) continue;
+      const sessions = 1 + Math.floor(rnd() * (loyal > 0.7 ? 3 : 1.4));
+      for (let s = 0; s < sessions; s++) {
+        let t = startOfDay(now, d) + (8 + rnd() * 14) * 3600000;
+        if (t > now) t = now - rnd() * 3600000;
+        const sid = 's' + u + '_' + d + '_' + s;
+        const srcs = ['google', 'google', 'google', 'directo', 'whatsapp', 'facebook', 'tag:nevasport', 'web', 'reddit'];
+        const src = platform === 'android' ? 'app' : srcs[Math.floor(rnd() * srcs.length)];
+        const lps = ['/', '/estacion/baqueira-beret/', '/guias/pistas-mas-empinadas-espana-andorra/', '/app/', '/estacion/formigal/'];
+        const DEMO_TZ = ['Europe/Madrid', 'Europe/Madrid', 'Europe/Madrid', 'America/Denver', 'Europe/Zurich', 'Europe/London', 'Europe/Andorra', 'Asia/Tokyo', 'Europe/Paris'];
+        out.push({ id: sid + 'o', t, y: 'open', u: uid, s: sid, p: platform, nw: first || undefined, src,
+          tz: u % 7 ? DEMO_TZ[u % DEMO_TZ.length] : undefined, lg: u % 7 ? undefined : 'en-US',
+          ref: src === 'google' ? 'google.com' : src === 'web' ? 'blogdeesqui.es' : src === 'reddit' ? 'reddit.com' : undefined,
+          lp: platform === 'android' ? '/' : lps[Math.floor(rnd() * lps.length)] });
+        if (platform !== 'android' && rnd() < 0.3) out.push({ id: sid + 'p', t: t + 2000, y: 'page', u: uid, s: sid, p: platform, lp: '/guias/estaciones-de-esqui-cerca-de-madrid/' });
+        first = false;
+        const views = 1 + Math.floor(rnd() * 4);
+        for (let v = 0; v < views; v++) {
+          const st = names[Math.floor(Math.pow(rnd(), 1.8) * names.length)];
+          t += 20000 + rnd() * 90000;
+          out.push({ id: sid + 'v' + v, t, y: 'station', u: uid, s: sid, p: platform, st: st[0], n: st[1], c: st[2] });
+          if (rnd() < 0.35) out.push({ id: sid + 'm' + v, t: t + 5000, y: 'map', u: uid, s: sid, p: platform, st: st[0], n: st[1], c: st[2] });
+          if (rnd() < 0.06) out.push({ id: sid + 'f' + v, t: t + 7000, y: 'fav', u: uid, s: sid, p: platform, st: st[0], n: st[1], c: st[2] });
+          if (rnd() < 0.07) out.push({ id: sid + 'b' + v, t: t + 9000, y: 'booking', u: uid, s: sid, p: platform, st: st[0], n: st[1], c: st[2] });
+        }
+        out.push({ id: sid + 't', t: t + 30000, y: 'time', u: uid, s: sid, p: platform, sec: Math.round(40 + rnd() * rnd() * 900) });
+      }
+    }
+  }
+  // A few one-visit users who never did anything (robots, before the filter).
+  for (let i = 0; i < 8; i++) {
+    const t = Math.min(now, BOT_FILTER_SINCE) - (i + 1) * 5 * 3600000;
+    out.push({ id: 'idle' + i, t, y: 'open', u: 'idle' + i + 'xxxx', s: 'si' + i, p: 'web', nw: true, src: 'directo', lp: '/estacion/formigal/' });
+  }
+  return out.filter((e) => e.t <= now).sort((a, b) => a.t - b.t);
+}
+
+// ---------- Firebase ----------
+let unsubscribe = null;
+async function startFirebase() {
+  if (!FIREBASE_CONFIG.apiKey) {
+    setLive(false, 'Sin configurar');
+    showGate('<p><strong>Falta conectar Firebase.</strong></p><p>Hay que pegar la configuración de la app web de Firebase en <code>FIREBASE_CONFIG</code> dentro de <code>docs/stats.html</code>.</p><p><a href="?demo=1">Ver con datos de ejemplo</a></p>');
+    return;
+  }
+  setLive(false, 'Conectando…');
+  let appMod, authMod, fs;
+  try {
+    [appMod, authMod, fs] = await Promise.all([
+      import(SDK + 'firebase-app.js'), import(SDK + 'firebase-auth.js'), import(SDK + 'firebase-firestore.js')
+    ]);
+  } catch (e) {
+    setLive(false, 'Sin conexión');
+    showGate('<p>No se ha podido cargar Firebase. Comprueba la conexión y recarga.</p>');
+    return;
+  }
+  const app = appMod.initializeApp(FIREBASE_CONFIG);
+  const auth = authMod.getAuth(app);
+  const db = fs.getFirestore(app);
+  $('signout-btn').onclick = () => authMod.signOut(auth);
+
+  authMod.onAuthStateChanged(auth, (user) => {
+    if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+    if (!user) {
+      $('signout-btn').hidden = true;
+      setLive(false, 'Sin sesión');
+      showGate('<p>Entra con tu cuenta de Google para ver las estadísticas.</p><button type="button" class="btn" id="signin-btn">Entrar con Google</button>');
+      $('signin-btn').onclick = () => authMod.signInWithPopup(auth, new authMod.GoogleAuthProvider())
+        .catch((err) => showGate('<p>No se pudo iniciar sesión: ' + esc(err.message) + '</p><button type="button" class="btn" onclick="location.reload()">Reintentar</button>'));
+      return;
+    }
+    $('signout-btn').hidden = false;
+    listen(fs, db, user);
+  });
+}
+
+// Only events newer than what's cached on this device are fetched, then the
+// listener stays open and streams new ones in -- so each reload costs few reads.
+function listen(fs, db, user) {
+  loadCache();
+  showDash();
+  render();
+  const since = events.length ? events[events.length - 1].t - 60000 : Date.now() - KEEP_DAYS * DAY;
+  const q = fs.query(fs.collection(db, 'events'), fs.where('ts', '>', fs.Timestamp.fromMillis(since)), fs.orderBy('ts'));
+  unsubscribe = fs.onSnapshot(q, (snap) => {
+    let added = 0;
+    snap.docChanges().forEach((ch) => {
+      if (ch.type !== 'added' || seenIds.has(ch.doc.id)) return;
+      const d = ch.doc.data();
+      if (!d.ts) return;
+      events.push(compact(ch.doc.id, d));
+      seenIds.add(ch.doc.id);
+      added++;
+    });
+    if (added) { events.sort((a, b) => a.t - b.t); saveCache(); }
+    setLive(true);
+    render();
+  }, (err) => {
+    setLive(false, 'Error');
+    if (err.code === 'permission-denied') {
+      showGate('<p>La cuenta <strong>' + esc(user.email) + '</strong> no tiene acceso a estas estadísticas.</p><p>Entra con la cuenta propietaria.</p>');
+    } else {
+      showGate('<p>Error al leer los datos: ' + esc(err.message) + '</p>');
+    }
+  });
+  purgeExpired(fs, db);
+}
+
+// Stand-in for a Firestore TTL policy (not available on this project's plan):
+// each dashboard visit deletes events whose 13-month "exp" date has passed.
+async function purgeExpired(fs, db) {
+  try {
+    const q = fs.query(fs.collection(db, 'events'), fs.where('exp', '<', fs.Timestamp.now()), fs.limit(450));
+    const snap = await fs.getDocs(q);
+    if (snap.empty) return;
+    const batch = fs.writeBatch(db);
+    snap.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  } catch (e) {
+    console.warn('No se pudieron borrar eventos caducados', e);
+  }
+}
+
+setInterval(() => { if (!$('dash').hidden) render(); }, 60000);
+
+if (DEMO) {
+  $('demo-banner').hidden = false;
+  events = demoEvents();
+  try { hidden = new Set(JSON.parse(storeGet(HIDDEN_KEY) || '[]')); } catch (e) {}
+  setLive(true, 'Datos de ejemplo');
+  showDash();
+  render();
+} else {
+  startFirebase();
+}
+</script>
+</body>
+</html>

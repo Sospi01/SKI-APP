@@ -1,0 +1,16 @@
+{
+  "name": "Ski Info · Mapas de pistas y nieve",
+  "short_name": "Ski Info",
+  "description": "Mapas de pistas, pendiente real de cada pista y previsión de nieve de más de 1.200 estaciones de esquí.",
+  "lang": "es",
+  "start_url": "/?fuente=app-instalada",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#14345c",
+  "theme_color": "#14345c",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

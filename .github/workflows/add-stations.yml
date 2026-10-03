@@ -1,0 +1,84 @@
+name: Add stations (on demand)
+
+# Adds ski areas the app doesn't have yet for one country, from a freshly
+# downloaded OpenSkiMap (data-pipeline/scripts/add_stations.py). Run it first
+# as a dry run (the default) and read the list in the run's summary; run it
+# again with dry_run off to write the data files, the catalogue entries and
+# their pinned slugs, commit them to this branch and redeploy the site.
+
+on:
+  workflow_dispatch:
+    inputs:
+      country:
+        description: "ISO country code (e.g. US, CA, FR)"
+        required: true
+        default: "US"
+      min_km:
+        description: "Minimum km of downhill runs"
+        required: true
+        default: "3"
+      max_new:
+        description: "Add at most this many (largest first)"
+        required: true
+        default: "150"
+      dry_run:
+        description: "Only list what would be added"
+        type: boolean
+        required: true
+        default: true
+
+permissions:
+  contents: write   # commit the new stations
+  actions: write    # start the deploy (a push made with GITHUB_TOKEN doesn't trigger workflows)
+
+concurrency:
+  group: refresh-stations   # never at the same time as the weekly refresh
+  cancel-in-progress: false
+
+jobs:
+  add:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install -r data-pipeline/requirements.txt
+
+      - name: Download OpenSkiMap data and build the database
+        working-directory: data-pipeline
+        run: python -m ski_pipeline.cli --db data/ski_info.db -v
+
+      - name: Add the missing stations
+        run: >
+          python3 data-pipeline/scripts/add_stations.py --db data-pipeline/data/ski_info.db
+          --country "${{ inputs.country }}" --min-km "${{ inputs.min_km }}" --max-new "${{ inputs.max_new }}"
+          ${{ inputs.dry_run && '--dry-run' || '' }} --report "$GITHUB_STEP_SUMMARY"
+
+      - name: Pin the new stations' slugs
+        if: ${{ !inputs.dry_run }}
+        run: python3 data-pipeline/scripts/build_seo_pages.py --write-slugs
+
+      - name: Commit and push
+        if: ${{ !inputs.dry_run }}
+        id: commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/data docs/stations.js data-pipeline/station_slugs.json
+          if git diff --cached --quiet; then
+            echo "Nothing to add."
+            exit 0
+          fi
+          git commit -m "Add ${{ inputs.country }} stations with at least ${{ inputs.min_km }} km from OpenSkiMap"
+          git push
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy the site
+        if: steps.commit.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy-pages.yml --ref "$GITHUB_REF_NAME"

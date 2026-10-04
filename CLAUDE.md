@@ -78,7 +78,7 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
 
 **Piezas clave de `index.html`:**
 - `loadStation`: limpia la ficha, descarga `data/<id>.json` y la previsión, y llama a `renderDashboard`.
-- `buildMap`: mapa SVG con teselas de satélite de Esri y proyección equirectangular. La capa base es un solo nivel de zoom para toda la estación (máx. 130 teselas); al acercarse, `refineMapTiles` añade encima teselas más nítidas solo de la zona visible (hasta `TILE_MAX_ZOOM` = 17, máx. 48 por vez).
+- `buildMap`: mapa SVG con teselas de satélite de Esri y proyección equirectangular. El satélite cubre un 20 % más allá de la estación por cada lado (`MAP_SLACK`) y el mapa se puede arrastrar ese margen aunque no haya zoom (el 50 % con un panel abierto). La capa base es un solo nivel de zoom para toda la estación (máx. 160 teselas); al acercarse, `refineMapTiles` añade encima teselas más nítidas solo de la zona visible (hasta `TILE_MAX_ZOOM` = 17, máx. 48 por vez).
 - `renderMapPreview`: tarjeta del mapa en el móvil, sobre satélite; solo por debajo de 1000 px.
 - `trackMapUse`: cuenta el uso real del mapa una vez por estación. En el móvil, al abrirlo; en el ordenador, al arrastrar, hacer zoom o pulsar.
 - `displayName`: nombres en alfabeto latino.
@@ -104,6 +104,8 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
   - pasos legibles: se omiten enlaces (caminatas < 80 m, trocitos de otra pista), un remonte dibujado en varios tramos es un paso (su duración se reparte por longitud y la espera se cuenta una vez), una pista usada en parte dice "200 m de 2,6 km", y si ya estás en el destino dice "Ya estás en…";
   - las pistas dibujadas como un bucle (bajan por un carril y suben por otro, o al revés) se parten en dos carriles hacia abajo: en el perfil (`splitOutAndBack` de `profile.js`), en las flechas del mapa y en las rutas (`splitLoop`);
   - no sabe qué está abierto: el panel lo advierte siempre.
+  - al calcular, la ruta se encuadra sola (`fitRoute` → `fitMapTo` en 2D, `map3d.fitRoute` en 3D) junto al panel (ordenador) o encima (móvil). En la ruta, remontes en discontinua y tramos a pie en puntos;
+  - elegir la salida tocando: con "Otro punto" elegido, cualquier toque en el mapa es la salida (`routePickArmed`; un remonte → su salida o llegada más cercana, un servicio → él mismo, una pista → el punto tocado; los servicios tienen prioridad sobre la pista de debajo). Con otro origen, tocar algo con la ruta abierta abre una ventanita con "Salir desde aquí" y "Ruta hasta aquí" (en el ordenador no se cierra al mover el ratón: `dataset.sticky`).
 - **Modo de prueba de "Dónde estoy"** (escondido): tras abrir la web con `?simular=1` (se recuerda en `localStorage.si_fake_loc`; `?simular=0` lo quita), el botón no pide la ubicación real: mueve el punto por la pista más larga de la estación a unos 8 m/s (`locFakeWalk`). Sirve para probar desde casa y para grabar vídeos. En modo prueba el botón sale aunque el aparato no dé ubicación (app 1.0.5).
 - **Códigos en el buscador de la portada** (la app Android no tiene barra de direcciones): `simular=1`/`simular=0` y `rutas=1`/`rutas=0` activan o quitan esos modos y recargan la página.
 

@@ -598,6 +598,8 @@
     background: var(--accent); color: #fff; font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; pointer-events: auto; }
   .map-run-panel-body > .map-route-btn { margin: 0 0 12px; }
   .map-route-btn svg { width: 15px; height: 15px; }
+  .map-route-btn + .map-route-btn { margin-left: 0; }
+  .map-route-btn-start { background: #2e7d32; }
   .route-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
   .route-row-label { font-size: 11.5px; color: var(--text-secondary); width: 44px; flex-shrink: 0; }
   .route-chips { display: flex; gap: 5px; flex-wrap: wrap; }
@@ -622,8 +624,8 @@
   #map-svg.has-route .map-run, #map-svg.has-route .map-slope, #map-svg.has-route .map-lift { opacity: 0.35; }
   .map-route-casing { fill: none; stroke: #fff; stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; opacity: 0.9; pointer-events: none; }
   .map-route-line { fill: none; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; pointer-events: none; }
-  .map-route-lift { stroke: var(--map-lift-color); stroke-dasharray: 6 4; }
-  .map-route-walk { stroke: #5f6b77; stroke-dasharray: 2 4; }
+  .map-route-lift { stroke: var(--map-lift-color); stroke-linecap: butt; stroke-dasharray: 9 7; }
+  .map-route-walk { stroke: #5f6b77; stroke-dasharray: 0.1 9; }
   .map-route-start { fill: #2e7d32; stroke: #fff; stroke-width: 2.5; vector-effect: non-scaling-stroke; }
   .map-route-end { fill: #e53935; stroke: #fff; stroke-width: 2.5; vector-effect: non-scaling-stroke; }
   /* 3D view (map3d.js): over the 2D map, under its buttons and panels. */
@@ -1413,7 +1415,8 @@
 
 
   // ============== live satellite tiles (Esri World Imagery) ==============
-  var TILE_SIZE = 256, TILE_MIN_ZOOM = 12, TILE_MAX_ZOOM = 17, TILE_MAX_COUNT = 130;
+  var TILE_SIZE = 256, TILE_MIN_ZOOM = 12, TILE_MAX_ZOOM = 17, TILE_MAX_COUNT = 160;
+  var MAP_SLACK = 0.2;   // how far past its edges the resort map can be dragged (share of the view)
   function deg2tile(latDeg, lonDeg, zoom) {
     var latRad = latDeg * Math.PI / 180;
     var n = Math.pow(2, zoom);
@@ -1535,6 +1538,7 @@
   var mapTapPopup = document.getElementById('map-tap-popup');
   function showMapTapPopup(x, y, label, valueText, geomPart) {
     mapTapPopup.innerHTML = '';
+    delete mapTapPopup.dataset.sticky;
     mapTapPopup.appendChild(buildMapTapPopupContent(label, valueText, geomPart));
     mapTapPopup.hidden = false;
     var margin = 10;
@@ -1552,6 +1556,7 @@
   // highlightFeatures is set up by the map controller (setupMapControlsOnce).
   var highlightFeatures = function () {};
   var centerMapOn = function () {};
+  var fitMapTo = function () {};   // set by the map controller: fit a box of map points into part of the view
   var currentRunGroups = {};   // run name -> group from renderDashboard
   var selectedMapKey = null;   // 'run:<name>' | feature object for unnamed runs/lifts
   var runPanel = document.getElementById('map-run-panel');
@@ -2741,9 +2746,13 @@
       // map; once rotated that box no longer bounds the visible content
       // correctly, so panning goes unclamped until the view is reset to north-up.
       if (mapState.angle) return;
-      var minTx = mapState.vbW * (1 - mapState.zoom), minTy = mapState.vbH * (1 - mapState.zoom);
-      mapState.tx = Math.min(0, Math.max(minTx, mapState.tx));
-      mapState.ty = Math.min(0, Math.max(minTy, mapState.ty));
+      // The map can be pulled a little past its edges (MAP_SLACK, with imagery
+      // there), and further with a panel open over it (a route, a run's
+      // profile) so whatever is behind the panel can be brought into view.
+      var open = !runPanel.hidden, sx = mapState.vbW * (open ? 0.5 : MAP_SLACK), sy = mapState.vbH * (open ? 0.5 : MAP_SLACK);
+      var minTx = mapState.vbW * (1 - mapState.zoom) - sx, minTy = mapState.vbH * (1 - mapState.zoom) - sy;
+      mapState.tx = Math.min(sx, Math.max(minTx, mapState.tx));
+      mapState.ty = Math.min(sy, Math.max(minTy, mapState.ty));
     }
     function svgPoint(clientX, clientY) {
       var rect = svg.getBoundingClientRect();
@@ -2876,14 +2885,27 @@
           var a = outerPoint(f.points[i][0], f.points[i][1]);
           var b = outerPoint(f.points[i + 1][0], f.points[i + 1][1]);
           var d = distToSegment(cursor[0], cursor[1], a[0], a[1], b[0], b[1]);
+          // A service icon sits on top of the pistes around it: a tap on it means it.
+          if (f.svc) d -= 3;
           if (d < bestDist) { bestDist = d; best = f; }
         }
       });
       return best;
     }
     function handleTap(clientX, clientY) {
-      if (routePicking) { routePicked(mapState.unproject(outerToContentPoint.apply(null, svgPoint(clientX, clientY)))); return; }
+      var tapPt = mapState.unproject(outerToContentPoint.apply(null, svgPoint(clientX, clientY)));
       var found = pickFeature(clientX, clientY);
+      if (routePicking || routePickArmed()) { routePicked(tapPt, found); return; }
+      if (isDesktopLayout() && routeOpen() && found) {
+        // A route is open: offer to start from (or go to) what was clicked,
+        // rather than swapping the route for that piste's details.
+        hideTooltip();
+        showMapTapPopup(clientX, clientY, found.label, found.valueText, null);
+        addRouteButtonToPopup(found, tapPt);
+        mapTapPopup.dataset.sticky = '1';
+        return;
+      }
+      if (isDesktopLayout() && routeOpen()) { hideMapTapPopup(); return; }
       if (isDesktopLayout()) {
         // Desktop: highlight what was clicked and show it in the fixed panel.
         hideTooltip();
@@ -2902,7 +2924,7 @@
         // chart popup that can end up overlapping.
         hideTooltip();
         showMapTapPopup(clientX, clientY, found.label, found.valueText, found.geomPart);
-        addRouteButtonToPopup(found);
+        addRouteButtonToPopup(found, tapPt);
       } else {
         clearActiveFeature();
         hideTooltip();
@@ -2924,8 +2946,9 @@
         hideTooltip();
       }
       // The tap popup only appears on an actual tap (see handleTap); any
-      // hover movement means the pointer moved on from wherever it tapped.
-      hideMapTapPopup();
+      // hover movement means the pointer moved on from wherever it tapped --
+      // except the desktop one with route buttons, which the mouse heads for.
+      if (!mapTapPopup.dataset.sticky) hideMapTapPopup();
     });
     // ---- selection (desktop): highlight a piste/lift, optionally fly to it ----
     function animateView(target) {
@@ -2971,6 +2994,23 @@
     }
     // Centre the map on a point (content coordinates), zooming in to at
     // least 2.5x: "where am I" on the piste map.
+    // pts: map (content) points; avail: the part of the view to fit them in
+    // (outer units, i.e. CSS px of the map), e.g. beside or above a panel.
+    fitMapTo = function (pts, avail) {
+      if (!mapState || !pts.length) return;
+      var r = pts.map(function (q) { return rotateXY(q[0], q[1], mapState.angle); });
+      var xs = r.map(function (q) { return q[0]; }), ys = r.map(function (q) { return q[1]; });
+      var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
+      var zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, 0.88 * Math.min(avail.w / Math.max(x1 - x0, 1), avail.h / Math.max(y1 - y0, 1))));
+      var saved = { zoom: mapState.zoom, tx: mapState.tx, ty: mapState.ty };
+      mapState.zoom = zoom;
+      mapState.tx = avail.x + avail.w / 2 - (x0 + x1) / 2 * zoom;
+      mapState.ty = avail.y + avail.h / 2 - (y0 + y1) / 2 * zoom;
+      clamp();
+      var target = { zoom: mapState.zoom, tx: mapState.tx, ty: mapState.ty };
+      mapState.zoom = saved.zoom; mapState.tx = saved.tx; mapState.ty = saved.ty;
+      animateView(target);
+    };
     centerMapOn = function (q) {
       if (!mapState) return;
       var r = rotateXY(q[0], q[1], mapState.angle), zoom = Math.max(mapState.zoom, 2.5);
@@ -3002,7 +3042,7 @@
       // A touch pointer fires "leave" the moment the finger lifts, which would
       // otherwise immediately hide the tooltip a tap just showed. Only a real
       // mouse leaving the map area should dismiss it.
-      if (e.pointerType === 'mouse') { clearActiveFeature(); hideTooltip(); hideMapTapPopup(); }
+      if (e.pointerType === 'mouse') { clearActiveFeature(); hideTooltip(); if (!mapTapPopup.dataset.sticky) hideMapTapPopup(); }
     });
   })();
 
@@ -3174,6 +3214,10 @@
 
     var lonMinP = lonMin - padX / cos, lonMaxP = lonMax + padX / cos;
     var latMinP = latMin - padY, latMaxP = latMax + padY;
+    // Imagery reaches MAP_SLACK of the view beyond each edge, where the map
+    // can be dragged to (clamp in the map controller).
+    var extX = (lonMaxP - lonMinP) * MAP_SLACK, extY = (latMaxP - latMinP) * MAP_SLACK;
+    lonMinP -= extX; lonMaxP += extX; latMinP -= extY; latMaxP += extY;
     var tileZoom = pickTileZoom(lonMinP, lonMaxP, latMinP, latMaxP);
     var grid = tileGridAt(lonMinP, lonMaxP, latMinP, latMaxP, tileZoom);
     for (var ty = grid.yt0; ty <= grid.yt1; ty++) {
@@ -3627,7 +3671,15 @@
     setTimeout(function () { map3dMsg(''); }, 5000);
   }
   function map3dTap(f, x, y, lngLat) {
-    if (routePicking) { if (lngLat) routePicked([lngLat.lng, lngLat.lat]); return; }
+    var tapPt = lngLat ? [lngLat.lng, lngLat.lat] : null;
+    if (routePicking || routePickArmed()) { if (tapPt) routePicked(tapPt, f); return; }
+    if (isDesktopLayout() && routeOpen() && f) {
+      hideTooltip();
+      showMapTapPopup(x, y, f.label, f.valueText, null);
+      addRouteButtonToPopup(f, tapPt);
+      mapTapPopup.dataset.sticky = '1';
+      return;
+    }
     if (isDesktopLayout()) {
       if (f) selectMapFeature(f, { pan: false, fromMap: true });
       else clearMapSelection();
@@ -3636,7 +3688,7 @@
     hideTooltip();
     if (!f) { hideMapTapPopup(); map3dHighlight([]); return; }
     showMapTapPopup(x, y, f.label, f.valueText, f.geomPart);
-    addRouteButtonToPopup(f);
+    addRouteButtonToPopup(f, tapPt);
     map3dHighlight(f.runName ? featuresForRun(f.runName) : [f]);
   }
   function open3d() {
@@ -3720,11 +3772,28 @@
     b.addEventListener('click', function (e) { e.stopPropagation(); hideMapTapPopup(); openRoute(f); });
     return b;
   }
-  function addRouteButtonToPopup(f) {
+  // The route panel is on screen; with "Otro punto" chosen, a tap on the map
+  // is the start, whatever it lands on.
+  function routeOpen() { return !!routeDest && !runPanel.hidden; }
+  function routePickArmed() { return routeOpen() && routeOrigin === 'pick'; }
+  function startButton(f, pt) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'map-route-btn map-route-btn-start';
+    b.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="4.5" fill="currentColor"/><circle cx="10" cy="10" r="7.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><span></span>';
+    b.querySelector('span').textContent = T('Salir desde aquí');
+    b.addEventListener('click', function (e) { e.stopPropagation(); hideMapTapPopup(); routePicked(pt, f); });
+    return b;
+  }
+  function addRouteButtonToPopup(f, pt) {
     if (!ROUTES_ON || !routable(f)) return;
+    if (routeOpen() && pt && f !== routeDest) mapTapPopup.appendChild(startButton(f, pt));
     mapTapPopup.appendChild(routeButton(f));
     var r = mapTapPopup.getBoundingClientRect();
     if (r.bottom > window.innerHeight - 10) mapTapPopup.style.top = Math.max(10, window.innerHeight - 10 - r.height) + 'px';
+    // Keep it off the route panel (desktop): to the left of the panel.
+    var pr = runPanel.hidden ? null : runPanel.getBoundingClientRect();
+    if (pr && isDesktopLayout() && r.right > pr.left && r.left < pr.right && r.bottom > pr.top) mapTapPopup.style.left = Math.max(10, pr.left - r.width - 12) + 'px';
   }
   function routeNetwork() {
     if (!routeNet || routeNet.id !== currentRaw.id) {
@@ -3922,7 +3991,26 @@
       routeShown = legs;
       drawRoute2D(legs);
       if (map3d) map3d.showRoute(routeLines(legs));
+      fitRoute(legs);
     });
+  }
+  // Frame the whole route in the part of the map the panel leaves free:
+  // beside it on a wide screen, above it on a phone.
+  function fitRoute(legs) {
+    if (!mapState || !legs || !legs.length) return;
+    var sv = mapState.svg.getBoundingClientRect(), pr = runPanel.getBoundingClientRect();
+    if (!sv.width || !sv.height) return;
+    var k = mapState.vbW / sv.width, desk = isDesktopLayout();
+    var avail = desk
+      ? { x: 12, y: 56, w: Math.max(120, (pr.left - sv.left) * k - 24), h: mapState.vbH - 80 }
+      : { x: 12, y: 56, w: mapState.vbW - 64, h: Math.max(120, (pr.top - sv.top) * k - 68) };
+    var pts = [];
+    legs.forEach(function (l) { l.coords.forEach(function (c) { pts.push(mapState.project(c)); }); });
+    fitMapTo(pts, avail);
+    if (map3d) {
+      var pad = desk ? { top: 60, left: 40, bottom: 40, right: (sv.right - pr.left) + 30 } : { top: 60, left: 30, right: 60, bottom: (sv.bottom - pr.top) + 30 };
+      map3d.fitRoute(routeLines(legs), pad);
+    }
   }
   // The legs as plain coloured lines, for the 3D view.
   function routeLines(legs) {
@@ -3938,12 +4026,20 @@
   }
   // A tap on the map snaps to the nearest of those places (within 250 m),
   // which then shows as chosen in the list; failing that, the point itself.
-  function routePicked(pt) {
+  // A tapped lift or service starts from its own place (the nearer end of a
+  // lift); a tapped run, from the spot on it.
+  function routePicked(pt, f) {
     routePicking = false;
     map3dMsg('');
     routeOrigin = 'pick';
     var best = null, bestM = 250;
-    routePlaces(routeNetwork()).forEach(function (pl) { var m = SkiRoutes.dist(pt, pl.p); if (m < bestM) { bestM = m; best = pl; } });
+    if (f && f.isLift) bestM = Infinity;
+    if (f && f.svc) { bestM = Infinity; pt = [f.svc.lon, f.svc.lat]; }
+    if (!(f && f.geomPart)) routePlaces(routeNetwork()).forEach(function (pl) {
+      if (f && f.isLift && pl.of !== 'lift:' + (f.lift && f.lift.name)) return;
+      if (f && f.svc && pl.of !== f.svc) return;
+      var m = SkiRoutes.dist(pt, pl.p); if (m < bestM) { bestM = m; best = pl; }
+    });
     routePlace = best;
     routePickPt = best ? best.p : pt;
     // Shown a moment later: on a phone the same tap's click would otherwise
@@ -3965,12 +4061,12 @@
         if (!(x.run.name in runs) || net.nodes[x.end].p[2] < net.nodes[runs[x.run.name]].p[2]) runs[x.run.name] = x.end;
       }
     });
-    var add = function (group, label, node) { out.push({ group: group, label: label, node: node, p: net.nodes[node].p }); };
-    Object.keys(lifts).forEach(function (n) { add('lift', T('Salida de {0}', n), lifts[n].bottom); add('lift', T('Llegada de {0}', n), lifts[n].top); });
+    var add = function (group, label, node, of) { out.push({ group: group, label: label, node: node, p: net.nodes[node].p, of: of }); };
+    Object.keys(lifts).forEach(function (n) { add('lift', T('Salida de {0}', n), lifts[n].bottom, 'lift:' + n); add('lift', T('Llegada de {0}', n), lifts[n].top, 'lift:' + n); });
     Object.keys(runs).forEach(function (n) { add('run', T('Final de {0}', n), runs[n]); });
     (currentRaw.services || []).forEach(function (svc) {
       var cat = SERVICE_CATEGORIES[svc.category], at = SkiRoutes.near(net, [svc.lon, svc.lat], 150, 1)[0];
-      if (cat && at) add('svc', (svc.name || cat.label), at.node);
+      if (cat && at) add('svc', (svc.name || cat.label), at.node, svc);
     });
     out.sort(function (a, b) { return a.label.localeCompare(b.label, LOCALE); });
     net.places = out;
@@ -4022,6 +4118,7 @@
   }
   function clearRoute() {
     clearTimeout(routeWaitTimer);
+    hideMapTapPopup();
     if (routePicking) { routePicking = false; map3dMsg(''); }
     routeDest = null;
     drawRouteNone();

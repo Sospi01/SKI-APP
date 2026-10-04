@@ -390,6 +390,7 @@ window.SKI_I18N = {
   "o tócalo en el mapa": "oder auf der Karte antippen",
   "Finales de pista": "Pistenenden",
   "Elige en la lista desde dónde sales, o tócalo en el mapa.": "Wähle deinen Startpunkt in der Liste oder tippe ihn auf der Karte an.",
-  "Punto elegido en el mapa": "Auf der Karte gewählter Punkt"
+  "Punto elegido en el mapa": "Auf der Karte gewählter Punkt",
+  "Salir desde aquí": "Von hier starten"
  }
 };

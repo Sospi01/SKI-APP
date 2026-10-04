@@ -390,6 +390,7 @@ window.SKI_I18N = {
   "o tócalo en el mapa": "or tap it on the map",
   "Finales de pista": "Run ends",
   "Elige en la lista desde dónde sales, o tócalo en el mapa.": "Choose where you start from the list, or tap it on the map.",
-  "Punto elegido en el mapa": "Point picked on the map"
+  "Punto elegido en el mapa": "Point picked on the map",
+  "Salir desde aquí": "Start from here"
  }
 };

@@ -135,7 +135,7 @@
           // A planned route (index.html's route planner), on top of everything.
           { id: 'route-casing', type: 'line', source: 'route', layout: round, paint: { 'line-color': '#ffffff', 'line-width': 10, 'line-opacity': 0.9 } },
           { id: 'route', type: 'line', source: 'route', layout: round, filter: ['==', ['get', 'kind'], 'run'], paint: { 'line-color': ['get', 'color'], 'line-width': 5 } },
-          { id: 'route-dash', type: 'line', source: 'route', filter: ['!=', ['get', 'kind'], 'run'], paint: { 'line-color': ['get', 'color'], 'line-width': 5, 'line-dasharray': [1.5, 1] } }
+          { id: 'route-dash', type: 'line', source: 'route', filter: ['!=', ['get', 'kind'], 'run'], paint: { 'line-color': ['get', 'color'], 'line-width': 5, 'line-dasharray': [2, 1.6] } }
         ],
         terrain: { source: 'dem', exaggeration: EXAGGERATION },
         sky: { 'sky-color': '#7fb2e5', 'horizon-color': '#dfeaf4', 'sky-horizon-blend': 0.6, 'horizon-fog-blend': 0.5, 'fog-color': '#dfeaf4', 'fog-ground-blend': 0.85 }
@@ -240,6 +240,13 @@
           var a = lines[0].coords[0], z = lines[lines.length - 1].coords, b = z[z.length - 1];
           routeMarkers = [marker('map3d-route-start').setLngLat([a[0], a[1]]).addTo(map), marker('map3d-route-end').setLngLat([b[0], b[1]]).addTo(map)];
         }
+      },
+      fitRoute: function (lines, padding) {
+        var xs = [], ys = [];
+        (lines || []).forEach(function (l) { l.coords.forEach(function (c) { xs.push(c[0]); ys.push(c[1]); }); });
+        if (!xs.length) return;
+        map.fitBounds([[Math.min.apply(null, xs), Math.min.apply(null, ys)], [Math.max.apply(null, xs), Math.max.apply(null, ys)]],
+          { padding: padding, bearing: map.getBearing(), pitch: map.getPitch(), maxZoom: 16, duration: 800 });
       },
       zoomIn: function () { map.zoomIn(); },
       zoomOut: function () { map.zoomOut(); },

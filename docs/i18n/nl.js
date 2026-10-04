@@ -390,6 +390,7 @@ window.SKI_I18N = {
   "o tócalo en el mapa": "of tik het aan op de kaart",
   "Finales de pista": "Einde van pistes",
   "Elige en la lista desde dónde sales, o tócalo en el mapa.": "Kies in de lijst waar je vertrekt, of tik het aan op de kaart.",
-  "Punto elegido en el mapa": "Punt gekozen op de kaart"
+  "Punto elegido en el mapa": "Punt gekozen op de kaart",
+  "Salir desde aquí": "Vanaf hier vertrekken"
  }
 };

@@ -32,9 +32,6 @@
     --page: #05070a; --bg: #12161c; --surface-2: #1b2129;
     --text-primary: #f2f5f8; --text-secondary: #c3ccd6; --text-muted: #8a94a0;
     --border: rgba(255,255,255,0.10); --accent: #3987e5; --accent-soft: #1c3559;
-    --diff-novice: hsl(125 60% 48%); --diff-easy: hsl(208 85% 60%); --diff-intermediate: hsl(359 75% 62%);
-    --diff-advanced: hsl(0 0% 90%); --diff-expert: hsl(0 0% 90%); --diff-freeride: hsl(34 88% 58%);
-    --diff-extreme: hsl(34 88% 58%); --diff-other: hsl(0 0% 55%);
     --svc-restaurant: #ff8c4a; --svc-cafe: #c9915a; --svc-bar: #e068c0; --svc-fast_food: #f0c34d;
     --svc-toilets: #6ab3f5; --svc-first_aid: #ff6b6b; --svc-pharmacy: #4fd699; --svc-alpine_hut: #b08968; --svc-sports: #4fe0cf;
     --hero-1: #0b2036; --hero-2: #164a80;
@@ -45,9 +42,6 @@
   --page: #05070a; --bg: #12161c; --surface-2: #1b2129;
   --text-primary: #f2f5f8; --text-secondary: #c3ccd6; --text-muted: #8a94a0;
   --border: rgba(255,255,255,0.10); --accent: #3987e5; --accent-soft: #1c3559;
-  --diff-novice: hsl(125 60% 48%); --diff-easy: hsl(208 85% 60%); --diff-intermediate: hsl(359 75% 62%);
-  --diff-advanced: hsl(0 0% 90%); --diff-expert: hsl(0 0% 90%); --diff-freeride: hsl(34 88% 58%);
-  --diff-extreme: hsl(34 88% 58%); --diff-other: hsl(0 0% 55%);
   --svc-restaurant: #ff8c4a; --svc-cafe: #c9915a; --svc-bar: #e068c0; --svc-fast_food: #f0c34d;
   --svc-toilets: #6ab3f5; --svc-first_aid: #ff6b6b; --svc-pharmacy: #4fd699; --svc-alpine_hut: #b08968; --svc-sports: #4fe0cf;
   --hero-1: #0b2036; --hero-2: #164a80;

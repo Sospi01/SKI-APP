@@ -86,6 +86,7 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
 - `trackMapUse`: cuenta el uso real del mapa una vez por estación. En el móvil, al abrirlo; en el ordenador, al arrastrar, hacer zoom o pulsar.
 - `displayName`: nombres en alfabeto latino.
 - `DIFF`, `DIFF_ORDER`, `DIFF_SHOWN_AS` y `shownDifficulty`: colores por región.
+  - **Mismos colores en modo claro y oscuro** (5 de octubre, queja de un usuario de iPhone que veía las negras blancas): el modo oscuro ya no cambia `--diff-*` ni `--map-lift-color` (`index.html` y `static-pages.css`). Los mapas (`#map-viewport`, `#map-preview`) llevan siempre el borde blanco (`--map-halo`). En modo oscuro, los puntos y barras negros de las listas llevan un anillo claro (selector `[style*="--diff-advanced"]`).
   - Norteamérica: *easy* → verde, *intermediate* → azul, *expert* → doble negra (`double`).
   - Japón: *easy* → verde.
   - Lo replican `build_guides.py`, `build_seo_pages.py` y `build_share_images.py`.

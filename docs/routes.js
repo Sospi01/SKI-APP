@@ -63,18 +63,33 @@
       });
     });
 
+    // A lift is sometimes mapped as several sections in a row (Formigal's
+    // Tramacastilla drag: three), each tagged with the whole lift's duration.
+    // Such sections share the duration by length, and only the first has a wait.
+    var sections = [];
     (raw.lifts || []).forEach(function (l, li) {
       (l.geom || []).forEach(function (part) {
         if (!part || part.length < 2) return;
         var a = part[0], b = part[part.length - 1];
         if (a[2] != null && b[2] != null && a[2] > b[2]) { var t = a; a = b; b = t; }
-        var fi = feats.push({ kind: 'lift', lift: l, li: li, part: part }) - 1;
-        var lo = node(a, fi), hi = node(b, fi);
-        var len = l.length_m || dist(a, b);
-        var ride = l.duration_s || len / (LIFT_SPEED[l.lift_type] * (l.detachable ? 1.6 : 1) || 3);
-        edge(lo, hi, ride + LIFT_WAIT, fi);
-        feats[fi].bottom = lo; feats[fi].topNode = hi;
+        sections.push({ l: l, li: li, part: part, a: a, b: b, len: l.length_m || dist(a, b) });
       });
+    });
+    sections.forEach(function (x) {
+      var group = sections.filter(function (y) { return y.l.name && y.l.name === x.l.name && y.l.duration_s === x.l.duration_s; });
+      var chained = group.length > 1 && group.every(function (y) {
+        return group.some(function (z) { return z !== y && (dist(y.b, z.a) < 30 || dist(z.b, y.a) < 30); });
+      });
+      var total = group.reduce(function (s2, y) { return s2 + y.len; }, 0);
+      var speed = LIFT_SPEED[x.l.lift_type] * (x.l.detachable ? 1.6 : 1) || 3;
+      x.ride = x.l.duration_s ? (chained ? x.l.duration_s * x.len / total : x.l.duration_s) : x.len / speed;
+      x.wait = chained && group.some(function (z) { return z !== x && dist(z.b, x.a) < 30; }) ? 0 : LIFT_WAIT;
+    });
+    sections.forEach(function (x) {
+      var fi = feats.push({ kind: 'lift', lift: x.l, li: x.li, part: x.part, ride: x.ride, wait: x.wait }) - 1;
+      var lo = node(x.a, fi), hi = node(x.b, fi);
+      edge(lo, hi, x.ride + x.wait, fi);
+      feats[fi].bottom = lo; feats[fi].topNode = hi;
     });
 
     // Walks between features that touch (or skating across a flat), on a
@@ -178,7 +193,7 @@
       else out.push({ key: key, kind: kind, feat: f, m: m, coords: [a.p, b.p], from: res.path[k - 1].node, to: res.path[k].node });
     }
     out.forEach(function (l) {
-      if (l.kind === 'lift') l.secs = (l.feat.lift.duration_s || 0) + LIFT_WAIT;
+      if (l.kind === 'lift') l.secs = l.feat.ride + l.feat.wait;
       else if (l.kind === 'run') l.secs = l.m / (RUN_SPEED[l.feat.diff] || RUN_SPEED.other);
       else l.secs = l.m / WALK_SPEED;
     });

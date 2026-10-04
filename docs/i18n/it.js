@@ -378,6 +378,7 @@ window.SKI_I18N = {
   "1 remonte": "1 impianto",
   "{0} remontes": "{0} impianti",
   "1 pista": "1 pista",
-  "{0} pistas": "{0} piste"
+  "{0} pistas": "{0} piste",
+  "{0} de {1}": "{0} su {1}"
  }
 };

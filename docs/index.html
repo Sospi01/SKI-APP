@@ -3801,11 +3801,19 @@
         starts = SkiRoutes.near(net, routePickPt, 300);
         if (!starts.length) { msg(T('Ese punto está lejos de las pistas: toca más cerca de una pista o un remonte.')); drawRouteNone(); return; }
       } else {
-        // The base: the lowest bottom of a lift.
+        // The base: the lowest bottom of a lift, and every lift starting
+        // around it (Formigal has three at 1,502 m), so the route begins at
+        // whichever suits it rather than walking or skiing to it.
         var low = null;
         net.feats.forEach(function (x) { if (x.kind === 'lift') { var e = net.nodes[x.bottom].p[2]; if (low == null || (e != null && e < net.nodes[low].p[2])) low = x.bottom; } });
         if (low == null) { msg(T('No encontramos ruta.')); drawRouteNone(); return; }
-        starts = [{ node: low, cost: 0 }];
+        var lowP = net.nodes[low].p;
+        starts = [];
+        net.feats.forEach(function (x) {
+          if (x.kind !== 'lift') return;
+          var p = net.nodes[x.bottom].p;
+          if (SkiRoutes.dist(p, lowP) <= 500 && (p[2] == null || lowP[2] == null || p[2] - lowP[2] <= 25)) starts.push({ node: x.bottom, cost: 0 });
+        });
       }
 
       var targets = routeTargets(net, f);
@@ -3819,16 +3827,24 @@
       var legs = SkiRoutes.legs(net, res);
       // Steps to read: short walks dropped, and a short run (or a run of
       // unnamed ones) folded into the run next to it, named after the longest.
-      var steps = [];
+      // Links between runs (short walks, a few metres of another run) are
+      // left out; a lift drawn in two sections is one step.
+      var steps = [], carry = 0;
       legs.forEach(function (l) {
-        if (l.kind === 'walk' && l.m < 40) return;
         var last = steps[steps.length - 1];
+        if (l.kind === 'walk' && l.m < 80) return;
+        if (l.kind === 'run' && l.m < 80 && !(last && last.kind === 'run')) { carry += l.m; return; }
+        if (l.kind === 'lift' && last && last.kind === 'lift' && last.feat.lift.name && last.feat.lift.name === l.feat.lift.name) {
+          last.secs += l.feat.ride;
+          return;
+        }
         if (l.kind === 'run' && last && last.kind === 'run' && (l.m < 150 || last.m < 150 || (!l.feat.run.name && !last.feat.run.name))) {
           if (l.m > last.longest) { last.feat = l.feat; last.longest = l.m; }
           last.m += l.m;
           return;
         }
-        steps.push({ kind: l.kind, feat: l.feat, m: l.m, longest: l.m });
+        steps.push({ kind: l.kind, feat: l.feat, m: l.m + (l.kind === 'run' ? carry : 0), longest: l.m, secs: l.kind === 'lift' ? l.feat.ride : 0 });
+        if (l.kind === 'run') carry = 0;
       });
       var sum = document.createElement('div'); sum.className = 'route-summary';
       var nLifts = steps.filter(function (l) { return l.kind === 'lift'; }).length, nRuns = steps.filter(function (l) { return l.kind === 'run'; }).length;
@@ -3842,10 +3858,13 @@
         if (l.kind === 'run') dot.style.background = DIFF[l.feat.diff].color;
         if (l.kind === 'lift') {
           txt.textContent = T('Sube en {0}', l.feat.lift.name || T('Remonte sin nombre'));
-          meta.textContent = [LIFT_TYPE[l.feat.lift.lift_type] || '', l.feat.lift.duration_s ? T('{0} min', Math.max(1, Math.round(l.feat.lift.duration_s / 60))) : ''].filter(Boolean).join(' · ');
+          meta.textContent = [LIFT_TYPE[l.feat.lift.lift_type] || '', l.secs ? T('{0} min', Math.max(1, Math.round(l.secs / 60))) : ''].filter(Boolean).join(' · ');
         } else if (l.kind === 'run') {
           txt.textContent = T('Baja por {0}', l.feat.run.name || T('Pista sin nombre'));
-          meta.textContent = DIFF[l.feat.diff].label + ' · ' + (l.m >= 1000 ? fmt(l.m / 1000, 1) + ' km' : fmt(Math.round(l.m / 10) * 10) + ' m');
+          var km = function (m) { return m >= 1000 ? fmt(m / 1000, 1) + ' km' : fmt(Math.round(m / 10) * 10) + ' m'; };
+          var whole = l.feat.run.length_m;
+          // Only part of a long run: say so ("200 m de 2,6 km").
+          meta.textContent = DIFF[l.feat.diff].label + ' · ' + (whole && l.m < whole * 0.7 && whole - l.m > 150 ? T('{0} de {1}', km(l.m), km(whole)) : km(l.m));
         } else {
           txt.textContent = T('Camina {0} m', fmt(Math.round(l.m / 10) * 10));
         }

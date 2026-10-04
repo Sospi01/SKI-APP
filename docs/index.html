@@ -605,9 +605,30 @@
   .route-chips { display: flex; gap: 5px; flex-wrap: wrap; }
   .route-chips button { border: 1px solid var(--border); background: var(--surface-2); color: var(--text-primary); border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 12px; cursor: pointer; }
   .route-chips button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
-  .route-place { padding-left: 52px; }
-  .route-select { flex: 1; min-width: 0; max-width: 100%; font: inherit; font-size: 13px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text-primary); }
+  .route-place { padding-left: 52px; margin-bottom: 8px; }
+  .route-place-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .route-place-current { display: inline-flex; align-items: center; gap: 7px; flex: 1; min-width: 0; max-width: 100%; padding: 6px 10px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--surface-2); color: var(--text-primary); font: inherit; font-size: 13px; cursor: pointer; text-align: left; }
+  .route-place-current[aria-expanded="true"] { border-color: var(--accent); }
+  .route-place-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .route-place-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .route-place-chev { color: var(--text-muted); font-size: 11px; }
   .route-tap { border: none; background: none; color: var(--accent); font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; padding: 2px 0; }
+  .route-picker { margin-top: 8px; }
+  .route-picker-search { width: 100%; box-sizing: border-box; font: inherit; font-size: 13px; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text-primary); }
+  .route-picker-tabs { display: flex; gap: 4px; margin: 8px 0; padding: 3px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border); }
+  .route-picker-tabs.dim { opacity: 0.45; }
+  .route-picker-tab { flex: 1; border: none; background: none; border-radius: 7px; padding: 5px 4px; font: inherit; font-size: 12px; font-weight: 500; color: var(--text-secondary); cursor: pointer; }
+  .route-picker-tab[aria-pressed="true"] { background: var(--surface); color: var(--text-primary); font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,0.12); }
+  .route-picker-count { font-size: 10.5px; color: var(--text-muted); font-weight: 400; }
+  .route-picker-list { max-height: 230px; }
+  .route-picker-item { padding: 8px 10px; }
+  .route-picker-ends { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .route-picker-ask { width: 100%; font-size: 11.5px; color: var(--text-secondary); }
+  .route-picker-ends button { border: 1px solid var(--accent); background: var(--accent); color: #fff; border-radius: 999px; padding: 5px 11px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .route-picker-ends button + button { background: var(--surface); color: var(--accent); }
+  @media (max-width: 999px) { .route-place { padding-left: 0; } }
+  .route-picker-empty { padding: 12px; font-size: 12px; color: var(--text-muted); font-style: italic; }
   .route-result { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
   .route-summary { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 6px; }
   .route-steps { list-style: none; margin: 0; padding: 0; }
@@ -4051,52 +4072,143 @@
   function routePlaces(net) {
     if (net.places) return net.places;
     var out = [], lifts = {}, runs = {};
+    var hi = function (a, b) { return net.nodes[a].p[2] >= net.nodes[b].p[2]; };
     net.feats.forEach(function (x) {
       if (x.kind === 'lift' && x.lift.name) {
-        var l = lifts[x.lift.name] || (lifts[x.lift.name] = { bottom: x.bottom, top: x.topNode });
-        if (net.nodes[x.bottom].p[2] < net.nodes[l.bottom].p[2]) l.bottom = x.bottom;
-        if (net.nodes[x.topNode].p[2] > net.nodes[l.top].p[2]) l.top = x.topNode;
+        var l = lifts[x.lift.name] || (lifts[x.lift.name] = { bottom: x.bottom, top: x.topNode, type: x.lift.lift_type });
+        if (!hi(x.bottom, l.bottom)) l.bottom = x.bottom;
+        if (hi(x.topNode, l.top)) l.top = x.topNode;
       }
       if (x.kind === 'run' && x.run.name) {
-        if (!(x.run.name in runs) || net.nodes[x.end].p[2] < net.nodes[runs[x.run.name]].p[2]) runs[x.run.name] = x.end;
+        var r = runs[x.run.name] || (runs[x.run.name] = { top: x.top, end: x.end, diff: x.diff });
+        if (hi(x.top, r.top)) r.top = x.top;
+        if (!hi(x.end, r.end)) r.end = x.end;
       }
     });
-    var add = function (group, label, node, of) { out.push({ group: group, label: label, node: node, p: net.nodes[node].p, of: of }); };
-    Object.keys(lifts).forEach(function (n) { add('lift', T('Salida de {0}', n), lifts[n].bottom, 'lift:' + n); add('lift', T('Llegada de {0}', n), lifts[n].top, 'lift:' + n); });
-    Object.keys(runs).forEach(function (n) { add('run', T('Final de {0}', n), runs[n]); });
+    var add = function (o) { o.p = net.nodes[o.node].p; out.push(o); };
+    Object.keys(lifts).forEach(function (n) {
+      var meta = LIFT_TYPE[lifts[n].type] || '';
+      add({ group: 'lift', name: n, meta: meta, side: 'start', label: T('Salida de {0}', n), node: lifts[n].bottom, of: 'lift:' + n });
+      add({ group: 'lift', name: n, meta: meta, side: 'end', label: T('Llegada de {0}', n), node: lifts[n].top, of: 'lift:' + n });
+    });
+    Object.keys(runs).forEach(function (n) {
+      var d = DIFF[runs[n].diff] || DIFF.other;
+      add({ group: 'run', name: n, meta: d.label, color: d.color, side: 'start', label: T('Inicio de {0}', n), node: runs[n].top, of: 'run:' + n });
+      add({ group: 'run', name: n, meta: d.label, color: d.color, side: 'end', label: T('Final de {0}', n), node: runs[n].end, of: 'run:' + n });
+    });
     (currentRaw.services || []).forEach(function (svc) {
       var cat = SERVICE_CATEGORIES[svc.category], at = SkiRoutes.near(net, [svc.lon, svc.lat], 150, 1)[0];
-      if (cat && at) add('svc', (svc.name || cat.label), at.node, svc);
+      if (cat && at) add({ group: 'svc', name: svc.name || cat.label, meta: svc.name ? cat.label : '', icon: cat.icon, color: cat.color, label: svc.name || cat.label, node: at.node, of: svc });
     });
-    out.sort(function (a, b) { return a.label.localeCompare(b.label, LOCALE); });
+    out.sort(function (a, b) { return a.name.localeCompare(b.name, LOCALE) || (a.side === 'start' ? -1 : 1); });
     net.places = out;
     return out;
   }
+  // "Otro punto": the chosen place as a button that opens a list like the
+  // pistes list (Pistas / Remontes / Servicios, with a search box). A piste
+  // or lift then asks which end to start from.
+  var routePickerOpen = false, routePickerTab = 'run', routePickerQuery = '', routePickerItem = null;
   function routePlaceRow(net) {
-    var row = document.createElement('div'); row.className = 'route-row route-place';
-    var sel = document.createElement('select'); sel.className = 'route-select';
-    var none = document.createElement('option'); none.value = ''; none.textContent = !routePlace && routePickPt ? T('Punto elegido en el mapa') : T('Elige un punto de salida…');
-    sel.appendChild(none);
     var places = routePlaces(net);
-    [['lift', T('Remontes')], ['run', T('Finales de pista')], ['svc', T('Servicios')]].forEach(function (g) {
-      var og = document.createElement('optgroup'); og.label = g[1];
-      places.forEach(function (pl, i) {
-        if (pl.group !== g[0]) return;
-        var o = document.createElement('option'); o.value = String(i); o.textContent = pl.label;
-        if (pl === routePlace) o.selected = true;
-        og.appendChild(o);
-      });
-      if (og.children.length) sel.appendChild(og);
-    });
-    sel.addEventListener('change', function () {
-      routePlace = sel.value ? places[+sel.value] : null;
-      routePickPt = routePlace ? routePlace.p : null;
-      renderRoute();
-    });
+    var wrap = document.createElement('div'); wrap.className = 'route-place';
+    var head = document.createElement('div'); head.className = 'route-place-head';
+    var cur = document.createElement('button'); cur.type = 'button'; cur.className = 'route-place-current';
+    var open = routePickerOpen || !routePickPt;
+    cur.setAttribute('aria-expanded', open ? 'true' : 'false');
+    var curDot = document.createElement('span'); curDot.className = 'route-place-dot';
+    var curText = document.createElement('span'); curText.className = 'route-place-text';
+    curText.textContent = routePlace ? routePlace.label : routePickPt ? T('Punto elegido en el mapa') : T('Elige un punto de salida…');
+    if (routePlace) curDot.style.background = routePlace.group === 'lift' ? 'var(--map-lift-color)' : routePlace.color;
+    else curDot.hidden = true;
+    var chev = document.createElement('span'); chev.className = 'route-place-chev'; chev.textContent = '▾';
+    cur.appendChild(curDot); cur.appendChild(curText); cur.appendChild(chev);
+    cur.addEventListener('click', function () { routePickerOpen = !open; routePickerItem = null; renderRoute(); });
     var tap = document.createElement('button'); tap.type = 'button'; tap.className = 'route-tap'; tap.textContent = T('o tócalo en el mapa');
-    tap.addEventListener('click', startRoutePick);
-    row.appendChild(sel); row.appendChild(tap);
-    return row;
+    tap.addEventListener('click', function () { routePickerOpen = false; startRoutePick(); });
+    head.appendChild(cur); head.appendChild(tap);
+    wrap.appendChild(head);
+    if (!open) return wrap;
+
+    var picker = document.createElement('div'); picker.className = 'route-picker';
+    var search = document.createElement('input'); search.type = 'search'; search.className = 'route-picker-search';
+    search.placeholder = T('Buscar pista, remonte o servicio…'); search.value = routePickerQuery;
+    var counts = { run: 0, lift: 0, svc: 0 };
+    places.forEach(function (pl) { if (pl.group === 'svc' || pl.side === 'start') counts[pl.group]++; });
+    if (!counts[routePickerTab]) routePickerTab = counts.run ? 'run' : counts.lift ? 'lift' : 'svc';
+    var tabs = document.createElement('div'); tabs.className = 'route-picker-tabs';
+    var list = document.createElement('div'); list.className = 'list-scroll route-picker-list';
+    var choose = function (pl) {
+      routePlace = pl; routePickPt = pl.p; routePickerOpen = false; routePickerItem = null; routePickerQuery = '';
+      renderRoute();
+    };
+    var fill = function () {
+      list.innerHTML = '';
+      var q = routePickerQuery.trim().toLowerCase();
+      var shown = places.filter(function (pl) {
+        if (pl.group !== 'svc' && pl.side !== 'start') return false;
+        return q ? pl.name.toLowerCase().indexOf(q) !== -1 || (pl.meta || '').toLowerCase().indexOf(q) !== -1 : pl.group === routePickerTab;
+      });
+      if (!shown.length) { var e = document.createElement('div'); e.className = 'route-picker-empty'; e.textContent = T('Nada coincide con la búsqueda.'); list.appendChild(e); return; }
+      shown.forEach(function (pl) {
+        var it = document.createElement('div'); it.className = 'item run-item route-picker-item'; it.tabIndex = 0;
+        var dot = document.createElement('span'); dot.className = 'dot';
+        dot.style.background = pl.group === 'lift' ? 'var(--map-lift-color)' : pl.color;
+        if (pl.group === 'lift') dot.style.borderRadius = '2px';
+        var main = document.createElement('div'); main.className = 'item-main';
+        var nm = document.createElement('div'); nm.className = 'item-name'; nm.textContent = (pl.icon ? pl.icon + ' ' : '') + pl.name;
+        main.appendChild(nm);
+        if (pl.meta) { var mt = document.createElement('div'); mt.className = 'item-meta'; mt.textContent = pl.meta; main.appendChild(mt); }
+        it.appendChild(dot); it.appendChild(main);
+        var other = pl.group === 'svc' ? null : places.filter(function (o) { return o.of === pl.of && o.side === 'end'; })[0];
+        if (other) {
+          var ch = document.createElement('span'); ch.className = 'item-chevron'; ch.textContent = '›';
+          it.appendChild(ch);
+          var expanded = routePickerItem === pl.of;
+          it.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+          if (expanded) {
+            var ends = document.createElement('div'); ends.className = 'route-picker-ends';
+            var ask = document.createElement('div'); ask.className = 'route-picker-ask'; ask.textContent = T('¿Desde dónde sales?');
+            ends.appendChild(ask);
+            [[pl, pl.group === 'lift' ? T('Desde la salida (abajo)') : T('Desde el inicio (arriba)')],
+             [other, pl.group === 'lift' ? T('Desde la llegada (arriba)') : T('Desde el final (abajo)')]].forEach(function (o) {
+              var b = document.createElement('button'); b.type = 'button'; b.textContent = o[1];
+              b.addEventListener('click', function (e) { e.stopPropagation(); choose(o[0]); });
+              ends.appendChild(b);
+            });
+            main.appendChild(ends);
+          }
+        }
+        var act = function () {
+          if (!other) { choose(pl); return; }
+          routePickerItem = routePickerItem === pl.of ? null : pl.of;
+          var top = list.scrollTop; fill(); list.scrollTop = top;
+          // Bring the question (and its two buttons) into view.
+          var ex = list.querySelector('[aria-expanded="true"]');
+          if (ex) ex.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        };
+        it.addEventListener('click', act);
+        it.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(); } });
+        list.appendChild(it);
+      });
+    };
+    [['run', T('Pistas')], ['lift', T('Remontes')], ['svc', T('Servicios')]].forEach(function (t) {
+      if (!counts[t[0]]) return;
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'route-picker-tab';
+      b.innerHTML = '<span></span> <span class="route-picker-count"></span>';
+      b.firstChild.textContent = t[1]; b.lastChild.textContent = counts[t[0]];
+      b.setAttribute('aria-pressed', t[0] === routePickerTab ? 'true' : 'false');
+      b.addEventListener('click', function () {
+        routePickerTab = t[0]; routePickerItem = null; routePickerQuery = ''; search.value = '';
+        [].forEach.call(tabs.children, function (c) { c.setAttribute('aria-pressed', c === b ? 'true' : 'false'); });
+        fill(); list.scrollTop = 0;
+      });
+      tabs.appendChild(b);
+    });
+    search.addEventListener('input', function () { routePickerQuery = search.value; routePickerItem = null; tabs.classList.toggle('dim', !!search.value.trim()); fill(); });
+    picker.appendChild(search); picker.appendChild(tabs); picker.appendChild(list);
+    wrap.appendChild(picker);
+    fill();
+    return wrap;
   }
   // The point picked on the map, marked even when no route starts there.
   function drawRouteStart() {

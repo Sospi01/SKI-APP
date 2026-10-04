@@ -391,6 +391,14 @@ window.SKI_I18N = {
   "Finales de pista": "Run ends",
   "Elige en la lista desde dónde sales, o tócalo en el mapa.": "Choose where you start from the list, or tap it on the map.",
   "Punto elegido en el mapa": "Point picked on the map",
-  "Salir desde aquí": "Start from here"
+  "Salir desde aquí": "Start from here",
+  "Inicio de {0}": "Top of {0}",
+  "Buscar pista, remonte o servicio…": "Search a run, lift or service…",
+  "Nada coincide con la búsqueda.": "Nothing matches your search.",
+  "¿Desde dónde sales?": "Where do you start from?",
+  "Desde la salida (abajo)": "From the bottom station",
+  "Desde el inicio (arriba)": "From the top of the run",
+  "Desde la llegada (arriba)": "From the top station",
+  "Desde el final (abajo)": "From the bottom of the run"
  }
 };

@@ -391,6 +391,14 @@ window.SKI_I18N = {
   "Finales de pista": "Pistenenden",
   "Elige en la lista desde dónde sales, o tócalo en el mapa.": "Wähle deinen Startpunkt in der Liste oder tippe ihn auf der Karte an.",
   "Punto elegido en el mapa": "Auf der Karte gewählter Punkt",
-  "Salir desde aquí": "Von hier starten"
+  "Salir desde aquí": "Von hier starten",
+  "Inicio de {0}": "Beginn von {0}",
+  "Buscar pista, remonte o servicio…": "Piste, Lift oder Service suchen…",
+  "Nada coincide con la búsqueda.": "Keine Treffer.",
+  "¿Desde dónde sales?": "Wo startest du?",
+  "Desde la salida (abajo)": "Von der Talstation",
+  "Desde el inicio (arriba)": "Vom Pistenanfang (oben)",
+  "Desde la llegada (arriba)": "Von der Bergstation",
+  "Desde el final (abajo)": "Vom Pistenende (unten)"
  }
 };

@@ -391,6 +391,14 @@ window.SKI_I18N = {
   "Finales de pista": "Einde van pistes",
   "Elige en la lista desde dónde sales, o tócalo en el mapa.": "Kies in de lijst waar je vertrekt, of tik het aan op de kaart.",
   "Punto elegido en el mapa": "Punt gekozen op de kaart",
-  "Salir desde aquí": "Vanaf hier vertrekken"
+  "Salir desde aquí": "Vanaf hier vertrekken",
+  "Inicio de {0}": "Begin van {0}",
+  "Buscar pista, remonte o servicio…": "Zoek een piste, lift of voorziening…",
+  "Nada coincide con la búsqueda.": "Niets gevonden.",
+  "¿Desde dónde sales?": "Waar vertrek je?",
+  "Desde la salida (abajo)": "Vanaf het dalstation",
+  "Desde el inicio (arriba)": "Vanaf de bovenkant van de piste",
+  "Desde la llegada (arriba)": "Vanaf het bergstation",
+  "Desde el final (abajo)": "Vanaf de onderkant van de piste"
  }
 };

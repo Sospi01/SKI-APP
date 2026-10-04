@@ -391,6 +391,14 @@ window.SKI_I18N = {
   "Finales de pista": "Fine delle piste",
   "Elige en la lista desde dónde sales, o tócalo en el mapa.": "Scegli dalla lista da dove parti, o toccalo sulla mappa.",
   "Punto elegido en el mapa": "Punto scelto sulla mappa",
-  "Salir desde aquí": "Parti da qui"
+  "Salir desde aquí": "Parti da qui",
+  "Inicio de {0}": "Inizio di {0}",
+  "Buscar pista, remonte o servicio…": "Cerca pista, impianto o servizio…",
+  "Nada coincide con la búsqueda.": "Nessun risultato.",
+  "¿Desde dónde sales?": "Da dove parti?",
+  "Desde la salida (abajo)": "Dalla partenza (a valle)",
+  "Desde el inicio (arriba)": "Dall’inizio della pista (in alto)",
+  "Desde la llegada (arriba)": "Dall’arrivo (a monte)",
+  "Desde el final (abajo)": "Dalla fine della pista (in basso)"
  }
 };

@@ -391,6 +391,14 @@ window.SKI_I18N = {
   "Finales de pista": "Końce tras",
   "Elige en la lista desde dónde sales, o tócalo en el mapa.": "Wybierz z listy, skąd startujesz, lub dotknij na mapie.",
   "Punto elegido en el mapa": "Punkt wybrany na mapie",
-  "Salir desde aquí": "Start stąd"
+  "Salir desde aquí": "Start stąd",
+  "Inicio de {0}": "Początek: {0}",
+  "Buscar pista, remonte o servicio…": "Szukaj trasy, wyciągu lub usługi…",
+  "Nada coincide con la búsqueda.": "Brak wyników.",
+  "¿Desde dónde sales?": "Skąd ruszasz?",
+  "Desde la salida (abajo)": "Od dolnej stacji",
+  "Desde el inicio (arriba)": "Od początku trasy (góra)",
+  "Desde la llegada (arriba)": "Od górnej stacji",
+  "Desde el final (abajo)": "Od końca trasy (dół)"
  }
 };

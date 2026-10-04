@@ -49,18 +49,22 @@ function pitchZoneFor(pct) {
 // instead of one misleading dip. The same-elevation-endpoints check is
 // what keeps this from also firing on a real traverse that legitimately
 // dips and climbs to a different elevation than it started at.
+// The same loop also comes the other way round -- drawn from the bottom up
+// one lane and back down the other (several of Formigal's runs) -- which
+// reads as a "Λ", a mountain: split at the interior high point then.
+// Mirrored in docs/routes.js (splitLoop), which must not ski a lane uphill.
 function splitOutAndBack(pts) {
-  var minIdx = 0;
-  for (var i = 1; i < pts.length; i++) if (pts[i][2] < pts[minIdx][2]) minIdx = i;
-  if (minIdx <= 0 || minIdx >= pts.length - 1) return null;
-  var descentBefore = pts[0][2] - pts[minIdx][2];
-  var ascentAfter = pts[pts.length - 1][2] - pts[minIdx][2];
-  if (descentBefore <= 0 || ascentAfter <= 0) return null;
+  if (!pts || pts.length < 3 || pts[0][2] == null || pts[pts.length - 1][2] == null) return null;
   if (Math.abs(pts[0][2] - pts[pts.length - 1][2]) > 10) return null;
-  var smaller = Math.min(descentBefore, ascentAfter);
-  var larger = Math.max(descentBefore, ascentAfter);
-  if (smaller < 15 || smaller / larger < 0.4) return null;
-  return [pts.slice(0, minIdx + 1), pts.slice(minIdx).reverse()];
+  function at(sign) {
+    var k = 0;
+    for (var i = 1; i < pts.length; i++) if (pts[i][2] != null && sign * (pts[i][2] - pts[k][2]) > 0) k = i;
+    if (k <= 0 || k >= pts.length - 1) return null;
+    var a = sign * (pts[k][2] - pts[0][2]), b = sign * (pts[k][2] - pts[pts.length - 1][2]);
+    if (a <= 0 || b <= 0 || Math.min(a, b) < 15 || Math.min(a, b) / Math.max(a, b) < 0.4) return null;
+    return [pts.slice(0, k + 1), pts.slice(k).reverse()];
+  }
+  return at(-1) || at(1);   // "V": split at the low point; "Λ": at the high point
 }
 
 function buildElevationProfiles(geomParts) {

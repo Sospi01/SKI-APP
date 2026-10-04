@@ -3257,7 +3257,11 @@
         var projPts = part.map(project);
         features.push({ el: line, hoverClass: 'run-hovered', points: projPts, label: label, valueText: valueText, geomPart: part, runName: r.name || null, diffKey: key });
         // Pistes are skied downhill.
-        addDirectionArrow(content, directionArrows, projPts, partFlowSign(part, false));
+        // A loop drawn down one lane and back up the other (or the reverse)
+        // gets an arrow per lane, each pointing downhill.
+        (splitOutAndBack(part.filter(function (p) { return p && p.length >= 3; })) || [part]).forEach(function (lane) {
+          addDirectionArrow(content, directionArrows, lane === part ? projPts : lane.map(project), partFlowSign(lane, false));
+        });
       });
     });
 

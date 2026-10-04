@@ -22,6 +22,23 @@
   var EASY = { novice: 1, easy: 1, other: 1 };
   var NO_BLACK = { novice: 1, easy: 1, intermediate: 1, other: 1 };
 
+  // A run drawn as one loop, down one lane and back up the other (or up and
+  // back down): two downhill lanes, split at the turning point. Mirrors
+  // splitOutAndBack() in docs/profile.js.
+  function splitLoop(pts) {
+    if (pts.length < 3 || pts[0][2] == null || pts[pts.length - 1][2] == null) return [pts];
+    if (Math.abs(pts[0][2] - pts[pts.length - 1][2]) > 10) return [pts];
+    function at(sign) {
+      var k = 0;
+      for (var i = 1; i < pts.length; i++) if (pts[i][2] != null && sign * (pts[i][2] - pts[k][2]) > 0) k = i;
+      if (k <= 0 || k >= pts.length - 1) return null;
+      var a = sign * (pts[k][2] - pts[0][2]), b = sign * (pts[k][2] - pts[pts.length - 1][2]);
+      if (a <= 0 || b <= 0 || Math.min(a, b) < 15 || Math.min(a, b) / Math.max(a, b) < 0.4) return null;
+      return [pts.slice(0, k + 1), pts.slice(k)];
+    }
+    return at(-1) || at(1) || [pts];
+  }
+
   function dist(a, b) {
     var k = Math.cos((a[1] + b[1]) / 2 * Math.PI / 180);
     return Math.hypot((a[0] - b[0]) * 111320 * k, (a[1] - b[1]) * 111320);
@@ -38,8 +55,14 @@
       if (r.uses && r.uses.split(',').indexOf('downhill') === -1) return;
       var diff = diffOf ? diffOf(r) : (r.difficulty || 'other');
       (r.geom || []).forEach(function (part) {
-        var pts = part.filter(function (p) { return p && p.length >= 2; });
-        if (pts.length < 2) return;
+        var all = part.filter(function (p) { return p && p.length >= 2; });
+        if (all.length < 2) return;
+        splitLoop(all).forEach(function (pts) { addRunLane(r, ri, diff, part, pts); });
+      });
+    });
+
+    function addRunLane(r, ri, diff, part, pts) {
+      {
         var e0 = pts[0][2], e1 = pts[pts.length - 1][2], both = false;
         if (e0 != null && e1 != null) {
           // Nearly level (cat tracks, links between sectors): skied or skated either way.
@@ -60,8 +83,8 @@
           prev = n;
         });
         feats[fi].top = prev - pts.length + 1;   // first node: the run's start
-      });
-    });
+      }
+    }
 
     // A lift is sometimes mapped as several sections in a row (Formigal's
     // Tramacastilla drag: three), each tagged with the whole lift's duration.

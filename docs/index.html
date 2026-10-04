@@ -1880,6 +1880,17 @@
     }
     function close() { box.hidden = true; active = -1; }
     function update() {
+      // Test switches typed into the search (the Android app has no address
+      // bar for ?3d=1 / ?simular=1): "3d=1", "3d=0", "simular=1", "simular=0".
+      var code = /^(3d|simular)=([01])$/.exec(input.value.trim().toLowerCase());
+      if (code) {
+        try {
+          var key = code[1] === '3d' ? 'si_3d' : 'si_fake_loc';
+          if (code[2] === '1') localStorage.setItem(key, '1'); else localStorage.removeItem(key);
+        } catch (e) {}
+        location.reload();
+        return;
+      }
       var q = normalize(input.value.trim());
       box.innerHTML = '';
       if (!q) { close(); return; }
@@ -3389,7 +3400,7 @@
     } catch (e) { return false; }
   })();
   var locBtn = document.getElementById('map-locate'), locMsgEl = document.getElementById('map-loc-msg');
-  locBtn.hidden = !canUseLocation();
+  locBtn.hidden = !canUseLocation() && !LOC_FAKE;   // the test walk needs no permission
   function locMsg(text) { locMsgEl.textContent = text || ''; locMsgEl.hidden = !text; }
   function locStop() {
     if (!locBtn) return;

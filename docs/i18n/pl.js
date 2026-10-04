@@ -346,6 +346,10 @@ window.SKI_I18N = {
   "Activa el permiso de ubicación para ver dónde estás.": "Zezwól na dostęp do lokalizacji, aby zobaczyć, gdzie jesteś.",
   "Pendiente máxima: el tramo más empinado de al menos 50 m": "Maksymalne nachylenie: najbardziej stromy odcinek o długości co najmniej 50 m",
   "máx. {0}%": "maks. {0}%",
-  "Guarda {0} y verás su previsión de nieve cada vez que abras Ski Info.": "Zapisz {0}, a zobaczysz prognozę śniegu za każdym razem, gdy otworzysz Ski Info."
+  "Guarda {0} y verás su previsión de nieve cada vez que abras Ski Info.": "Zapisz {0}, a zobaczysz prognozę śniegu za każdym razem, gdy otworzysz Ski Info.",
+  "Vista 3D": "Widok 3D",
+  "Dar una vuelta": "Obróć widok",
+  "Cargando 3D…": "Ładowanie 3D…",
+  "No se pudo cargar la vista 3D.": "Nie udało się wczytać widoku 3D."
  }
 };

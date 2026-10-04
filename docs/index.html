@@ -593,6 +593,16 @@
   #map-viewport .map-controls { top: 52px; }
   #map-viewport .map-hint { top: auto; bottom: 28px; }
   #map-locate[hidden] { display: none; }
+  /* 3D view (map3d.js): over the 2D map, under its buttons and panels. */
+  #map-3d { position: absolute; inset: 0; background: #0b1218; } /* beats .maplibregl-map { position: relative } */
+  .map-3d[hidden] { display: none; }
+  #map-3d-btn { font-size: 11.5px; font-weight: 700; letter-spacing: 0.02em; }
+  #map-3d-btn[hidden], #map-3d-spin[hidden] { display: none; }
+  #map-3d-btn[aria-pressed="true"], #map-3d-spin[aria-pressed="true"] { color: #4aa3ff; }
+  #map-3d-spin svg { width: 17px; height: 17px; display: block; margin: auto; }
+  .map3d-loc { width: 16px; height: 16px; border-radius: 50%; background: #1a73e8; border: 3px solid #fff; box-shadow: 0 0 0 6px rgba(26,115,232,0.25); }
+  .map3d-point { width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 3px solid #10161c; box-shadow: 0 0 6px rgba(0,0,0,0.5); }
+  .map-3d .maplibregl-ctrl-attrib { font-size: 10px; }
   #map-locate svg { width: 17px; height: 17px; display: block; margin: auto; }
   #map-locate[aria-pressed="true"] { color: #4aa3ff; }
   .map-loc-msg {
@@ -1156,6 +1166,7 @@
     </div>
     <div class="map-viewport" id="map-viewport">
       <svg id="map-svg" role="img" aria-label="Mapa interactivo de las pistas y remontes sobre imagen satelital del terreno, coloreado por dificultad"></svg>
+      <div class="map-3d" id="map-3d" hidden></div>
       <div class="map-mode" id="map-mode" role="group" aria-label="Colorear las pistas por">
         <button type="button" data-mode="diff" aria-pressed="true">Dificultad</button>
         <button type="button" data-mode="slope" aria-pressed="false">Pendiente</button>
@@ -1164,9 +1175,12 @@
         <button type="button" id="map-zoom-in" aria-label="Acercar">+</button>
         <button type="button" id="map-zoom-out" aria-label="Alejar">–</button>
         <button type="button" id="map-zoom-reset" aria-label="Restablecer vista">⤢</button>
+        <button type="button" id="map-3d-btn" aria-label="Vista 3D" aria-pressed="false" hidden>3D</button>
+        <button type="button" id="map-3d-spin" aria-label="Dar una vuelta" aria-pressed="false" hidden><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16.2 7.5A6.6 6.6 0 1 0 16.6 12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M16.8 3.6v4.2h-4.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <button type="button" id="map-locate" aria-label="Dónde estoy" aria-pressed="false" hidden><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="3" fill="currentColor"/><circle cx="10" cy="10" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 1.5v2.5M10 16v2.5M1.5 10H4M16 10h2.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
       </div>
       <div class="map-loc-msg" id="map-loc-msg" role="status" hidden></div>
+      <div class="map-loc-msg" id="map-3d-msg" role="status" hidden></div>
       <div class="map-hint" id="map-hint">Arrastra para mover · pellizco para zoom · gira con dos dedos</div>
       <div class="map-empty" id="map-empty" hidden>No hay geometría de pistas ni remontes para esta estación.</div>
       <div class="map-run-panel" id="map-run-panel" role="dialog" aria-labelledby="map-run-panel-title" hidden>
@@ -1545,6 +1559,7 @@
       renderRunProfile(wrap, g);
     });
     highlightFeatures(featuresForRun(name), opts && opts.pan);
+    map3dHighlight(featuresForRun(name));
     markActiveRunItem(name, opts && opts.fromMap);
   }
   function selectMapFeature(f, opts) {
@@ -1554,12 +1569,14 @@
       f.isLift ? 'var(--map-lift-color)' : DIFF[f.diffKey || 'other'].color,
       f.geomPart ? function (body) { body.appendChild(buildMapTapPopupContent(null, null, f.geomPart)); } : null);
     highlightFeatures([f], opts && opts.pan);
+    map3dHighlight([f]);
     markActiveRunItem(null);
   }
   function clearMapSelection() {
     selectedMapKey = null;
     runPanel.hidden = true;
     highlightFeatures([], false);
+    map3dHighlight([]);
     markActiveRunItem(null);
   }
   // After the map is rebuilt (resize), put the highlight back on the new elements.
@@ -2438,6 +2455,7 @@
     screenDashboard.hidden = false;
     document.getElementById('app').classList.add('dash-mode');
     currentRaw = null;
+    close3d();
     mapUsedFor = null;
     if (paintFav) paintFav();
     mapBuiltKey = null;
@@ -2732,9 +2750,9 @@
     svg.addEventListener('pointerup', endPointer);
     svg.addEventListener('pointercancel', endPointer);
 
-    document.getElementById('map-zoom-in').addEventListener('click', function () { if (!mapState) return; dismissHint(); zoomToward(mapState.zoom * 1.6, mapState.vbW / 2, mapState.vbH / 2); });
-    document.getElementById('map-zoom-out').addEventListener('click', function () { if (!mapState) return; dismissHint(); zoomToward(mapState.zoom / 1.6, mapState.vbW / 2, mapState.vbH / 2); });
-    document.getElementById('map-zoom-reset').addEventListener('click', function () { if (!mapState) return; dismissHint(); mapState.zoom = 1; mapState.tx = 0; mapState.ty = 0; mapState.angle = 0; apply(); });
+    document.getElementById('map-zoom-in').addEventListener('click', function () { if (map3d) { map3d.zoomIn(); return; } if (!mapState) return; dismissHint(); zoomToward(mapState.zoom * 1.6, mapState.vbW / 2, mapState.vbH / 2); });
+    document.getElementById('map-zoom-out').addEventListener('click', function () { if (map3d) { map3d.zoomOut(); return; } if (!mapState) return; dismissHint(); zoomToward(mapState.zoom / 1.6, mapState.vbW / 2, mapState.vbH / 2); });
+    document.getElementById('map-zoom-reset').addEventListener('click', function () { if (map3d) { map3d.reset(); return; } if (!mapState) return; dismissHint(); mapState.zoom = 1; mapState.tx = 0; mapState.ty = 0; mapState.angle = 0; apply(); });
 
     // Hover picking: find the nearest run/lift line to the pointer, regardless of SVG
     // paint order, so lifts get equal treatment to runs where the two overlap.
@@ -3310,6 +3328,7 @@
   }
   function setMapMode(mode) {
     mapMode = mode;
+    if (map3d) map3d.setMode(mode);
     if (mode === 'slope') drawSlopeLines();
     document.getElementById('map-svg').classList.toggle('slope-mode', mode === 'slope');
     document.getElementById('map-legend').classList.toggle('slope-mode', mode === 'slope');
@@ -3326,6 +3345,7 @@
   // While a finger slides along a run's profile (profile.js), the same
   // point is marked on the map.
   window.onProfilePoint = function (pt) {
+    if (map3d) map3d.setProfilePoint(pt);
     if (!mapState) return;
     var dot = mapState.profilePoint;
     if (!pt) { if (dot) dot.setAttribute('display', 'none'); return; }
@@ -3367,6 +3387,7 @@
     locBtn.setAttribute('aria-pressed', 'false');
     locMsg('');
     if (mapState && mapState.loc) { mapState.loc.dot.remove(); mapState.loc.acc.remove(); mapState.loc = null; }
+    if (map3d) map3d.setLocation(null);
   }
   function locDraw(pos) {
     if (!mapState) return;
@@ -3381,6 +3402,7 @@
     mapState.content.appendChild(loc.dot);
     var pt = [pos.coords.longitude, pos.coords.latitude], q = mapState.project(pt);
     loc.pt = pt;
+    if (map3d) map3d.setLocation(pt);
     [loc.acc, loc.dot].forEach(function (c) { c.setAttribute('cx', q[0].toFixed(1)); c.setAttribute('cy', q[1].toFixed(1)); });
     // Accuracy radius: metres -> degrees of latitude -> map units.
     loc.acc.setAttribute('r', Math.max(0, (pos.coords.accuracy || 0) / 111320 * mapState.scale).toFixed(1));
@@ -3397,7 +3419,7 @@
       return;
     }
     locMsg(best && bestM <= 60 && best.label ? T('Estás en: {0}', best.label) : '');
-    if (!locCentered) { locCentered = true; centerMapOn(q); }
+    if (!locCentered) { locCentered = true; centerMapOn(q); if (map3d) map3d.setLocation(pt, true); }
   }
   locBtn.addEventListener('click', function () {
     if (locWatch != null) { locStop(); return; }
@@ -3410,6 +3432,111 @@
       locMsg(err && err.code === 1 ? T('Activa el permiso de ubicación para ver dónde estás.') : T('No hemos podido obtener tu ubicación.'));
       setTimeout(function () { if (locWatch == null && keep !== undefined) locMsg(''); }, 5000);
     }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
+  });
+
+  // ---- 3D view (map3d.js + MapLibre GL, loaded on the first tap) ----
+  // Hidden for now: shown only after opening the site once with ?3d=1
+  // (remembered on the device; ?3d=0 hides it again).
+  var map3d = null, map3dOpening = false;
+  var map3dBtn = document.getElementById('map-3d-btn'), map3dSpinBtn = document.getElementById('map-3d-spin');
+  var map3dEl = document.getElementById('map-3d'), map3dMsgEl = document.getElementById('map-3d-msg');
+  var MAPLIBRE_DIR = '/vendor/maplibre-gl-5.24.0/';
+  map3dBtn.hidden = !(function () {
+    try {
+      var m = /[?&]3d=([01])/.exec(location.search);
+      if (m) { if (m[1] === '1') localStorage.setItem('si_3d', '1'); else localStorage.removeItem('si_3d'); }
+      if (localStorage.getItem('si_3d') !== '1') return false;
+      var c = document.createElement('canvas');
+      return !!(c.getContext('webgl2') || c.getContext('webgl'));
+    } catch (e) { return false; }
+  })();
+  function map3dMsg(text) { map3dMsgEl.textContent = text || ''; map3dMsgEl.hidden = !text; }
+  function loadAsset(tag, attrs) {
+    return new Promise(function (resolve, reject) {
+      var el = document.createElement(tag);
+      Object.keys(attrs).forEach(function (k) { el[k] = attrs[k]; });
+      el.onload = resolve;
+      el.onerror = reject;
+      document.head.appendChild(el);
+    });
+  }
+  var map3dLoaded = null;
+  function load3d() {
+    if (!map3dLoaded) {
+      map3dLoaded = Promise.all([loadAsset('link', { rel: 'stylesheet', href: MAPLIBRE_DIR + 'maplibre-gl.css' }),
+                                 loadAsset('script', { src: MAPLIBRE_DIR + 'maplibre-gl.js' })])
+        .then(function () { return loadAsset('script', { src: '/map3d.js' }); });
+      map3dLoaded.catch(function () { map3dLoaded = null; });
+    }
+    return map3dLoaded;
+  }
+  function map3dHighlight(list) {
+    if (!map3d || !mapState) return;
+    map3d.highlight(list.map(function (f) { return mapState.features.indexOf(f); }).filter(function (i) { return i >= 0; }));
+  }
+  function map3dFailed() {
+    close3d();
+    map3dMsg(T('No se pudo cargar la vista 3D.'));
+    setTimeout(function () { map3dMsg(''); }, 5000);
+  }
+  function map3dTap(f, x, y) {
+    if (isDesktopLayout()) {
+      if (f) selectMapFeature(f, { pan: false, fromMap: true });
+      else clearMapSelection();
+      return;
+    }
+    hideTooltip();
+    if (!f) { hideMapTapPopup(); map3dHighlight([]); return; }
+    showMapTapPopup(x, y, f.label, f.valueText, f.geomPart);
+    map3dHighlight(f.runName ? featuresForRun(f.runName) : [f]);
+  }
+  function open3d() {
+    if (map3d || map3dOpening || !mapState || !mapState.features) return;
+    map3dOpening = true;
+    var raw = currentRaw;
+    map3dMsg(T('Cargando 3D…'));
+    load3d().then(function () {
+      map3dOpening = false;
+      if (!mapState || currentRaw !== raw) { map3dMsg(''); return; }
+      hideTooltip();
+      hideMapTapPopup();
+      map3dEl.hidden = false;
+      map3d = window.SkiMap3D.open({
+        container: map3dEl, features: mapState.features, mode: mapMode, slopeStretches: slopeStretches,
+        runColor: function (f) { return DIFF[f.diffKey || 'other'].color; },
+        liftColor: 'var(--map-lift-color)', haloColor: 'var(--map-halo)',
+        attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> (ODbL) · OpenSkiMap',
+        onTap: map3dTap,
+        onReady: function () { map3dMsg(''); },
+        onError: map3dFailed
+      });
+      if (!map3d) { map3dFailed(); return; }
+      map3d.onSpinChange = function (on) { map3dSpinBtn.setAttribute('aria-pressed', on ? 'true' : 'false'); };
+      document.getElementById('map-hint').classList.add('hidden');
+      map3dBtn.textContent = '2D';
+      map3dBtn.setAttribute('aria-pressed', 'true');
+      map3dSpinBtn.hidden = false;
+      if (typeof selectedMapKey === 'string') map3dHighlight(featuresForRun(selectedMapKey.slice(4)));
+      else if (selectedMapKey) map3dHighlight([selectedMapKey]);
+      if (mapState.loc && mapState.loc.pt) map3d.setLocation(mapState.loc.pt);
+    }).catch(function () { map3dOpening = false; map3dFailed(); });
+  }
+  function close3d() {
+    if (map3d) map3d.destroy();
+    map3d = null;
+    map3dEl.hidden = true;
+    map3dEl.innerHTML = '';
+    map3dBtn.textContent = '3D';
+    map3dBtn.setAttribute('aria-pressed', 'false');
+    map3dSpinBtn.hidden = true;
+    map3dSpinBtn.setAttribute('aria-pressed', 'false');
+  }
+  map3dBtn.addEventListener('click', function () {
+    hideMapTapPopup();
+    if (map3d) close3d(); else open3d();
+  });
+  map3dSpinBtn.addEventListener('click', function () {
+    if (map3d) map3dSpinBtn.setAttribute('aria-pressed', map3d.spin() ? 'true' : 'false');
   });
 
   // ============== country overview map (all stations of a country as pins) ==============

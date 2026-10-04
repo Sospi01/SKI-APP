@@ -346,6 +346,10 @@ window.SKI_I18N = {
   "Activa el permiso de ubicación para ver dónde estás.": "Allow location access to see where you are.",
   "Pendiente máxima: el tramo más empinado de al menos 50 m": "Max slope: the steepest stretch of at least 50 m",
   "máx. {0}%": "max {0}%",
-  "Guarda {0} y verás su previsión de nieve cada vez que abras Ski Info.": "Save {0} and you'll see its snow forecast every time you open Ski Info."
+  "Guarda {0} y verás su previsión de nieve cada vez que abras Ski Info.": "Save {0} and you'll see its snow forecast every time you open Ski Info.",
+  "Vista 3D": "3D view",
+  "Dar una vuelta": "Fly around",
+  "Cargando 3D…": "Loading 3D…",
+  "No se pudo cargar la vista 3D.": "Couldn't load the 3D view."
  }
 };

@@ -346,6 +346,10 @@ window.SKI_I18N = {
   "Activa el permiso de ubicación para ver dónde estás.": "Geef toegang tot je locatie om te zien waar je bent.",
   "Pendiente máxima: el tramo más empinado de al menos 50 m": "Maximale helling: het steilste stuk van minstens 50 m",
   "máx. {0}%": "max. {0}%",
-  "Guarda {0} y verás su previsión de nieve cada vez que abras Ski Info.": "Bewaar {0} en je ziet de sneeuwverwachting elke keer dat je Ski Info opent."
+  "Guarda {0} y verás su previsión de nieve cada vez que abras Ski Info.": "Bewaar {0} en je ziet de sneeuwverwachting elke keer dat je Ski Info opent.",
+  "Vista 3D": "3D-weergave",
+  "Dar una vuelta": "Rondvlucht",
+  "Cargando 3D…": "3D laden…",
+  "No se pudo cargar la vista 3D.": "De 3D-weergave kon niet worden geladen."
  }
 };

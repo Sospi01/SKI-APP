@@ -346,6 +346,10 @@ window.SKI_I18N = {
   "Activa el permiso de ubicación para ver dónde estás.": "Autorisez la localisation pour voir où vous êtes.",
   "Pendiente máxima: el tramo más empinado de al menos 50 m": "Pente maximale : le tronçon le plus raide d'au moins 50 m",
   "máx. {0}%": "max {0} %",
-  "Guarda {0} y verás su previsión de nieve cada vez que abras Ski Info.": "Enregistrez {0} et vous verrez ses prévisions de neige à chaque ouverture de Ski Info."
+  "Guarda {0} y verás su previsión de nieve cada vez que abras Ski Info.": "Enregistrez {0} et vous verrez ses prévisions de neige à chaque ouverture de Ski Info.",
+  "Vista 3D": "Vue 3D",
+  "Dar una vuelta": "Faire le tour",
+  "Cargando 3D…": "Chargement de la 3D…",
+  "No se pudo cargar la vista 3D.": "Impossible de charger la vue 3D."
  }
 };

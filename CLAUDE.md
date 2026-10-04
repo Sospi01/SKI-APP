@@ -90,6 +90,12 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
 - Portada para quien llega por primera vez: botones "Populares" (`POPULAR`, por idioma o Norteamérica) y "Cerca de ti" (por zona horaria, `TZ_COORDS`, o ubicación real guardada redondeada en `si_loc`). Botón "Instalar como app" (`beforeinstallprompt`).
 - Mapa de estación: modo de color "Dificultad | Pendiente" (`setMapMode`, `si_map_mode`), botón "Dónde estoy" (`locDraw`, `watchPosition`), compartir desde el mapa (`#mapa` al final de la URL de la ficha: `static-pages.js` salta al mapa), y el perfil de cada pista se puede recorrer con el dedo (`addProfileScrubber` en `profile.js`, que marca el punto en el mapa con `window.onProfilePoint`).
 - Portada: buscador `#global-search`, ranking de nieve, destacadas y guías. `#home-data` es el JSON que inyecta el despliegue.
+- **Vista 3D** (`docs/map3d.js` + MapLibre GL 5 en `docs/vendor/maplibre-gl-5.24.0/`, que solo se descargan al pulsar el botón "3D" del mapa):
+  - **escondida**: el botón solo sale tras abrir la web una vez con `?3d=1` (se recuerda en `localStorage.si_3d`; `?3d=0` lo quita) y si hay WebGL. Para abrirla a todos, cambiar la condición de `map3dBtn.hidden` en `index.html`;
+  - relieve de AWS Terrain Tiles (Mapzen, gratis, sin clave; sí se pueden descargar desde el sandbox) e imágenes de Esri;
+  - dibuja `mapState.features` (las mismas pistas y remontes que el 2D) y devuelve los toques al 2D: panel de pista en el ordenador y ventana con el perfil en el móvil. Reutiliza los botones de zoom, el modo Dificultad/Pendiente, "Dónde estoy" y el punto del perfil;
+  - cámara: mira ladera arriba (del punto más bajo al más alto) salvo que girarla hasta 90° encuadre mucho mejor la estación (`frame()`); botón para dar una vuelta (`spin`);
+  - arranca con `style.load`, no con `load` (que espera a todas las teselas y se queda colgado si alguna está bloqueada).
 
 ### 3.2 Pipeline (`data-pipeline/`)
 
@@ -207,6 +213,7 @@ cd data-pipeline && python3 -m pytest -q                       # si tocas el pip
 5. Hacia el 7–8 de octubre: terminar la prueba cerrada y solicitar producción.
 
 **De desarrollo, por prioridad:**
+0. **Vista 3D escondida** (`?3d=1`): esperar las capturas y comentarios del usuario, pulir y abrirla a todos. Después, medir su uso (nuevo campo o tipo de evento: requiere publicar las reglas de Firestore) y contarlo en Nevasport (echaban de menos FatMap).
 1. Comprobar que se ejecutaron los despliegues programados (04:17 y 11:07 UTC) con `mcp__github__actions_list` sobre `deploy-pages.yml`, filtrando por el evento `schedule`.
 2. **Portada para quien llega por primera vez:** el 36 % se va sin abrir ninguna estación. Hay que dar más visibilidad a las estaciones populares o cercanas.
 3. Textos de la ficha de Play: hechos en los 7 idiomas (`STORE_LISTING.md`); falta que el usuario los pegue en Play Console.

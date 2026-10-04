@@ -60,7 +60,8 @@ async function exists(p) {
 
 (async () => {
   if (!(await exists('/'))) { console.error('No server at ' + BASE + ' (cd docs && python3 -m http.server 8903)'); process.exit(2); }
-  const browser = await chromium.launch({ executablePath: CHROMIUM });
+  // Software WebGL, for the 3D map.
+  const browser = await chromium.launch({ executablePath: CHROMIUM, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 
   // ---- homes ----
   for (const lang of ['', 'en/', 'fr/', 'de/', 'it/', 'nl/', 'pl/']) {
@@ -154,6 +155,27 @@ async function exists(p) {
     }));
     check(/m · \d+ m · \d+%/.test(scrub.text) && scrub.marker, 'desktop station: sliding along a profile shows the point and marks it on the map', scrub.text);
     check(!p.errors.length, 'desktop station: no JS errors', p.errors.join(' | '));
+    await p.context().close();
+  }
+
+  // ---- 3D map: hidden unless ?3d=1; opens over the 2D map and closes again ----
+  // (Terrain and imagery tiles are blocked here: it draws the runs on a flat dark ground.)
+  {
+    const p = await newPage(browser, devices['Pixel 7']);
+    await p.goto(BASE + '/?estacion=' + BAQUEIRA + '&vista=mapa');
+    await p.waitForSelector('#map-svg polyline', { timeout: 15000 }).catch(() => {});
+    const hiddenByDefault = await p.$eval('#map-3d-btn', (e) => e.hidden);
+    await p.goto(BASE + '/?3d=1&estacion=' + BAQUEIRA + '&vista=mapa');
+    await p.waitForSelector('#map-svg polyline', { timeout: 15000 }).catch(() => {});
+    await p.tap('#map-3d-btn');
+    await p.waitForSelector('#map-3d canvas', { timeout: 15000 }).catch(() => {});
+    await p.waitForFunction(() => document.getElementById('map-3d-msg').hidden, null, { timeout: 20000 }).catch(() => {});
+    const on = await p.evaluate(() => ({ canvas: !!document.querySelector('#map-3d canvas'), btn: document.getElementById('map-3d-btn').textContent,
+      spin: !document.getElementById('map-3d-spin').hidden, msg: document.getElementById('map-3d-msg').hidden }));
+    await p.tap('#map-3d-btn'); await p.waitForTimeout(300);
+    const off = await p.evaluate(() => !document.querySelector('#map-3d canvas') && document.getElementById('map-3d').hidden);
+    check(hiddenByDefault && on.canvas && on.btn === '2D' && on.spin && on.msg && off && !p.errors.length,
+          '3D map: hidden by default, opens with ?3d=1 and closes', JSON.stringify(on) + (p.errors.length ? ' errors: ' + p.errors.join(' | ') : ''));
     await p.context().close();
   }
 

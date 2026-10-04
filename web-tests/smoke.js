@@ -177,6 +177,19 @@ async function exists(p) {
     await p.context().close();
   }
 
+  // ---- route planner (hidden behind ?rutas=1): a route from the base to a run ----
+  {
+    const p = await newPage(browser, { viewport: { width: 1440, height: 900 } });
+    await p.goto(BASE + '/?rutas=1&estacion=' + BAQUEIRA);
+    await p.waitForSelector('#runs-list .run-item', { timeout: 15000 }).catch(() => {});
+    await p.click('#runs-list .run-item >> nth=3'); await p.waitForTimeout(400);
+    await p.click('#map-run-panel .map-route-btn').catch(() => {});
+    await p.waitForSelector('.route-summary', { timeout: 10000 }).catch(() => {});
+    const r = await p.evaluate(() => ({ sum: (document.querySelector('.route-summary') || {}).textContent || '', steps: document.querySelectorAll('.route-steps li').length, drawn: document.querySelectorAll('.map-route-line').length }));
+    check(/min/.test(r.sum) && r.steps >= 3 && r.drawn > 0 && !p.errors.length, 'route planner: a route from the base to a run', r.sum + ' · ' + r.steps + ' steps' + (p.errors.length ? ' errors: ' + p.errors.join(' | ') : ''));
+    await p.context().close();
+  }
+
   // ---- generated station page ----
   if (await exists('/estacion/baqueira-beret/')) {
     const p = await newPage(browser, devices['Pixel 7']);

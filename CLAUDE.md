@@ -97,8 +97,13 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
   - dibuja `mapState.features` (las mismas pistas y remontes que el 2D) y devuelve los toques al 2D: panel de pista en el ordenador y ventana con el perfil en el móvil. Reutiliza los botones de zoom, el modo Dificultad/Pendiente, "Dónde estoy" y el punto del perfil;
   - cámara: mira ladera arriba (del punto más bajo al más alto) salvo que girarla hasta 90° encuadre mucho mejor la estación (`frame()`); botón para dar una vuelta (`spin`);
   - arranca con `style.load`, no con `load` (que espera a todas las teselas y se queda colgado si alguna está bloqueada). Se abre directamente en la vista final (inclinada) y oculta, y aparece con un fundido al primer `idle` o a los 5 s: la animación inicial de inclinación se quitó porque pedía teselas de todos los niveles intermedios y el relieve aparecía a saltos.
+- **Planificador de rutas** (`docs/routes.js`, se descarga al primer uso; **escondido** tras `?rutas=1` o el código `rutas=1` del buscador, que se recuerda en `localStorage.si_routes`):
+  - botón "Ruta hasta aquí" en la ventana (móvil) o el panel (ordenador) de cada pista, remonte o servicio; el panel de la ruta (`renderRoute`, reutiliza `#map-run-panel`) deja elegir el origen (mi ubicación, la base = el pie de remonte más bajo, o un punto tocado en el mapa, también en 3D) y el nivel (todas, sin negras, verdes y azules; `si_route_level`), y lista los pasos con el tiempo estimado. La ruta se dibuja en 2D (`drawRoute2D`) y en 3D (`map3d.showRoute`), atenuando el resto;
+  - la red (`SkiRoutes.build`): pistas solo cuesta abajo (en los dos sentidos si son casi llanas: menos de 5 m o del 3 %), remontes solo hacia arriba con 90 s de espera, y enlaces a pie entre lo que se toca (35 m; 60 m junto a remontes; hasta 150 m por llano, como el Pla de Beret), sin subir más de 8 m ni bajar por un cortado. Dijkstra por tiempo estimado;
+  - calidad de la red (`SkiRoutes.quality`, % de pares de remontes conectados; `node web-tests/route-quality.js`): a 4 de octubre, 1.023 de 1.409 estaciones superan el 80 % (Formigal 100 %, Baqueira 94 %). Por debajo del 80 % el panel avisa de que puede haber huecos;
+  - no sabe qué está abierto: el panel lo advierte siempre.
 - **Modo de prueba de "Dónde estoy"** (escondido): tras abrir la web con `?simular=1` (se recuerda en `localStorage.si_fake_loc`; `?simular=0` lo quita), el botón no pide la ubicación real: mueve el punto por la pista más larga de la estación a unos 8 m/s (`locFakeWalk`). Sirve para probar desde casa y para grabar vídeos. En modo prueba el botón sale aunque el aparato no dé ubicación (app 1.0.5).
-- **Código en el buscador de la portada** (la app Android no tiene barra de direcciones): escribir `simular=1` o `simular=0` activa o quita el modo de prueba y recarga la página.
+- **Códigos en el buscador de la portada** (la app Android no tiene barra de direcciones): `simular=1`/`simular=0` y `rutas=1`/`rutas=0` activan o quitan esos modos y recargan la página.
 
 ### 3.2 Pipeline (`data-pipeline/`)
 
@@ -217,6 +222,7 @@ cd data-pipeline && python3 -m pytest -q                       # si tocas el pip
 
 **De desarrollo, por prioridad:**
 0. **Vista 3D** (abierta a todos el 4 de octubre; el usuario ya lo contó en Nevasport): su uso se mide con el evento `map3d` (reglas publicadas el 4 de octubre). Revisar en unos días cuántos lo abren.
+0b. **Planificador de rutas** (Fase 1 hecha, escondida tras `rutas=1`): esperar las pruebas del usuario en Formigal y Baqueira y corregir. Siguientes pasos: beta abierta en el hilo de Nevasport; abrirlo a todos solo en las estaciones con calidad ≥ 80 %; botón "Está cerrado" en remontes y pistas para recalcular; Fase 2, guía en directo siguiendo "Dónde estoy" (recalcular si te sales).
 1. Comprobar que se ejecutaron los despliegues programados (04:17 y 11:07 UTC) con `mcp__github__actions_list` sobre `deploy-pages.yml`, filtrando por el evento `schedule`.
 2. **Portada para quien llega por primera vez:** el 36 % se va sin abrir ninguna estación. Hay que dar más visibilidad a las estaciones populares o cercanas.
 3. Textos de la ficha de Play: hechos en los 7 idiomas (`STORE_LISTING.md`); falta que el usuario los pegue en Play Console.

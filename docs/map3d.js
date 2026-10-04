@@ -118,7 +118,8 @@
           runs: { type: 'geojson', data: collection(runs) },
           slope: { type: 'geojson', data: collection(slope) },
           lifts: { type: 'geojson', data: collection(lifts) },
-          sel: { type: 'geojson', data: collection([]) }
+          sel: { type: 'geojson', data: collection([]) },
+          route: { type: 'geojson', data: collection([]) }
         },
         layers: [
           { id: 'sat', type: 'raster', source: 'sat' },
@@ -130,7 +131,11 @@
             paint: { 'line-color': ['get', 'color'], 'line-width': 2.6 } },
           { id: 'slope', type: 'line', source: 'slope', layout: Object.assign({ visibility: mode === 'slope' ? 'visible' : 'none' }, round),
             paint: { 'line-color': ['get', 'color'], 'line-width': 2.6 } },
-          { id: 'sel', type: 'line', source: 'sel', layout: round, paint: { 'line-color': ['get', 'color'], 'line-width': 5 } }
+          { id: 'sel', type: 'line', source: 'sel', layout: round, paint: { 'line-color': ['get', 'color'], 'line-width': 5 } },
+          // A planned route (index.html's route planner), on top of everything.
+          { id: 'route-casing', type: 'line', source: 'route', layout: round, paint: { 'line-color': '#ffffff', 'line-width': 10, 'line-opacity': 0.9 } },
+          { id: 'route', type: 'line', source: 'route', layout: round, filter: ['==', ['get', 'kind'], 'run'], paint: { 'line-color': ['get', 'color'], 'line-width': 5 } },
+          { id: 'route-dash', type: 'line', source: 'route', filter: ['!=', ['get', 'kind'], 'run'], paint: { 'line-color': ['get', 'color'], 'line-width': 5, 'line-dasharray': [1.5, 1] } }
         ],
         terrain: { source: 'dem', exaggeration: EXAGGERATION },
         sky: { 'sky-color': '#7fb2e5', 'horizon-color': '#dfeaf4', 'sky-horizon-blend': 0.6, 'horizon-fog-blend': 0.5, 'fog-color': '#dfeaf4', 'fog-ground-blend': 0.85 }
@@ -171,7 +176,7 @@
       hits.sort(function (a, b) { return (a.layer.id === 'lift') - (b.layer.id === 'lift'); });
       var f = hits.length ? o.features[hits[0].properties.fi] : null;
       var ev = e.originalEvent || {};
-      o.onTap(f || null, ev.clientX != null ? ev.clientX : p.x, ev.clientY != null ? ev.clientY : p.y);
+      o.onTap(f || null, ev.clientX != null ? ev.clientX : p.x, ev.clientY != null ? ev.clientY : p.y, e.lngLat);
     });
     map.on('mousemove', function (e) {
       var p = e.point;
@@ -184,7 +189,7 @@
       d.className = cls;
       return new maplibregl.Marker({ element: d });
     };
-    var locMarker = null, profMarker = null, spinning = false, spinFrame = null;
+    var locMarker = null, profMarker = null, routeMarkers = null, spinning = false, spinFrame = null;
     function stopSpin() {
       spinning = false;
       if (spinFrame) cancelAnimationFrame(spinFrame);
@@ -221,6 +226,20 @@
         if (!pt) { if (profMarker) profMarker.remove(); profMarker = null; return; }
         if (!profMarker) profMarker = marker('map3d-point').setLngLat([pt[0], pt[1]]).addTo(map);
         else profMarker.setLngLat([pt[0], pt[1]]);
+      },
+      // lines: [{ coords: [[lon, lat]...], kind: 'run' | 'lift' | 'walk', color }] or null.
+      showRoute: function (lines) {
+        var src = map.getSource('route');
+        if (!src) { map.once('style.load', function () { api.showRoute(lines); }); return; }
+        src.setData(collection((lines || []).map(function (l) { return line(l.coords, { kind: l.kind, color: color(l.color) }); })));
+        var dim = lines && lines.length ? 0.35 : 1;
+        ['run', 'slope', 'lift', 'run-halo', 'lift-casing'].forEach(function (id) { map.setPaintProperty(id, 'line-opacity', dim); });
+        if (routeMarkers) routeMarkers.forEach(function (m) { m.remove(); });
+        routeMarkers = null;
+        if (lines && lines.length) {
+          var a = lines[0].coords[0], z = lines[lines.length - 1].coords, b = z[z.length - 1];
+          routeMarkers = [marker('map3d-route-start').setLngLat([a[0], a[1]]).addTo(map), marker('map3d-route-end').setLngLat([b[0], b[1]]).addTo(map)];
+        }
       },
       zoomIn: function () { map.zoomIn(); },
       zoomOut: function () { map.zoomOut(); },

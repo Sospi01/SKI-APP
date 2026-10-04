@@ -593,6 +593,36 @@
   #map-viewport .map-controls { top: 52px; }
   #map-viewport .map-hint { top: auto; bottom: 28px; }
   #map-locate[hidden] { display: none; }
+  /* Route planner (routes.js): the button in a run/lift/service popup or panel, and the route panel. */
+  .map-route-btn { display: inline-flex; align-items: center; gap: 6px; margin: 8px 12px 10px; padding: 7px 12px; border: none; border-radius: 999px;
+    background: var(--accent); color: #fff; font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; pointer-events: auto; }
+  .map-run-panel-body > .map-route-btn { margin: 0 0 12px; }
+  .map-route-btn svg { width: 15px; height: 15px; }
+  .route-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .route-row-label { font-size: 11.5px; color: var(--text-secondary); width: 44px; flex-shrink: 0; }
+  .route-chips { display: flex; gap: 5px; flex-wrap: wrap; }
+  .route-chips button { border: 1px solid var(--border); background: var(--surface-2); color: var(--text-primary); border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 12px; cursor: pointer; }
+  .route-chips button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .route-result { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
+  .route-summary { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+  .route-steps { list-style: none; margin: 0; padding: 0; }
+  .route-steps li { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; font-size: 13px; line-height: 1.3; }
+  .route-steps li + li { border-top: 1px dashed var(--border); }
+  .route-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; background: var(--text-muted); }
+  .route-dot-lift { background: var(--map-lift-color); border-radius: 3px; }
+  .route-dot-walk { background: none; border: 2px dotted var(--text-muted); }
+  .route-dot-end { background: #e53935; }
+  .route-step-txt { display: flex; flex-direction: column; min-width: 0; }
+  .route-step-meta { font-size: 11.5px; color: var(--text-secondary); }
+  .route-msg { font-size: 12.5px; color: var(--text-secondary); margin: 6px 0; }
+  .route-note { font-size: 11px; color: var(--text-muted); margin: 10px 0 0; line-height: 1.4; }
+  #map-svg.has-route .map-run, #map-svg.has-route .map-slope, #map-svg.has-route .map-lift { opacity: 0.35; }
+  .map-route-casing { fill: none; stroke: #fff; stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; opacity: 0.9; pointer-events: none; }
+  .map-route-line { fill: none; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; pointer-events: none; }
+  .map-route-lift { stroke: var(--map-lift-color); stroke-dasharray: 6 4; }
+  .map-route-walk { stroke: #5f6b77; stroke-dasharray: 2 4; }
+  .map-route-start { fill: #2e7d32; stroke: #fff; stroke-width: 2.5; vector-effect: non-scaling-stroke; }
+  .map-route-end { fill: #e53935; stroke: #fff; stroke-width: 2.5; vector-effect: non-scaling-stroke; }
   /* 3D view (map3d.js): over the 2D map, under its buttons and panels. */
   #map-3d { position: absolute; inset: 0; background: #0b1218; } /* beats .maplibregl-map { position: relative } */
   .map-3d[hidden] { display: none; }
@@ -601,6 +631,9 @@
   #map-3d-btn[aria-pressed="true"], #map-3d-spin[aria-pressed="true"] { color: #4aa3ff; }
   #map-3d-spin svg { width: 17px; height: 17px; display: block; margin: auto; }
   .map3d-loc { width: 16px; height: 16px; border-radius: 50%; background: #1a73e8; border: 3px solid #fff; box-shadow: 0 0 0 6px rgba(26,115,232,0.25); }
+  .map3d-route-start, .map3d-route-end { width: 14px; height: 14px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
+  .map3d-route-start { background: #2e7d32; }
+  .map3d-route-end { background: #e53935; }
   .map3d-point { width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 3px solid #10161c; box-shadow: 0 0 6px rgba(0,0,0,0.5); }
   .map-3d .maplibregl-ctrl-attrib { font-size: 10px; }
   #map-locate svg { width: 17px; height: 17px; display: block; margin: auto; }
@@ -717,7 +750,7 @@
      piste's full profile (mobile keeps the small popup next to the tap). */
   .map-run-panel {
     position: absolute; right: 16px; bottom: 16px; z-index: 6; width: 400px; max-width: calc(100% - 32px);
-    max-height: calc(100% - 130px); display: flex; flex-direction: column; /* clears the zoom buttons */
+    max-height: calc(100% - 290px); min-height: 160px; display: flex; flex-direction: column; /* clears the column of map buttons */
     background: var(--bg); border: 1px solid var(--border); border-radius: 14px;
     box-shadow: 0 18px 40px -16px rgba(0,0,0,0.55);
   }
@@ -1553,7 +1586,10 @@
     var g = currentRunGroups[name];
     if (!g) return;
     selectedMapKey = 'run:' + name;
+    clearRoute();
     showRunPanel((g.ref ? g.ref + ' · ' : '') + g.name, runGroupMeta(g), DIFF[diffKey(g.difficulty)].color, function (body) {
+      var rf = featuresForRun(name)[0];
+      if (rf && ROUTES_ON) body.appendChild(routeButton(rf));
       var wrap = document.createElement('div'); wrap.className = 'run-profile';
       body.appendChild(wrap);
       renderRunProfile(wrap, g);
@@ -1565,14 +1601,19 @@
   function selectMapFeature(f, opts) {
     if (f.runName && currentRunGroups[f.runName]) { selectRunByName(f.runName, opts); return; }
     selectedMapKey = f;
+    clearRoute();
     showRunPanel(f.label || (f.isLift ? T('Remonte sin nombre') : T('Pista sin nombre')), f.valueText,
-      f.isLift ? 'var(--map-lift-color)' : DIFF[f.diffKey || 'other'].color,
-      f.geomPart ? function (body) { body.appendChild(buildMapTapPopupContent(null, null, f.geomPart)); } : null);
+      f.isLift ? 'var(--map-lift-color)' : f.svc ? 'var(--text-muted)' : DIFF[f.diffKey || 'other'].color,
+      function (body) {
+        if (ROUTES_ON && routable(f)) body.appendChild(routeButton(f));
+        if (f.geomPart) body.appendChild(buildMapTapPopupContent(null, null, f.geomPart));
+      });
     highlightFeatures([f], opts && opts.pan);
     map3dHighlight([f]);
     markActiveRunItem(null);
   }
   function clearMapSelection() {
+    clearRoute();
     selectedMapKey = null;
     runPanel.hidden = true;
     highlightFeatures([], false);
@@ -1880,12 +1921,13 @@
     }
     function close() { box.hidden = true; active = -1; }
     function update() {
-      // The test switch typed into the search (the Android app has no address
-      // bar for ?simular=1): "simular=1" / "simular=0".
-      var code = /^simular=([01])$/.exec(input.value.trim().toLowerCase());
+      // Test switches typed into the search (the Android app has no address
+      // bar): "simular=1" / "simular=0", "rutas=1" / "rutas=0".
+      var code = /^(simular|rutas)=([01])$/.exec(input.value.trim().toLowerCase());
       if (code) {
         try {
-          if (code[1] === '1') localStorage.setItem('si_fake_loc', '1'); else localStorage.removeItem('si_fake_loc');
+          var key = code[1] === 'rutas' ? 'si_routes' : 'si_fake_loc';
+          if (code[2] === '1') localStorage.setItem(key, '1'); else localStorage.removeItem(key);
         } catch (e) {}
         location.reload();
         return;
@@ -2272,6 +2314,7 @@
     buildMap(currentRaw);
     mapBuiltKey = mapSizeKey();
     reapplyMapSelection();
+    if (routeShown) drawRoute2D(routeShown);
   }
 
   // The phone's map preview: a card like a map app's -- the resort's satellite
@@ -2465,6 +2508,8 @@
     screenDashboard.hidden = false;
     document.getElementById('app').classList.add('dash-mode');
     currentRaw = null;
+    clearRoute();
+    routeNet = null;
     close3d();
     mapUsedFor = null;
     if (paintFav) paintFav();
@@ -2618,6 +2663,7 @@
         'rotate(' + mapState.angle.toFixed(2) + ') scale(' + mapState.zoom.toFixed(3) + ')');
       mapState.updateScaleBar(mapState.zoom);
       if (mapState.onZoom) mapState.onZoom(mapState.zoom);
+      if (mapState.routeG) mapState.routeG.querySelectorAll('circle').forEach(function (c) { c.setAttribute('r', (6 / mapState.zoom).toFixed(2)); });
       clearTimeout(refineTimer);
       refineTimer = setTimeout(refineMapTiles, 250);
       var liftR = liftStationRadius(mapState.zoom).toFixed(3);
@@ -2831,6 +2877,7 @@
       return best;
     }
     function handleTap(clientX, clientY) {
+      if (routePicking) { routePicked(mapState.unproject(outerToContentPoint.apply(null, svgPoint(clientX, clientY)))); return; }
       var found = pickFeature(clientX, clientY);
       if (isDesktopLayout()) {
         // Desktop: highlight what was clicked and show it in the fixed panel.
@@ -2850,6 +2897,7 @@
         // chart popup that can end up overlapping.
         hideTooltip();
         showMapTapPopup(clientX, clientY, found.label, found.valueText, found.geomPart);
+        addRouteButtonToPopup(found);
       } else {
         clearActiveFeature();
         hideTooltip();
@@ -3183,7 +3231,7 @@
         var valueText = bits.join(' · ');
         wireFocusTooltip(hit, label, valueText);
         var projPts = part.map(project);
-        features.push({ el: pl, hoverClass: 'lift-hovered', points: projPts, label: label, valueText: valueText, isLift: true, geo: part });
+        features.push({ el: pl, hoverClass: 'lift-hovered', points: projPts, label: label, valueText: valueText, isLift: true, geo: part, lift: l });
         // Lifts carry people uphill.
         addDirectionArrow(content, directionArrows, projPts, partFlowSign(part, true));
       });
@@ -3257,7 +3305,7 @@
       if (svc.phone) metaBits.push(svc.phone);
       var valueText = metaBits.join(' · ');
       wireFocusTooltip(dot, label, valueText);
-      features.push({ el: dot, hoverClass: 'service-hovered', points: [p, p], label: label, valueText: valueText });
+      features.push({ el: dot, hoverClass: 'service-hovered', points: [p, p], label: label, valueText: valueText, svc: svc });
     });
 
     var mapWidthMeters = projW * 111320;
@@ -3569,7 +3617,8 @@
     map3dMsg(T('No se pudo cargar la vista 3D.'));
     setTimeout(function () { map3dMsg(''); }, 5000);
   }
-  function map3dTap(f, x, y) {
+  function map3dTap(f, x, y, lngLat) {
+    if (routePicking) { if (lngLat) routePicked([lngLat.lng, lngLat.lat]); return; }
     if (isDesktopLayout()) {
       if (f) selectMapFeature(f, { pan: false, fromMap: true });
       else clearMapSelection();
@@ -3578,6 +3627,7 @@
     hideTooltip();
     if (!f) { hideMapTapPopup(); map3dHighlight([]); return; }
     showMapTapPopup(x, y, f.label, f.valueText, f.geomPart);
+    addRouteButtonToPopup(f);
     map3dHighlight(f.runName ? featuresForRun(f.runName) : [f]);
   }
   function open3d() {
@@ -3610,6 +3660,7 @@
       if (typeof selectedMapKey === 'string') map3dHighlight(featuresForRun(selectedMapKey.slice(4)));
       else if (selectedMapKey) map3dHighlight([selectedMapKey]);
       if (mapState.loc && mapState.loc.pt) map3d.setLocation(mapState.loc.pt);
+      if (routeShown) map3d.showRoute(routeLines(routeShown));
     }).catch(function () { map3dOpening = false; map3dFailed(); });
   }
   function close3d() {
@@ -3629,6 +3680,257 @@
   map3dSpinBtn.addEventListener('click', function () {
     if (map3d) map3dSpinBtn.setAttribute('aria-pressed', map3d.spin() ? 'true' : 'false');
   });
+
+  // ---- route planner (routes.js, loaded on the first use) ----
+  // Hidden for now: shown after opening the site once with ?rutas=1, or typing
+  // "rutas=1" in the home search ("rutas=0" hides it again).
+  var ROUTES_ON = (function () {
+    try {
+      var m = /[?&]rutas=([01])/.exec(location.search);
+      if (m) { if (m[1] === '1') localStorage.setItem('si_routes', '1'); else localStorage.removeItem('si_routes'); }
+      return localStorage.getItem('si_routes') === '1';
+    } catch (e) { return false; }
+  })();
+  var routeNet = null, routeDest = null, routeShown = null, routePicking = false, routePickPt = null, routeWaitTimer = null;
+  var routeOrigin = 'base', routeLevel = (function () { try { return localStorage.getItem('si_route_level') || 'all'; } catch (e) { return 'all'; } })();
+  var routesLoaded = null;
+  function loadRoutes() {
+    if (!routesLoaded) {
+      routesLoaded = window.SkiRoutes ? Promise.resolve() : loadAsset('script', { src: '/routes.js' });
+      routesLoaded.catch(function () { routesLoaded = null; });
+    }
+    return routesLoaded;
+  }
+  function routable(f) { return !!(f && (f.isLift || f.geomPart || f.svc)); }
+  function routeButton(f) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'map-route-btn';
+    b.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="5" cy="15" r="2.2" fill="currentColor"/><path d="M5 12.5V9a3 3 0 0 1 3-3h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M11 3l3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span></span>';
+    b.querySelector('span').textContent = T('Ruta hasta aquí');
+    b.addEventListener('click', function (e) { e.stopPropagation(); hideMapTapPopup(); openRoute(f); });
+    return b;
+  }
+  function addRouteButtonToPopup(f) {
+    if (!ROUTES_ON || !routable(f)) return;
+    mapTapPopup.appendChild(routeButton(f));
+    var r = mapTapPopup.getBoundingClientRect();
+    if (r.bottom > window.innerHeight - 10) mapTapPopup.style.top = Math.max(10, window.innerHeight - 10 - r.height) + 'px';
+  }
+  function routeNetwork() {
+    if (!routeNet || routeNet.id !== currentRaw.id) {
+      var conv = currentRaw.run_convention;
+      var net = SkiRoutes.build(currentRaw, function (r) { return diffKey(shownDifficulty(r.difficulty, conv)); });
+      net.id = currentRaw.id;
+      net.q = SkiRoutes.quality(net);
+      routeNet = net;
+    }
+    return routeNet;
+  }
+  // Where a destination can be reached: the start of a run, the bottom of a
+  // lift, or the network next to a service.
+  function routeTargets(net, f) {
+    var out = [];
+    net.feats.forEach(function (x) {
+      if (x.kind === 'run' && f.geomPart && (f.runName ? x.run.name === f.runName : x.part === f.geomPart)) out.push(x.top);
+      if (x.kind === 'lift' && f.isLift && x.part === f.geo) out.push(x.bottom);
+    });
+    if (f.svc) {
+      var pt = [f.svc.lon, f.svc.lat];
+      out = SkiRoutes.near(net, pt, 150, 20).map(function (n) { return n.node; });
+      if (!out.length) out = SkiRoutes.near(net, pt, 500, 5).map(function (n) { return n.node; });
+    }
+    return out;
+  }
+  function openRoute(f) {
+    routeDest = f;
+    routeOrigin = mapState && mapState.loc && mapState.loc.pt ? 'me' : routeOrigin === 'pick' && routePickPt ? 'pick' : 'base';
+    loadRoutes().then(renderRoute).catch(function () { map3dMsg(T('No se pudo calcular la ruta.')); setTimeout(function () { map3dMsg(''); }, 4000); });
+  }
+  function routeChips(label, options, current, onPick) {
+    var row = document.createElement('div');
+    row.className = 'route-row';
+    var l = document.createElement('span'); l.className = 'route-row-label'; l.textContent = label;
+    row.appendChild(l);
+    var g = document.createElement('div'); g.className = 'route-chips';
+    options.forEach(function (o) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = o[1];
+      b.setAttribute('aria-pressed', o[0] === current ? 'true' : 'false');
+      b.addEventListener('click', function () { onPick(o[0]); });
+      g.appendChild(b);
+    });
+    row.appendChild(g);
+    return row;
+  }
+  function renderRoute() {
+    if (!routeDest || !currentRaw || !mapState) return;
+    clearTimeout(routeWaitTimer);
+    var f = routeDest, net = routeNetwork();
+    var color = f.isLift ? 'var(--map-lift-color)' : f.svc ? 'var(--text-muted)' : DIFF[f.diffKey || 'other'].color;
+    showRunPanel(T('Ruta hasta {0}', f.label || (f.isLift ? T('Remonte sin nombre') : T('Pista sin nombre'))), '', color, function (body) {
+      body.appendChild(routeChips(T('Desde'), [['me', T('Mi ubicación')], ['base', T('La base')], ['pick', T('Elegir en el mapa')]], routeOrigin, function (v) {
+        routeOrigin = v;
+        if (v === 'pick') { startRoutePick(); return; }
+        if (v === 'me' && locWatch == null && !locBtn.hidden) locBtn.click();
+        renderRoute();
+      }));
+      body.appendChild(routeChips(T('Nivel'), [['all', T('Todas')], ['noblack', T('Sin negras')], ['easy', T('Verdes y azules')]], routeLevel, function (v) {
+        routeLevel = v;
+        try { localStorage.setItem('si_route_level', v); } catch (e) {}
+        renderRoute();
+      }));
+      var out = document.createElement('div'); out.className = 'route-result';
+      body.appendChild(out);
+      var msg = function (t) { var p = document.createElement('p'); p.className = 'route-msg'; p.textContent = t; out.appendChild(p); };
+
+      // Where from.
+      var starts = null;
+      if (routeOrigin === 'me') {
+        var pt = mapState.loc && mapState.loc.pt;
+        if (!pt) {
+          msg(locBtn.hidden ? T('Este dispositivo no nos da tu ubicación: elige otro punto de partida.') : T('Buscando tu posición…'));
+          if (!locBtn.hidden) routeWaitTimer = setTimeout(renderRoute, 1500);
+          drawRouteNone();
+          return;
+        }
+        starts = SkiRoutes.near(net, pt, 300);
+        if (!starts.length) { msg(T('Estás lejos de las pistas de esta estación: elige otro punto de partida.')); drawRouteNone(); return; }
+      } else if (routeOrigin === 'pick' && routePickPt) {
+        starts = SkiRoutes.near(net, routePickPt, 300);
+        if (!starts.length) { msg(T('Ese punto está lejos de las pistas: toca más cerca de una pista o un remonte.')); drawRouteNone(); return; }
+      } else {
+        // The base: the lowest bottom of a lift.
+        var low = null;
+        net.feats.forEach(function (x) { if (x.kind === 'lift') { var e = net.nodes[x.bottom].p[2]; if (low == null || (e != null && e < net.nodes[low].p[2])) low = x.bottom; } });
+        if (low == null) { msg(T('No encontramos ruta.')); drawRouteNone(); return; }
+        starts = [{ node: low, cost: 0 }];
+      }
+
+      var targets = routeTargets(net, f);
+      var res = targets.length ? SkiRoutes.route(net, starts, targets, routeLevel) : null;
+      if (!res) {
+        msg(routeLevel !== 'all' ? T('No encontramos ruta con este nivel. Prueba con otro nivel o desde otro punto.') : T('No encontramos ruta: puede que falte algún tramo en el mapa de esta estación.'));
+        if (net.q != null && net.q < 0.8) msg(T('El mapa de pistas de esta estación tiene huecos, así que no siempre encontramos la ruta.'));
+        drawRouteNone();
+        return;
+      }
+      var legs = SkiRoutes.legs(net, res);
+      // Steps to read: short walks dropped, and a short run (or a run of
+      // unnamed ones) folded into the run next to it, named after the longest.
+      var steps = [];
+      legs.forEach(function (l) {
+        if (l.kind === 'walk' && l.m < 40) return;
+        var last = steps[steps.length - 1];
+        if (l.kind === 'run' && last && last.kind === 'run' && (l.m < 150 || last.m < 150 || (!l.feat.run.name && !last.feat.run.name))) {
+          if (l.m > last.longest) { last.feat = l.feat; last.longest = l.m; }
+          last.m += l.m;
+          return;
+        }
+        steps.push({ kind: l.kind, feat: l.feat, m: l.m, longest: l.m });
+      });
+      var sum = document.createElement('div'); sum.className = 'route-summary';
+      var nLifts = steps.filter(function (l) { return l.kind === 'lift'; }).length, nRuns = steps.filter(function (l) { return l.kind === 'run'; }).length;
+      sum.textContent = [T('{0} min', Math.max(1, Math.round(res.cost / 60))),
+        nLifts === 1 ? T('1 remonte') : T('{0} remontes', nLifts), nRuns === 1 ? T('1 pista') : T('{0} pistas', nRuns)].join(' · ');
+      out.appendChild(sum);
+      var ol = document.createElement('ol'); ol.className = 'route-steps';
+      steps.forEach(function (l) {
+        var li = document.createElement('li'), dot = document.createElement('span'), txt = document.createElement('span'), meta = document.createElement('span');
+        dot.className = 'route-dot route-dot-' + l.kind;
+        if (l.kind === 'run') dot.style.background = DIFF[l.feat.diff].color;
+        if (l.kind === 'lift') {
+          txt.textContent = T('Sube en {0}', l.feat.lift.name || T('Remonte sin nombre'));
+          meta.textContent = [LIFT_TYPE[l.feat.lift.lift_type] || '', l.feat.lift.duration_s ? T('{0} min', Math.max(1, Math.round(l.feat.lift.duration_s / 60))) : ''].filter(Boolean).join(' · ');
+        } else if (l.kind === 'run') {
+          txt.textContent = T('Baja por {0}', l.feat.run.name || T('Pista sin nombre'));
+          meta.textContent = DIFF[l.feat.diff].label + ' · ' + (l.m >= 1000 ? fmt(l.m / 1000, 1) + ' km' : fmt(Math.round(l.m / 10) * 10) + ' m');
+        } else {
+          txt.textContent = T('Camina {0} m', fmt(Math.round(l.m / 10) * 10));
+        }
+        li.appendChild(dot);
+        var tb = document.createElement('span'); tb.className = 'route-step-txt';
+        tb.appendChild(txt);
+        if (meta.textContent) { meta.className = 'route-step-meta'; tb.appendChild(meta); }
+        li.appendChild(tb);
+        ol.appendChild(li);
+      });
+      var end = document.createElement('li'), endDot = document.createElement('span'), endTxt = document.createElement('span');
+      endDot.className = 'route-dot route-dot-end';
+      endTxt.className = 'route-step-txt';
+      endTxt.textContent = T('Llegas a {0}', f.label || (f.isLift ? T('Remonte sin nombre') : T('Pista sin nombre')));
+      end.appendChild(endDot); end.appendChild(endTxt); ol.appendChild(end);
+      out.appendChild(ol);
+      if (net.q != null && net.q < 0.8) msg(T('El mapa de pistas de esta estación tiene huecos, así que no siempre encontramos la ruta.'));
+      var note = document.createElement('p'); note.className = 'route-note';
+      note.textContent = T('Ruta orientativa, hecha con los datos de OpenStreetMap: comprueba qué remontes están abiertos y sigue la señalización.');
+      out.appendChild(note);
+      routeShown = legs;
+      drawRoute2D(legs);
+      if (map3d) map3d.showRoute(routeLines(legs));
+    });
+  }
+  // The legs as plain coloured lines, for the 3D view.
+  function routeLines(legs) {
+    return legs.map(function (l) {
+      return { coords: l.coords, kind: l.kind, color: l.kind === 'run' ? DIFF[l.feat.diff].color : l.kind === 'lift' ? 'var(--map-lift-color)' : '#5f6b77' };
+    });
+  }
+  function startRoutePick() {
+    routePicking = true;
+    runPanel.hidden = true;
+    hideMapTapPopup();
+    map3dMsg(T('Toca en el mapa tu punto de partida'));
+  }
+  function routePicked(pt) {
+    routePicking = false;
+    map3dMsg('');
+    routePickPt = pt;
+    routeOrigin = 'pick';
+    renderRoute();
+  }
+  function drawRouteNone() {
+    routeShown = null;
+    drawRoute2D(null);
+    if (map3d) map3d.showRoute(null);
+  }
+  function clearRoute() {
+    clearTimeout(routeWaitTimer);
+    if (routePicking) { routePicking = false; map3dMsg(''); }
+    routeDest = null;
+    drawRouteNone();
+  }
+  function drawRoute2D(legs) {
+    if (!mapState) return;
+    if (mapState.routeG) { mapState.routeG.remove(); mapState.routeG = null; }
+    mapState.svg.classList.toggle('has-route', !!legs);
+    if (!legs) return;
+    var SVGNS = 'http://www.w3.org/2000/svg', g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'map-route');
+    var pts = function (c) { return c.map(function (p) { var q = mapState.project(p); return q[0].toFixed(1) + ',' + q[1].toFixed(1); }).join(' '); };
+    legs.forEach(function (l) {
+      var c = document.createElementNS(SVGNS, 'polyline');
+      c.setAttribute('points', pts(l.coords)); c.setAttribute('class', 'map-route-casing');
+      g.appendChild(c);
+    });
+    legs.forEach(function (l) {
+      var pl = document.createElementNS(SVGNS, 'polyline');
+      pl.setAttribute('points', pts(l.coords));
+      pl.setAttribute('class', 'map-route-line map-route-' + l.kind);
+      if (l.kind === 'run') pl.style.stroke = DIFF[l.feat.diff].color;
+      g.appendChild(pl);
+    });
+    var first = legs[0].coords[0], last = legs[legs.length - 1].coords[legs[legs.length - 1].coords.length - 1];
+    [[first, 'map-route-start'], [last, 'map-route-end']].forEach(function (m) {
+      var q = mapState.project(m[0]), c = document.createElementNS(SVGNS, 'circle');
+      c.setAttribute('cx', q[0].toFixed(1)); c.setAttribute('cy', q[1].toFixed(1)); c.setAttribute('r', (6 / (mapState.zoom || 1)).toFixed(2));
+      c.setAttribute('class', m[1]);
+      g.appendChild(c);
+    });
+    mapState.content.appendChild(g);
+    mapState.routeG = g;
+  }
 
   // ============== country overview map (all stations of a country as pins) ==============
   var countryMapState = null;

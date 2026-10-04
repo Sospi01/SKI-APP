@@ -214,6 +214,9 @@
     width: 100%; padding: 11px 14px 11px 38px; border-radius: 12px; border: 1px solid var(--border);
     background: var(--surface-2); color: var(--text-primary); font-size: 14px; font-family: inherit;
   }
+  /* iOS zooms the whole page into any text box under 16px when it is focused,
+     and the zoom stays on after the search: the map then shows cut off. */
+  @media (pointer: coarse) { input, select, textarea { font-size: 16px !important; } }
   .search-box input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
   .search-box input::-webkit-search-cancel-button { filter: var(--cancel-filter, none); }
 

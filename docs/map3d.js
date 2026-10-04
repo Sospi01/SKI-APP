@@ -80,6 +80,35 @@
     });
     if (!pts.length) return null;
 
+    // Names along the pistes and lifts (the longest drawn part of each). They
+    // are drawn as small images (canvas), so no font server is needed;
+    // MapLibre lays them along the line and drops those that would collide.
+    var labelBy = {}, labelImg = {};
+    o.features.forEach(function (f) {
+      var part = f.isLift ? f.geo : f.geomPart, name = f.isLift ? f.lift && f.lift.name : f.runName;
+      if (!name || !part || part.length < 2) return;
+      var len = 0;
+      for (var i = 1; i < part.length; i++) len += Math.hypot(part[i][0] - part[i - 1][0], part[i][1] - part[i - 1][1]);
+      var key = (f.isLift ? 'l:' : 'r:') + name;
+      if (!labelBy[key] || len > labelBy[key].len) labelBy[key] = { part: part, len: len, name: name, lift: !!f.isLift };
+    });
+    var labels = Object.keys(labelBy).map(function (k, i) {
+      var l = labelBy[k];
+      labelImg['label-' + i] = l;
+      return line(l.part, { img: 'label-' + i, rank: -l.len * (l.lift ? 0.8 : 1) });
+    });
+    function drawLabel(l) {
+      var R = 2, fs = 11 * R, cv = document.createElement('canvas'), cx = cv.getContext('2d');
+      var font = (l.lift ? 'italic ' : '') + '600 ' + fs + 'px "IBM Plex Sans", sans-serif';
+      cx.font = font;
+      var w = Math.ceil(cx.measureText(l.name).width) + 8 * R, h = Math.ceil(fs * 1.5);
+      cv.width = w; cv.height = h;
+      cx.font = font; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.lineJoin = 'round';
+      cx.lineWidth = 3.2 * R; cx.strokeStyle = 'rgba(10,16,22,0.85)'; cx.strokeText(l.name, w / 2, h / 2);
+      cx.fillStyle = l.lift ? '#e4defc' : '#ffffff'; cx.fillText(l.name, w / 2, h / 2);
+      return { width: w, height: h, data: cx.getImageData(0, 0, w, h).data, pixelRatio: R };
+    }
+
     var lonMin = Infinity, lonMax = -Infinity, latMin = Infinity, latMax = -Infinity, low = null, high = null;
     pts.forEach(function (p) {
       lonMin = Math.min(lonMin, p[0]); lonMax = Math.max(lonMax, p[0]);
@@ -119,6 +148,7 @@
           slope: { type: 'geojson', data: collection(slope) },
           lifts: { type: 'geojson', data: collection(lifts) },
           sel: { type: 'geojson', data: collection([]) },
+          labels: { type: 'geojson', data: collection(labels) },
           route: { type: 'geojson', data: collection([]) }
         },
         layers: [
@@ -132,6 +162,9 @@
           { id: 'slope', type: 'line', source: 'slope', layout: Object.assign({ visibility: mode === 'slope' ? 'visible' : 'none' }, round),
             paint: { 'line-color': ['get', 'color'], 'line-width': 2.6 } },
           { id: 'sel', type: 'line', source: 'sel', layout: round, paint: { 'line-color': ['get', 'color'], 'line-width': 5 } },
+          { id: 'labels', type: 'symbol', source: 'labels',
+            layout: { 'symbol-placement': 'line', 'symbol-spacing': 600, 'symbol-sort-key': ['get', 'rank'], 'icon-image': ['get', 'img'],
+              'icon-rotation-alignment': 'map', 'icon-pitch-alignment': 'viewport', 'icon-keep-upright': true, 'icon-padding': 4, 'icon-offset': [0, -8] } },
           // A planned route (index.html's route planner), on top of everything.
           { id: 'route-casing', type: 'line', source: 'route', layout: round, paint: { 'line-color': '#ffffff', 'line-width': 10, 'line-opacity': 0.9 } },
           { id: 'route', type: 'line', source: 'route', layout: round, filter: ['==', ['get', 'kind'], 'run'], paint: { 'line-color': ['get', 'color'], 'line-width': 5 } },
@@ -165,6 +198,11 @@
       if (attrib) attrib.classList.remove('maplibregl-compact-show');
       map.once('idle', reveal);
       revealTimer = setTimeout(reveal, 5000);
+    });
+    // The label images, made the first time MapLibre asks for each.
+    map.on('styleimagemissing', function (e) {
+      var l = labelImg[e.id];
+      if (l && !map.hasImage(e.id)) { var im = drawLabel(l); map.addImage(e.id, { width: im.width, height: im.height, data: im.data }, { pixelRatio: im.pixelRatio }); }
     });
     map.on('error', function () {});   // logged by MapLibre otherwise; tiles that fail just stay blank
 
@@ -234,6 +272,7 @@
         src.setData(collection((lines || []).map(function (l) { return line(l.coords, { kind: l.kind, color: color(l.color) }); })));
         var dim = lines && lines.length ? 0.35 : 1;
         ['run', 'slope', 'lift', 'run-halo', 'lift-casing'].forEach(function (id) { map.setPaintProperty(id, 'line-opacity', dim); });
+        map.setPaintProperty('labels', 'icon-opacity', lines && lines.length ? 0.5 : 1);
         if (routeMarkers) routeMarkers.forEach(function (m) { m.remove(); });
         routeMarkers = null;
         if (lines && lines.length) {

@@ -627,6 +627,10 @@
   .route-msg { font-size: 12.5px; color: var(--text-secondary); margin: 6px 0; }
   .route-note { font-size: 11px; color: var(--text-muted); margin: 10px 0 0; line-height: 1.4; }
   #map-svg.has-route .map-run, #map-svg.has-route .map-slope, #map-svg.has-route .map-lift { opacity: 0.35; }
+  .map-labels { pointer-events: none; }
+  .map-label { font-family: 'IBM Plex Sans', sans-serif; font-size: 11px; font-weight: 600; fill: #fff; stroke: rgba(10,16,22,0.82); stroke-width: 3px; stroke-linejoin: round; paint-order: stroke; letter-spacing: 0.1px; }
+  .map-label-lift { font-size: 10.5px; font-style: italic; fill: #e4defc; }
+  #map-svg.has-route .map-labels { opacity: 0.5; }
   .map-route-casing { fill: none; stroke: #fff; stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; opacity: 0.9; pointer-events: none; }
   .map-route-line { fill: none; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; pointer-events: none; }
   .map-route-lift { stroke: var(--map-lift-color); stroke-linecap: butt; stroke-dasharray: 9 7; }
@@ -1561,7 +1565,8 @@
   // highlightFeatures is set up by the map controller (setupMapControlsOnce).
   var highlightFeatures = function () {};
   var centerMapOn = function () {};
-  var fitMapTo = function () {};   // set by the map controller: fit a box of map points into part of the view
+  var fitMapTo = function () {};
+  var relabelMap = function () {};   // set by the map controller   // set by the map controller: fit a box of map points into part of the view
   var currentRunGroups = {};   // run name -> group from renderDashboard
   var selectedMapKey = null;   // 'run:<name>' | feature object for unnamed runs/lifts
   var runPanel = document.getElementById('map-run-panel');
@@ -2681,6 +2686,17 @@
       if (mapState.routeG) mapState.routeG.querySelectorAll('circle').forEach(function (c) { c.setAttribute('r', (6 / mapState.zoom).toFixed(2)); });
       clearTimeout(refineTimer);
       refineTimer = setTimeout(refineMapTiles, 250);
+      // Name labels live outside the zoomed group (fixed size, upright): a pan
+      // just slides them, a zoom or turn hides them until they're laid out again.
+      var la = mapState.labelAt, lg = mapState.labelG;
+      if (lg) {
+        if (la && la.zoom === mapState.zoom && la.angle === mapState.angle) {
+          lg.style.display = '';
+          lg.setAttribute('transform', 'translate(' + (mapState.tx - la.tx).toFixed(1) + ',' + (mapState.ty - la.ty).toFixed(1) + ')');
+        } else lg.style.display = 'none';
+      }
+      clearTimeout(labelTimer);
+      labelTimer = setTimeout(layoutLabels, 160);
       var liftR = liftStationRadius(mapState.zoom).toFixed(3);
       (mapState.liftStationDots || []).forEach(function (d) { d.setAttribute('r', liftR); });
       var svcR = serviceMarkerRadius(mapState.zoom).toFixed(3);
@@ -2708,6 +2724,71 @@
         var show = showArrows && visibleFlags[ai];
         a.el.style.display = show ? 'inline' : 'none';
         if (show) a.el.setAttribute('points', arrowPolygonPoints(a.cx, a.cy, a.angle, arrowSz));
+      });
+    }
+    // ---- names of the pistes and lifts, written along their line ----
+    // Laid out in screen space each time the view settles: the longest ones
+    // first, each on a fairly straight stretch, skipping any that would
+    // overlap one already placed -- zooming in makes room for more.
+    var labelTimer = null, LABEL_MAX = 90;
+    relabelMap = function () { clearTimeout(labelTimer); labelTimer = setTimeout(layoutLabels, 60); };
+    function layoutLabels() {
+      var st = mapState;
+      if (!st || !st.labelCands) return;
+      var NS = 'http://www.w3.org/2000/svg', g = st.labelG;
+      if (!g || !g.isConnected) { g = st.labelG = document.createElementNS(NS, 'g'); g.setAttribute('class', 'map-labels'); st.svg.appendChild(g); }
+      g.innerHTML = ''; g.removeAttribute('transform'); g.style.display = '';
+      st.labelAt = { zoom: st.zoom, angle: st.angle, tx: st.tx, ty: st.ty };
+      var grid = {}, CELL = 10, placed = 0;
+      var cells = function (x, y, r, mark) {
+        for (var i = Math.floor((x - r) / CELL); i <= Math.floor((x + r) / CELL); i++)
+          for (var j = Math.floor((y - r) / CELL); j <= Math.floor((y + r) / CELL); j++) {
+            var k = i + ',' + j;
+            if (mark) grid[k] = 1; else if (grid[k]) return true;
+          }
+        return false;
+      };
+      var at = function (pts, cum, sAt) {
+        var i = 1; while (i < cum.length - 1 && cum[i] < sAt) i++;
+        var seg = cum[i] - cum[i - 1] || 1, t = (sAt - cum[i - 1]) / seg;
+        return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * t, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t, i];
+      };
+      st.labelCands.forEach(function (c, ci) {
+        if (placed >= LABEL_MAX) return;
+        var fs = c.lift ? 10.5 : 11;
+        var pts = c.points.map(function (p) { return contentToOuter(p[0], p[1]); });
+        var cum = [0];
+        for (var i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+        var L = cum[cum.length - 1], w = c.text.length * fs * 0.57 + 8;
+        if (L < w * 1.1) return;
+        var centres = [0.5, 0.36, 0.64, 0.22, 0.78];
+        for (var k = 0; k < centres.length; k++) {
+          var s0 = L * centres[k] - w * 0.55, s1 = L * centres[k] + w * 0.55;
+          if (s0 < 0 || s1 > L) continue;
+          var a = at(pts, cum, s0), b = at(pts, cum, s1);
+          var sub = [[a[0], a[1]]].concat(pts.slice(a[2], b[2]), [[b[0], b[1]]]);
+          // Fairly straight, and wholly on screen.
+          if (Math.hypot(b[0] - a[0], b[1] - a[1]) < (s1 - s0) * 0.88) continue;
+          // (clear of the buttons: the colour toggle on top, zoom and 3D on the right)
+          if (sub.some(function (q) { return q[0] < 6 || q[1] < 58 || q[0] > st.vbW - 62 || q[1] > st.vbH - 30; })) continue;
+          var samples = [], r = fs * 0.75;
+          for (var sAt = s0; sAt <= s1; sAt += fs * 0.8) samples.push(at(pts, cum, sAt));
+          if (samples.some(function (q) { return cells(q[0], q[1], r, false); })) continue;
+          samples.forEach(function (q) { cells(q[0], q[1], r, true); });
+          // Written straight along the stretch, reading left to right.
+          var ang = Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI;
+          if (ang > 90) ang -= 180; else if (ang < -90) ang += 180;
+          var m = at(pts, cum, (s0 + s1) / 2);
+          var t = document.createElementNS(NS, 'text');
+          t.setAttribute('class', 'map-label' + (c.lift ? ' map-label-lift' : ''));
+          t.setAttribute('transform', 'translate(' + m[0].toFixed(1) + ',' + m[1].toFixed(1) + ') rotate(' + ang.toFixed(1) + ')');
+          t.setAttribute('y', (-fs * 0.45).toFixed(1));
+          t.setAttribute('text-anchor', 'middle');
+          t.textContent = c.text;
+          g.appendChild(t);
+          placed++;
+          break;
+        }
       });
     }
     // Zoomed in, the base tiles get blurry: load the tiles of the area in view
@@ -3420,10 +3501,24 @@
       legend.appendChild(svcItem);
     });
 
-    mapState = { project: project, unproject: function (q) { return [(q[0] / scale - padX) / cos + lonMin, latMax - (q[1] / scale - padY)]; },
+    // Label candidates: per named run or lift, its longest drawn part.
+    var labelBy = {};
+    features.forEach(function (f) {
+      var name = f.isLift ? f.lift && f.lift.name : f.geomPart && f.runName;
+      if (!name || f.points.length < 2) return;
+      var len = 0;
+      for (var i = 1; i < f.points.length; i++) len += Math.hypot(f.points[i][0] - f.points[i - 1][0], f.points[i][1] - f.points[i - 1][1]);
+      var key = (f.isLift ? 'l:' : 'r:') + name;
+      if (!labelBy[key] || len > labelBy[key].len) labelBy[key] = { text: name, lift: !!f.isLift, points: f.points, len: len };
+    });
+    var labelCands = Object.keys(labelBy).map(function (k) { return labelBy[k]; })
+      .sort(function (a, b) { return b.len * (b.lift ? 0.8 : 1) - a.len * (a.lift ? 0.8 : 1); });
+
+    mapState = { labelCands: labelCands, project: project, unproject: function (q) { return [(q[0] / scale - padX) / cos + lonMin, latMax - (q[1] / scale - padY)]; },
       tileZoom: tileZoom, baseTile: baseTile, detailG: detailG, detailTiles: {}, svg: svg, content: content, vbW: vbW, vbH: vbH, scale: scale, zoom: 1, tx: 0, ty: 0, angle: 0, updateScaleBar: updateScaleBar, features: features, liftStationDots: liftStationDots, serviceMarkers: serviceMarkers, serviceIcons: serviceIcons, directionArrows: directionArrows };
     updateScaleBar(1);
     setMapMode(mapMode || savedMapMode());
+    relabelMap();
   }
 
   // ---- map colour mode: by difficulty (the piste's official colour) or by

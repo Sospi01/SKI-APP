@@ -79,6 +79,9 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
 **Piezas clave de `index.html`:**
 - `loadStation`: limpia la ficha, descarga `data/<id>.json` y la previsión, y llama a `renderDashboard`.
 - `buildMap`: mapa SVG con teselas de satélite de Esri y proyección equirectangular. El satélite cubre un 20 % más allá de la estación por cada lado (`MAP_SLACK`) y el mapa se puede arrastrar ese margen aunque no haya zoom (el 50 % con un panel abierto). La capa base es un solo nivel de zoom para toda la estación (máx. 160 teselas); al acercarse, `refineMapTiles` añade encima teselas más nítidas solo de la zona visible (hasta `TILE_MAX_ZOOM` = 17, máx. 48 por vez).
+- **Nombres en el mapa** (5 de octubre): pistas y remontes con nombre llevan su nombre escrito a lo largo de la línea.
+  - 2D: `layoutLabels` (en el controlador del mapa; `relabelMap` al construirlo) los coloca en pantalla cada vez que la vista se para: primero los más largos, sobre un tramo casi recto, sin solaparse (rejilla de 10 px) y lejos de los botones; al hacer zoom caben más. Van fuera del grupo con zoom (`mapState.labelG`): al arrastrar solo se desplazan; al hacer zoom o girar se ocultan y se recolocan a los 160 ms. Máx. 90. Con una ruta abierta, al 50 %.
+  - 3D: capa `labels` de MapLibre (`symbol-placement: line`), con cada nombre dibujado en un canvas (`drawLabel`, `styleimagemissing`), así que no hace falta servidor de fuentes; MapLibre quita los que chocan.
 - `renderMapPreview`: tarjeta del mapa en el móvil, sobre satélite; solo por debajo de 1000 px.
 - `trackMapUse`: cuenta el uso real del mapa una vez por estación. En el móvil, al abrirlo; en el ordenador, al arrastrar, hacer zoom o pulsar.
 - `displayName`: nombres en alfabeto latino.

@@ -76,9 +76,9 @@ self.addEventListener('fetch', function (event) {
 
   if (request.mode === 'navigate') {
     // Offline fallback: the app home in the page's language.
-    var lang = /^\/(en|fr|de|it)(\/|$)/.exec(url.pathname);
+    var lang = /^\/(en|fr|de|it|nl|pl)(\/|$)/.exec(url.pathname);
     event.respondWith(networkFirst(request, PAGES, lang ? '/' + lang[1] + '/' : '/'));
-  } else if (/^\/(data\/.*|snow|guias|slugs|en\/guides|fr\/guides|de\/ratgeber|it\/guide)\.json$/.test(url.pathname)) {
+  } else if (/^\/(data\/.*|snow|guias|slugs|en\/guides|fr\/guides|de\/ratgeber|it\/guide|nl\/gidsen|pl\/poradniki)\.json$/.test(url.pathname)) {
     event.respondWith(networkFirst(request, DATA));
   } else if (/^\/(flags|icons|fonts|og\/thumb)\//.test(url.pathname)) {
     event.respondWith(cacheFirst(request, ASSETS));

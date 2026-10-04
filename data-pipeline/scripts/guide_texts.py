@@ -519,3 +519,219 @@ PAGE = {
            "index_desc": "Classifiche delle stazioni sciistiche: le più grandi, le più alte, le migliori per principianti, le piste più "
                          "ripide e lunghe, le stazioni vicino alla tua città e dove nevica questa settimana."},
 }
+
+# ---------- Dutch and Polish ----------
+# Dutch readers head for the Alps (and the nearest hills in Germany); Polish
+# readers ski at home first, so Polish has its own Poland rankings. Polish puts
+# counts after a colon where the noun's form would depend on the number.
+
+PATHS["nl"] = {"home": "/nl/", "guides": "/nl/gidsen/", "station": "/nl/skigebied/", "index_json": "nl/gidsen.json",
+               "og_dir": "/og/en/", "locale": "nl-NL"}
+PATHS["pl"] = {"home": "/pl/", "guides": "/pl/poradniki/", "station": "/pl/osrodek/", "index_json": "pl/poradniki.json",
+               "og_dir": "/og/en/", "locale": "pl-PL"}
+
+for _zone, _nl, _pl in (
+        ("iberia", ("in Spanje en Andorra",) * 2, ("w Hiszpanii i Andorze",) * 2),
+        ("pyrenees", ("in de Pyreneeën",) * 2, ("w Pirenejach",) * 2),
+        ("alps", ("in de Alpen",) * 2, ("w Alpach",) * 2),
+        ("world", ("ter wereld",) * 2, ("na świecie",) * 2),
+        ("north_america", ("in Noord-Amerika",) * 2, ("w Ameryce Północnej",) * 2),
+        ("japan", ("in Japan",) * 2, ("w Japonii",) * 2)):
+    ZONE_TXT[_zone]["nl"], ZONE_TXT[_zone]["pl"] = _nl, _pl
+ZONE_TXT["poland"] = {"pl": ("w Polsce",) * 2}
+
+SPECS["nl"] = {
+    "biggest": [("grootste-skigebieden-in-de-alpen", "alps", 25), ("grootste-skigebieden-ter-wereld", "world", 25),
+                ("grootste-skigebieden-in-noord-amerika", "north_america", 20)],
+    "beginners": [("beste-skigebieden-voor-beginners-in-de-alpen", "alps", 20, 40)],
+    "highest": [("hoogste-skigebieden-in-de-alpen", "alps", 20)],
+    "vertical": [("skigebieden-met-het-meeste-hoogteverschil-in-de-alpen", "alps", 20)],
+    "steep": [("steilste-pistes-in-de-alpen", "alps", 25)],
+    "long": [("langste-pistes-in-de-alpen", "alps", 25)],
+    "snow": "waar-gaat-het-deze-week-sneeuwen",
+}
+SPECS["pl"] = {
+    "biggest": [("najwieksze-osrodki-narciarskie-w-polsce", "poland", 15),
+                ("najwieksze-osrodki-narciarskie-w-alpach", "alps", 25),
+                ("najwieksze-osrodki-narciarskie-na-swiecie", "world", 25)],
+    "beginners": [("najlepsze-osrodki-dla-poczatkujacych-w-alpach", "alps", 20, 40)],
+    "highest": [("najwyzej-polozone-osrodki-narciarskie-w-polsce", "poland", 15),
+                ("najwyzej-polozone-osrodki-narciarskie-w-alpach", "alps", 20)],
+    "vertical": [("osrodki-z-najwiekszym-przewyzszeniem-w-polsce", "poland", 15),
+                 ("osrodki-z-najwiekszym-przewyzszeniem-w-alpach", "alps", 20)],
+    "steep": [("najbardziej-strome-trasy-w-polsce", "poland", 20), ("najbardziej-strome-trasy-w-alpach", "alps", 25)],
+    "long": [("najdluzsze-trasy-narciarskie-w-polsce", "poland", 20), ("najdluzsze-trasy-narciarskie-w-alpach", "alps", 25)],
+    "snow": "gdzie-spadnie-snieg-w-tym-tygodniu",
+}
+
+CITIES["nl"] = {"amsterdam": ("Amsterdam", 52.3676, 4.9041), "rotterdam": ("Rotterdam", 51.9244, 4.4777),
+                "utrecht": ("Utrecht", 52.0907, 5.1214), "eindhoven": ("Eindhoven", 51.4416, 5.4697),
+                "brussel": ("Brussel", 50.8503, 4.3517), "antwerpen": ("Antwerpen", 51.2194, 4.4025)}
+# Polish names in the genitive ("w pobliżu Krakowa"), slugs too.
+CITIES["pl"] = {"krakowa": ("Krakowa", 50.0647, 19.9450), "warszawy": ("Warszawy", 52.2297, 21.0122),
+                "wroclawia": ("Wrocławia", 51.1079, 17.0385), "katowic": ("Katowic", 50.2649, 19.0238),
+                "poznania": ("Poznania", 52.4064, 16.9252), "lodzi": ("Łodzi", 51.7592, 19.4560),
+                "rzeszowa": ("Rzeszowa", 50.0412, 21.9991)}
+
+GROUPS["nl"] = {"snow": "Sneeuw", "resorts": "Skigebieden", "runs": "Pistes", "near": "Bij jou in de buurt"}
+GROUPS["pl"] = {"snow": "Śnieg", "resorts": "Ośrodki", "runs": "Trasy", "near": "W pobliżu Twojego miasta"}
+
+GT["nl"] = {
+    "runs_w": "{0} pistes", "lifts_w": "{0} liften", "km_pistes": "km piste", "pct": "{0}%",
+    "biggest": {
+        "title": "De grootste skigebieden {zone}",
+        "intro": "De {n} skigebieden {zone} met de meeste pistekilometers. Het grootste is {top} ({place}), met {km} km piste",
+        "follow": ", gevolgd door {name} ({km} km)", "and": " en {name} ({km} km).",
+        "tail": " Tik op een skigebied voor de pistekaart, het profiel van elke piste en de sneeuwverwachting.",
+        "method": "Gerangschikt op de totale lengte van de alpine pistes in OpenStreetMap (langlaufloipes tellen niet mee). "
+                  "Officiële cijfers kunnen iets afwijken, omdat elk skigebied zijn pistes op zijn eigen manier meet.",
+        "rank": "grootste skigebieden {zone}", "label": "piste"},
+    "beginners": {
+        "title": "De beste skigebieden voor beginners {zone}", "h1": "De beste skigebieden voor beginners {zone}",
+        "intro": "De skigebieden {zone} met het grootste aandeel groene en blauwe pistes: ideaal om te leren skiën of om "
+                 "rustig te skiën. Bovenaan staat {top}, met {pct}% van zijn {km} km op makkelijke pistes. "
+                 "Alleen skigebieden met minstens {min_km} km tellen mee, zodat er genoeg terrein is om vooruit te komen.",
+        "method": "Aandeel kilometers groene en blauwe pistes in het totaal aan alpine pistes, onder de skigebieden met minstens "
+                  "{min_km} km. Moeilijkheidsgraden uit OpenStreetMap.",
+        "rank": "beste skigebieden voor beginners {zone}", "label": "makkelijke pistes",
+        "meta": "{easy} van {km} km groen of blauw · {meta}"},
+    "highest": {
+        "title": "De hoogste skigebieden {zone}",
+        "intro": "De skigebieden {zone} die het hoogst reiken. Meer hoogte betekent meestal betere sneeuw en een langer seizoen. "
+                 "Het hoogste is {top}, tot {hi} m.",
+        "method": "Hoogste punt dat een piste of lift van het skigebied bereikt, volgens OpenStreetMap en het hoogtemodel.",
+        "rank": "hoogste skigebieden {zone}", "label": "hoogste punt", "meta": "vanaf {lo} m · {km} {km_pistes}"},
+    "vertical": {
+        "title": "Skigebieden met het meeste hoogteverschil {zone}",
+        "intro": "De skigebieden {zone} met het grootste hoogteverschil tussen het laagste en het hoogste punt: "
+                 "de langste afdalingen van de dag. {top} gaat aan kop met {v} m hoogteverschil.",
+        "method": "Verschil tussen het hoogste en het laagste punt van de pistes en liften van het skigebied.",
+        "rank": "meeste hoogteverschil {zone}", "label": "hoogteverschil", "meta": "{lo}–{hi} m · {km} {km_pistes}"},
+    "steep": {
+        "title": "De steilste pistes {zone}",
+        "intro": "De {n} pistes {zone} met de hoogste gemiddelde helling, van boven tot onder gemeten met het hoogtemodel. "
+                 "De steilste is {run} in {station}, met gemiddeld {p}% over {len} m. "
+                 "Op de pagina van elk skigebied zie je het profiel van elke piste, stuk voor stuk.",
+        "method": "Gemiddelde helling = totaal hoogteverschil ÷ lengte van de piste (in %), voor gemarkeerde pistes (groen tot "
+                  "zwart) van minstens 300 m. Op de steilste stukken is de helling groter dan het gemiddelde.",
+        "rank": "steilste pistes {zone}", "label": "gem. helling", "meta": "{len} m · {vert} m hoogteverschil · {diff}"},
+    "long": {
+        "title": "De langste pistes {zone}",
+        "intro": "De {n} langste pistes {zone}. Bovenaan staat {run} in {station}: {km} km afdalen en {vert} m hoogteverschil.",
+        "method": "Totale lengte van elke piste met een naam (opgeteld over haar delen) in OpenStreetMap, voor gemarkeerde pistes "
+                  "van groen tot zwart.",
+        "rank": "langste pistes {zone}", "label": "afdaling", "meta": "{vert} m hoogteverschil · gem. helling {p}% · {diff}"},
+    "near": {
+        "slug": "skigebieden-bij-{city}", "title": "Skigebieden bij {city}",
+        "intro": "De skigebieden die het dichtst bij {city} liggen, van dichtbij naar verder weg. Het dichtstbijzijnde is {top}, "
+                 "op zo'n {d} km hemelsbreed. Tik op de pagina van een skigebied op ‘Route’ voor de route met de auto.",
+        "method": "Afstand hemelsbreed van het stadscentrum tot het skigebied; over de weg is het altijd verder. "
+                  "Skigebieden met minstens 3 km piste.",
+        "rank": "skigebieden bij {city}", "label": "hemelsbreed", "meta": "{km} km piste · {meta}"},
+    "snow": {
+        "when": " (verwachting van {date})",
+        "intro": "De skigebieden waar de komende 7 dagen{when} de meeste sneeuw wordt verwacht, op hun hoogste punt. "
+                 "Bovenaan staat {top} ({place}), met zo'n {cm} cm verwacht. "
+                 "Wordt elke dag bijgewerkt; op de pagina van elk skigebied staat de verwachting per dag.",
+        "none": "Op dit moment verwacht geen enkel skigebied de komende 7 dagen{when} noemenswaardige sneeuwval. "
+                "Deze pagina wordt elke dag bijgewerkt met de sneeuwverwachting van meer dan 1.200 skigebieden.",
+        "title": "Waar gaat het deze week sneeuwen: sneeuwverwachting voor de skigebieden",
+        "h1": "Waar gaat het deze week sneeuwen",
+        "method": "Totale sneeuwval die weermodellen (Open-Meteo) voor de komende 7 dagen verwachten op het hoogste punt van elk "
+                  "skigebied. Het is een verwachting, niet het officiële sneeuwbericht van het skigebied.",
+        "label": "in 7 dagen"},
+}
+GT["pl"] = {
+    "runs_w": "trasy: {0}", "lifts_w": "wyciągi: {0}", "km_pistes": "km tras", "pct": "{0}%",
+    "biggest": {
+        "title": "Największe ośrodki narciarskie {zone}",
+        "intro": "Ośrodki narciarskie {zone} z największą liczbą kilometrów tras. Największy jest {top} ({place}) z {km} km tras",
+        "follow": ", a za nim {name} ({km} km)", "and": " i {name} ({km} km).",
+        "tail": " Dotknij dowolnego, aby zobaczyć mapę tras, profil każdej trasy i prognozę śniegu.",
+        "method": "Kolejność według łącznej długości tras zjazdowych w OpenStreetMap (trasy biegowe się nie liczą). "
+                  "Oficjalne dane mogą się nieco różnić, bo każdy ośrodek mierzy trasy po swojemu.",
+        "rank": "największe ośrodki {zone}", "label": "tras"},
+    "beginners": {
+        "title": "Najlepsze ośrodki narciarskie dla początkujących {zone}",
+        "h1": "Najlepsze ośrodki narciarskie dla początkujących {zone}",
+        "intro": "Ośrodki {zone} z największym udziałem tras zielonych i niebieskich: idealne do nauki jazdy albo spokojnego "
+                 "szusowania. Na czele jest {top}: {pct}% z {km} km to łatwe trasy. "
+                 "Uwzględniamy tylko ośrodki z co najmniej {min_km} km tras, żeby było gdzie się rozwijać.",
+        "method": "Udział kilometrów tras zielonych i niebieskich we wszystkich trasach zjazdowych, wśród ośrodków z co najmniej "
+                  "{min_km} km. Stopnie trudności z OpenStreetMap.",
+        "rank": "najlepsze dla początkujących {zone}", "label": "łatwe trasy",
+        "meta": "{easy} z {km} km zielonych lub niebieskich · {meta}"},
+    "highest": {
+        "title": "Najwyżej położone ośrodki narciarskie {zone}",
+        "intro": "Ośrodki {zone}, które sięgają najwyżej. Większa wysokość zwykle oznacza lepszy śnieg i dłuższy sezon. "
+                 "Najwyżej sięga {top}: do {hi} m n.p.m.",
+        "method": "Najwyższy punkt, do którego dochodzi trasa lub wyciąg ośrodka, według OpenStreetMap i modelu wysokości.",
+        "rank": "najwyżej położone ośrodki {zone}", "label": "najwyższy punkt", "meta": "od {lo} m · {km} {km_pistes}"},
+    "vertical": {
+        "title": "Ośrodki narciarskie z największym przewyższeniem {zone}",
+        "intro": "Ośrodki {zone} z największą różnicą wysokości między najniższym a najwyższym punktem: "
+                 "najdłuższe zjazdy dnia. Prowadzi {top} z przewyższeniem {v} m.",
+        "method": "Różnica między najwyższym a najniższym punktem tras i wyciągów ośrodka.",
+        "rank": "największe przewyższenie {zone}", "label": "przewyższenia", "meta": "{lo}–{hi} m · {km} {km_pistes}"},
+    "steep": {
+        "title": "Najbardziej strome trasy narciarskie {zone}",
+        "intro": "Trasy {zone} o największym średnim nachyleniu, mierzonym od góry do dołu z modelu wysokości. "
+                 "Najbardziej stroma jest {run} w ośrodku {station}: średnio {p}% na {len} m. "
+                 "Na stronie każdego ośrodka zobaczysz profil każdej trasy, odcinek po odcinku.",
+        "method": "Średnie nachylenie = przewyższenie ÷ długość trasy (w %), dla oznakowanych tras (od zielonej do czarnej) "
+                  "o długości co najmniej 300 m. Na najtrudniejszych odcinkach nachylenie jest większe niż średnia.",
+        "rank": "najbardziej strome trasy {zone}", "label": "śr. nachylenie", "meta": "{len} m · {vert} m przewyższenia · {diff}"},
+    "long": {
+        "title": "Najdłuższe trasy narciarskie {zone}",
+        "intro": "Najdłuższe trasy {zone}. Pierwsza jest {run} w ośrodku {station}: {km} km zjazdu i {vert} m przewyższenia.",
+        "method": "Łączna długość każdej nazwanej trasy (suma jej odcinków) w OpenStreetMap, dla oznakowanych tras od zielonej "
+                  "do czarnej.",
+        "rank": "najdłuższe trasy {zone}", "label": "zjazdu", "meta": "{vert} m przewyższenia · śr. nachylenie {p}% · {diff}"},
+    "near": {
+        "slug": "osrodki-narciarskie-w-poblizu-{city}", "title": "Ośrodki narciarskie w pobliżu {city}",
+        "intro": "Ośrodki narciarskie najbliżej {city}, od najbliższego do najdalszego. Najbliżej jest {top}, "
+                 "około {d} km w linii prostej; ośrodków w promieniu 250 km: {within}. "
+                 "Dotknij „Dojazd” na stronie ośrodka, aby zobaczyć trasę samochodem.",
+        "method": "Odległość w linii prostej od centrum miasta do ośrodka; drogą jest zawsze dalej. "
+                  "Ośrodki z co najmniej 3 km tras.",
+        "rank": "ośrodki w pobliżu {city}", "label": "w linii prostej", "meta": "{km} km tras · {meta}"},
+    "snow": {
+        "when": " (prognoza z {date})",
+        "intro": "Ośrodki narciarskie, w których w ciągu najbliższych 7 dni{when} spadnie najwięcej śniegu, na ich najwyższym "
+                 "punkcie. Na czele jest {top} ({place}) z prognozą około {cm} cm. "
+                 "Aktualizowane codziennie; na stronie każdego ośrodka jest prognoza dzień po dniu.",
+        "none": "Obecnie żaden ośrodek nie spodziewa się znaczących opadów śniegu w ciągu najbliższych 7 dni{when}. "
+                "Ta strona jest codziennie aktualizowana prognozą śniegu dla ponad 1200 ośrodków.",
+        "title": "Gdzie spadnie śnieg w tym tygodniu: prognoza śniegu w ośrodkach narciarskich",
+        "h1": "Gdzie spadnie śnieg w tym tygodniu",
+        "method": "Suma opadów śniegu prognozowanych na najbliższe 7 dni przez modele pogodowe (Open-Meteo) na najwyższym punkcie "
+                  "każdego ośrodka. To prognoza, a nie oficjalny raport śniegowy ośrodka.",
+        "label": "w 7 dni"},
+}
+
+RANK_ITEM["nl"] = "Nr. {i} van de {what}"
+RANK_ITEM["pl"] = "Nr {i}: {what}"
+RUN_PREFIX["nl"] = "{title}: "
+RUN_PREFIX["pl"] = "{title}: "
+
+PAGE["nl"] = {
+    "guides": "Gidsen", "method": "Hoe deze lijst is gemaakt", "more": "Meer gidsen", "no1": "Nr. 1: {0}",
+    "empty": "Er staan op dit moment geen skigebieden in deze lijst.",
+    "stale": "Let op: deze verwachting is van {0} en is mogelijk verouderd. Op de pagina van elk skigebied staat de actuele verwachting.",
+    "index_h1": "Skigidsen & ranglijsten",
+    "index_sub": "De grootste en hoogste skigebieden, de beste voor beginners, de steilste en langste pistes, de skigebieden bij "
+                 "jou in de buurt en waar het deze week gaat sneeuwen. Allemaal berekend met de gegevens van meer dan 1.200 skigebieden.",
+    "index_title": "Gidsen & ranglijsten van skigebieden | Ski Info",
+    "index_desc": "Ranglijsten van skigebieden: de grootste, de hoogste, de beste voor beginners, de steilste en langste pistes, "
+                  "skigebieden bij jou in de buurt en waar het deze week sneeuwt."}
+PAGE["pl"] = {
+    "guides": "Poradniki", "method": "Jak powstała ta lista", "more": "Więcej poradników", "no1": "Nr 1: {0}",
+    "empty": "W tej chwili na liście nie ma żadnych ośrodków.",
+    "stale": "Uwaga: ta prognoza jest z {0} i może być nieaktualna. Na stronie każdego ośrodka jest aktualna prognoza.",
+    "index_h1": "Poradniki i rankingi narciarskie",
+    "index_sub": "Największe i najwyżej położone ośrodki, najlepsze dla początkujących, najbardziej strome i najdłuższe trasy, "
+                 "ośrodki w pobliżu Twojego miasta i gdzie spadnie śnieg w tym tygodniu. Wszystko obliczone na podstawie danych "
+                 "ponad 1200 ośrodków narciarskich.",
+    "index_title": "Poradniki i rankingi ośrodków narciarskich | Ski Info",
+    "index_desc": "Rankingi ośrodków narciarskich: największe, najwyżej położone, najlepsze dla początkujących, najbardziej strome "
+                  "i najdłuższe trasy, ośrodki w pobliżu Twojego miasta i gdzie pada śnieg w tym tygodniu."}

@@ -259,3 +259,181 @@ MONTHS = {
     "it": ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"],
 }
 DATE_FMT = {"fr": "{d} {m}", "de": "{d}. {m}", "it": "{d} {m}"}
+
+# Dutch and Polish. Polish puts counts after a colon ("trasy: 12") where the
+# noun's form would depend on the number.
+TX["nl"] = {
+    "resort": "Skigebied", "official_site": "Officiële website ↗", "altitude": "Hoogte", "vertical": "Hoogteverschil",
+    "km_pistes": "Km piste", "coords": "Coördinaten", "linked": "Verbonden skigebied",
+    "linked_note": "Herkend op basis van geografische nabijheid; de kilometers kunnen overlappen:",
+    "directions": "Route", "share": "Delen", "save": "Bewaren", "back_country": "Skigebieden in {0}",
+    "back_countries": "Landen", "open_map": "Interactieve pistekaart openen",
+    "intro_1": "{0} is een skigebied{1}.", "intro_in": " in {0}",
+    "intro_2": "Het heeft {0} km piste, verdeeld over {1} pistes met een naam{2}.", "intro_2_lifts": " en {0} liften",
+    "intro_3": "Het skigebied ligt tussen {0} en {1} m hoogte, met {2} m hoogteverschil.",
+    "intro_4": "Hier vind je alle pistes met hun hellingsprofiel, de liften en de voorzieningen op de berg; "
+               "de interactieve kaart toont ze op satellietbeelden.",
+    "intro_h2": "{0}: pistekaart en gegevens", "terrain": "Pistes per moeilijkheid", "lifts_by_type": "Liften per type",
+    "other": "Overig", "vert_m": "{0} m hoogteverschil", "avg_grad": "gem. helling {0}%", "alt_range": "{0}–{1} m hoogte",
+    "max_grad": "max. {0}%", "max_grad_title": "Maximale helling: het steilste stuk van minstens 50 m",
+    "sections": "{0} delen", "floodlit": "Verlicht", "glades": "Bosafdaling", "all_f": "Alle", "unclassified": "Zonder klasse",
+    "pph": "{0} p./u", "seats": "{0} plaatsen", "ride": "{0} ritduur", "unnamed": "Naamloos",
+    "detachable": "Ontkoppelbaar", "bubble": "Kap", "heated": "Verwarmde stoelen", "private": "Privé", "all_m": "Alle",
+    "no_services": "Voor dit skigebied zijn geen voorzieningen vastgelegd in OpenStreetMap.",
+    "no_services_data": "We hebben nog geen gegevens over voorzieningen voor dit skigebied.",
+    "catalog_h2": "Pistes, liften en voorzieningen", "catalog_sub": "tik op een piste om het profiel te zien",
+    "what_to_list": "Wat tonen", "runs": "Pistes", "lifts": "Liften", "services": "Voorzieningen",
+    "no_runs": "Er zijn geen pistes met een naam in de gegevens van dit skigebied.",
+    "no_lifts": "Er zijn geen liften in de gegevens van dit skigebied.",
+    "q_named": "Pistes met naam", "q_diff": "Moeilijkheid vastgelegd", "q_lit": "Verlichting vastgelegd",
+    "q_snow": "Kunstsneeuw vastgelegd", "q_cap": "Liftcapaciteit vastgelegd", "q_grip": "Koppelingstype vastgelegd",
+    "quality": "Kwaliteit van de gegevens",
+    "quality_note": "Kunstsneeuw en pistebewaking staan zelden in OpenStreetMap — dat betekent niet dat ze er niet zijn, "
+                    "maar dat bijna niemand ze nog in kaart brengt.",
+    "map_h2": "Interactieve kaart",
+    "map_text": "De pistes en liften van {0} op satellietbeelden, de richting van elke piste, de echte helling van elk stuk, "
+                "de voorzieningen en het actuele weer.",
+    "map_cta": "Kaart van {0} openen", "ranks": "In de ranglijsten", "nearby": "Skigebieden in de buurt",
+    "nearby_meta": "op {0} km · {1} km piste", "snow_h2": "Sneeuw en weer in {0}", "top_txt": " (op de top, {0} m)",
+    "snow_sum": "Sneeuwverwachting voor de komende 7 dagen{0}: {1}{2}", "snow_cm": "{0} cm",
+    "snow_none": "geen noemenswaardige sneeuwval", "snow_when": " (bijgewerkt op {0}).",
+    "snow_generic": "Sneeuw- en weersverwachting voor de komende 7 dagen in {0}{1}.",
+    "title": "{0}: pistekaart, sneeuwverwachting en liften | Ski Info",
+    "d_km": "{0} km piste", "d_runs": "{0} pistes", "d_lifts": "{0} liften", "d_alt": "Hoogte {0}–{1} m. ",
+    "d_tail": "7-daagse sneeuwverwachting, interactieve pistekaart op satellietbeelden en de echte helling van elke piste.",
+    "c_eyebrow": "Landen", "c_h1": "Skigebieden in {0}",
+    "c_sub": "{0} skigebieden · {1} km piste. Kies een skigebied om elke piste met haar hellingsprofiel, de liften, "
+             "de voorzieningen en de interactieve satellietkaart te zien.",
+    "c_title": "Skigebieden in {0} – pistekaarten | Ski Info",
+    "c_desc": "De {0} skigebieden in {1} met interactieve pistekaart, hellingsprofiel, liften en voorzieningen.",
+    "card_pista": "piste", "card_total": "piste", "n_resorts": "{0} skigebieden",
+    "ci_h1": "Skigebieden per land",
+    "ci_sub": "{0} skigebieden in {1} landen, met interactieve pistekaart, het hellingsprofiel van elke piste, liften en voorzieningen.",
+    "ci_title": "Skigebieden per land: pistekaarten | Ski Info",
+    "ci_desc": "Interactieve pistekaarten van {0} skigebieden in {1} landen: pistes, liften, hellingen en voorzieningen.",
+    "f_countries": "Skigebieden per land", "f_guides": "Gidsen & ranglijsten", "f_app": "App voor je telefoon",
+    "f_privacy": "Privacy",
+    "f_data": f"Gegevens © {OSM}OpenStreetMap-bijdragers</a> (ODbL), via OpenSkiMap.",
+}
+TX["pl"] = {
+    "resort": "Ośrodek narciarski", "official_site": "Oficjalna strona ↗", "altitude": "Wysokość", "vertical": "Przewyższenie",
+    "km_pistes": "Km tras", "coords": "Współrzędne", "linked": "Połączony teren narciarski",
+    "linked_note": "Wykryty na podstawie bliskości geograficznej; kilometry tras mogą się nakładać:",
+    "directions": "Dojazd", "share": "Udostępnij", "save": "Zapisz", "back_country": "Ośrodki narciarskie: {0}",
+    "back_countries": "Kraje", "open_map": "Otwórz interaktywną mapę tras",
+    "intro_1": "{0} to ośrodek narciarski{1}.", "intro_in": " ({0})",
+    "intro_2": "Ma {0} km tras; nazwanych tras: {1}{2}.", "intro_2_lifts": ", wyciągów: {0}",
+    "intro_3": "Teren narciarski leży na wysokości od {0} do {1} m n.p.m., co daje {2} m przewyższenia.",
+    "intro_4": "Znajdziesz tu wszystkie trasy z profilem nachylenia, wyciągi i usługi na stoku; "
+               "interaktywna mapa pokazuje je na zdjęciu satelitarnym.",
+    "intro_h2": "{0}: mapa tras i dane", "terrain": "Trasy według trudności", "lifts_by_type": "Wyciągi według rodzaju",
+    "other": "Inne", "vert_m": "{0} m przewyższenia", "avg_grad": "śr. nachylenie {0}%", "alt_range": "{0}–{1} m n.p.m.",
+    "max_grad": "maks. {0}%", "max_grad_title": "Maksymalne nachylenie: najbardziej stromy odcinek o długości co najmniej 50 m",
+    "sections": "odcinki: {0}", "floodlit": "Oświetlona", "glades": "W lesie", "all_f": "Wszystkie", "unclassified": "Bez klas.",
+    "pph": "{0} os./h", "seats": "miejsca: {0}", "ride": "czas jazdy {0}", "unnamed": "Bez nazwy",
+    "detachable": "Wyprzęgane", "bubble": "Osłona", "heated": "Podgrzewane siedzenia", "private": "Prywatny", "all_m": "Wszystkie",
+    "no_services": "W OpenStreetMap nie ma zapisanych usług dla tego ośrodka.",
+    "no_services_data": "Nie mamy jeszcze danych o usługach w tym ośrodku.",
+    "catalog_h2": "Trasy, wyciągi i usługi", "catalog_sub": "dotknij trasy, aby zobaczyć jej profil",
+    "what_to_list": "Co pokazać", "runs": "Trasy", "lifts": "Wyciągi", "services": "Usługi",
+    "no_runs": "W danych tego ośrodka nie ma tras z nazwą.",
+    "no_lifts": "W danych tego ośrodka nie ma wyciągów.",
+    "q_named": "Trasy z nazwą", "q_diff": "Trudność oznaczona", "q_lit": "Oświetlenie oznaczone",
+    "q_snow": "Naśnieżanie oznaczone", "q_cap": "Przepustowość wyciągów oznaczona", "q_grip": "Typ sprzęgła oznaczony",
+    "quality": "Jakość danych",
+    "quality_note": "Naśnieżanie i ratownictwo narciarskie rzadko są oznaczane w OpenStreetMap — nie znaczy to, że ich nie ma, "
+                    "tylko że prawie nikt ich jeszcze nie mapuje.",
+    "map_h2": "Interaktywna mapa",
+    "map_text": "Trasy i wyciągi ośrodka {0} na zdjęciu satelitarnym, kierunek każdej trasy, rzeczywiste nachylenie każdego "
+                "odcinka, usługi i aktualna pogoda.",
+    "map_cta": "Otwórz mapę: {0}", "ranks": "W rankingach", "nearby": "Ośrodki w pobliżu",
+    "nearby_meta": "{0} km stąd · {1} km tras", "snow_h2": "Śnieg i pogoda: {0}", "top_txt": " (na szczycie, {0} m)",
+    "snow_sum": "Prognoza śniegu na najbliższe 7 dni{0}: {1}{2}", "snow_cm": "{0} cm",
+    "snow_none": "bez znaczących opadów śniegu", "snow_when": " (aktualizacja: {0}).",
+    "snow_generic": "Prognoza śniegu i pogody na najbliższe 7 dni: {0}{1}.",
+    "title": "{0}: mapa tras, prognoza śniegu i wyciągi | Ski Info",
+    "d_km": "{0} km tras", "d_runs": "trasy: {0}", "d_lifts": "wyciągi: {0}", "d_alt": "Wysokość {0}–{1} m. ",
+    "d_tail": "Prognoza śniegu na 7 dni, interaktywna mapa tras na zdjęciu satelitarnym i rzeczywiste nachylenie każdej trasy.",
+    "c_eyebrow": "Kraje", "c_h1": "Ośrodki narciarskie: {0}",
+    "c_sub": "Ośrodki: {0} · {1} km tras. Wybierz ośrodek, aby zobaczyć każdą trasę z profilem nachylenia, wyciągi, "
+             "usługi i interaktywną mapę satelitarną.",
+    "c_title": "Ośrodki narciarskie: {0} – mapy tras | Ski Info",
+    "c_desc": "Ośrodki narciarskie – {1} (łącznie {0}) z interaktywną mapą tras, profilem nachylenia, wyciągami i usługami.",
+    "card_pista": "tras", "card_total": "tras", "n_resorts": "ośrodki: {0}",
+    "ci_h1": "Ośrodki narciarskie według krajów",
+    "ci_sub": "Ośrodki narciarskie w {1} krajach (łącznie {0}) z interaktywną mapą tras, profilem nachylenia każdej trasy, "
+              "wyciągami i usługami.",
+    "ci_title": "Ośrodki narciarskie według krajów: mapy tras | Ski Info",
+    "ci_desc": "Interaktywne mapy tras ośrodków narciarskich w {1} krajach (łącznie {0}): trasy, wyciągi, nachylenie i usługi.",
+    "f_countries": "Ośrodki według krajów", "f_guides": "Poradniki i rankingi", "f_app": "Aplikacja na telefon",
+    "f_privacy": "Prywatność",
+    "f_data": f"Dane © {OSM}współtwórcy OpenStreetMap</a> (ODbL), przez OpenSkiMap.",
+}
+
+APP_TX["nl"] = {
+    "add_home": "Beginscherm", "available": "Beschikbaar op", "soon": "Binnenkort op",
+    "soon_note": "De app wordt nog getest. Tot die tijd kun je Ski Info in Chrome gebruiken en installeren: "
+                 "menu <b>⋮</b> → <b>Toevoegen aan startscherm</b> (of <b>App installeren</b>).",
+    "h1": "Ski Info op je telefoon",
+    "lead": "Pistekaarten, de helling van elke piste en de sneeuwverwachting van {0}+ skigebieden, altijd bij de hand. "
+            "Gratis en zonder account.",
+    "b1": "Opent als een app", "b1t": "Met een eigen icoon op je beginscherm, schermvullend.",
+    "b2": "Werkt met weinig bereik", "b2t": "Skigebieden die je al hebt bekeken, openen ook zonder bereik op de piste.",
+    "b3": "Altijd actueel", "b3t": "Geen updates om te downloaden: altijd de nieuwste versie.",
+    "inapp": "Je gebruikt de Ski Info-app al. Bedankt!", "ios_h2": "iPhone en iPad",
+    "ios_lead": "Geen App Store nodig: installeer hem in drie stappen via <b>Safari</b>.",
+    "s1": "Open <b>skiinfoapp.com/nl/</b> in Safari en tik onderaan op de knop <b>Deel</b> <i class=\"ico\">{0}</i>.",
+    "s2": "Scrol omlaag en tik op <b>Zet op beginscherm</b> <i class=\"ico\">{0}</i>.",
+    "s3": "Tik op <b>Voeg toe</b>. Ski Info verschijnt op je beginscherm zoals elke andere app.",
+    "chrome_ios": "Gebruik je Chrome op de iPhone? Dan zit de deelknop bovenaan, naast de adresbalk.",
+    "pc_h2": "Op de computer",
+    "pc": "Je hoeft niets te installeren: ga naar <a href=\"/nl/\">skiinfoapp.com/nl/</a>. In Chrome of Edge kun je hem ook "
+          "installeren met het icoon <b>Installeren</b> rechts in de adresbalk.",
+    "title": "Download Ski Info: app met pistekaarten en sneeuwverwachting voor Android en iPhone",
+    "desc": "Installeer Ski Info op je telefoon: pistekaarten, de helling van elke piste en de sneeuwverwachting van "
+            "{0}+ skigebieden. Android en iPhone, gratis en zonder account."}
+APP_TX["pl"] = {
+    "add_home": "Ekran początkowy", "available": "Pobierz z", "soon": "Wkrótce w",
+    "soon_note": "Aplikacja jest w fazie testów. Do tego czasu możesz korzystać z Ski Info w Chrome i ją zainstalować: "
+                 "menu <b>⋮</b> → <b>Dodaj do ekranu głównego</b> (lub <b>Zainstaluj aplikację</b>).",
+    "h1": "Ski Info na Twoim telefonie",
+    "lead": "Mapy tras, nachylenie każdej trasy i prognoza śniegu dla {0}+ ośrodków, zawsze pod ręką. "
+            "Za darmo i bez rejestracji.",
+    "b1": "Otwiera się jak aplikacja", "b1t": "Z własną ikoną na ekranie początkowym, na pełnym ekranie.",
+    "b2": "Działa przy słabym zasięgu", "b2t": "Ośrodki, które już oglądałeś, otworzą się na stoku nawet bez zasięgu.",
+    "b3": "Zawsze aktualna", "b3t": "Bez pobierania aktualizacji: zawsze najnowsza wersja.",
+    "inapp": "Korzystasz już z aplikacji Ski Info. Dziękujemy!", "ios_h2": "iPhone i iPad",
+    "ios_lead": "Nie potrzebujesz App Store: zainstalujesz ją w <b>Safari</b> w trzech krokach.",
+    "s1": "Otwórz <b>skiinfoapp.com/pl/</b> w Safari i dotknij przycisku <b>Udostępnij</b> <i class=\"ico\">{0}</i> na dolnym pasku.",
+    "s2": "Przewiń w dół i dotknij <b>Do ekranu początkowego</b> <i class=\"ico\">{0}</i>.",
+    "s3": "Dotknij <b>Dodaj</b>. Ski Info pojawi się na ekranie początkowym jak każda inna aplikacja.",
+    "chrome_ios": "Jeśli używasz Chrome na iPhonie, przycisk Udostępnij jest u góry, obok paska adresu.",
+    "pc_h2": "Na komputerze",
+    "pc": "Nie musisz nic instalować: wejdź na <a href=\"/pl/\">skiinfoapp.com/pl/</a>. W Chrome lub Edge możesz ją też "
+          "zainstalować ikoną <b>Zainstaluj</b> po prawej stronie paska adresu.",
+    "title": "Pobierz Ski Info: aplikacja z mapami tras i prognozą śniegu na Androida i iPhone'a",
+    "desc": "Zainstaluj Ski Info na telefonie: mapy tras, nachylenie każdej trasy i prognoza śniegu dla {0}+ ośrodków "
+            "narciarskich. Android i iPhone, za darmo i bez rejestracji."}
+
+APP_HEAD["nl"] = {
+    "title": "Ski Info · Pistekaarten en sneeuwverwachting van skigebieden",
+    "description": "Interactieve pistekaarten op satellietbeelden, het hellingsprofiel van elke piste, liften, voorzieningen en "
+                   "7-daagse sneeuwverwachting voor meer dan 1.200 skigebieden in 45 landen.",
+    "og_title": "Ski Info · Pistekaarten en sneeuwverwachting",
+    "og_description": "Pistekaarten op satellietbeelden, de echte helling van elke piste en de sneeuwverwachting van meer dan "
+                      "1.200 skigebieden. Gratis en zonder account."}
+APP_HEAD["pl"] = {
+    "title": "Ski Info · Mapy tras i prognoza śniegu w ośrodkach narciarskich",
+    "description": "Interaktywne mapy tras na zdjęciach satelitarnych, profil nachylenia każdej trasy, wyciągi, usługi i "
+                   "prognoza śniegu na 7 dni dla ponad 1200 ośrodków narciarskich w 45 krajach.",
+    "og_title": "Ski Info · Mapy tras i prognoza śniegu",
+    "og_description": "Mapy tras na zdjęciach satelitarnych, rzeczywiste nachylenie każdej trasy i prognoza śniegu dla ponad "
+                      "1200 ośrodków narciarskich. Za darmo i bez rejestracji."}
+
+MONTHS["nl"] = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober",
+                "november", "december"]
+# Polish dates take the genitive month ("4 października").
+MONTHS["pl"] = ["stycznia", "lutego", "marca", "kwietnia", "maja", "czerwca", "lipca", "sierpnia", "września",
+                "października", "listopada", "grudnia"]
+DATE_FMT["nl"] = "{d} {m}"
+DATE_FMT["pl"] = "{d} {m}"

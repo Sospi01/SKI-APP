@@ -171,14 +171,21 @@ def fmt_fr(n: float, d: int = 0) -> str:
     return f"{n:,.{d}f}".replace(",", "\u202f").replace(".", ",")
 
 
-FMT = {"es": fmt, "en": fmt_en, "fr": fmt_fr, "de": fmt_de, "it": fmt_de}
+def fmt_pl(n: float, d: int = 0) -> str:
+    """Polish format like toLocaleString('pl-PL'): no-break space for thousands
+    from 10 000 up, decimal comma."""
+    s = f"{n:,.{d}f}" if abs(n) >= 10000 else f"{n:.{d}f}"
+    return s.replace(",", "\u00a0").replace(".", ",")
+
+
+FMT = {"es": fmt, "en": fmt_en, "fr": fmt_fr, "de": fmt_de, "it": fmt_de, "nl": fmt_de, "pl": fmt_pl}
 
 
 def format_coord(lat, lon, lang: str = "es") -> str:
     if lat is None or lon is None:
         return "–"
     f = FMT[lang]
-    west = "W" if lang in ("en", "de") else "O"
+    west = "W" if lang in ("en", "de", "nl", "pl") else "O"
     return f"{f(abs(lat), 2)}°{'N' if lat >= 0 else 'S'} {f(abs(lon), 2)}°{'E' if lon >= 0 else west}"
 
 
@@ -274,15 +281,19 @@ LOC = {
            "app": "/app/", "og_dir": "/og/"},
     "en": {"privacy": "/privacy-en.html", "html": "en", "og": "en_GB", "home": "/en/", "station": "/en/resort/", "countries": "/en/country/",
            "guides": "/en/guides/", "app": "/en/app/", "og_dir": "/og/en/"},
-    # These three reuse the English share images (their own would double the site's size).
+    # The other languages reuse the English share images (their own would double the site's size).
     "fr": {"privacy": "/privacy-fr.html", "html": "fr", "og": "fr_FR", "home": "/fr/", "station": "/fr/station/", "countries": "/fr/pays/",
            "guides": "/fr/guides/", "app": "/fr/app/", "og_dir": "/og/en/"},
     "de": {"privacy": "/privacy-de.html", "html": "de", "og": "de_DE", "home": "/de/", "station": "/de/skigebiet/", "countries": "/de/land/",
            "guides": "/de/ratgeber/", "app": "/de/app/", "og_dir": "/og/en/"},
     "it": {"privacy": "/privacy-it.html", "html": "it", "og": "it_IT", "home": "/it/", "station": "/it/stazione/", "countries": "/it/paese/",
            "guides": "/it/guide/", "app": "/it/app/", "og_dir": "/og/en/"},
+    "nl": {"privacy": "/privacy-nl.html", "html": "nl", "og": "nl_NL", "home": "/nl/", "station": "/nl/skigebied/", "countries": "/nl/land/",
+           "guides": "/nl/gidsen/", "app": "/nl/app/", "og_dir": "/og/en/"},
+    "pl": {"privacy": "/privacy-pl.html", "html": "pl", "og": "pl_PL", "home": "/pl/", "station": "/pl/osrodek/", "countries": "/pl/kraj/",
+           "guides": "/pl/poradniki/", "app": "/pl/app/", "og_dir": "/og/en/"},
 }
-LANG_NAMES = {"es": "Español", "en": "English", "fr": "Français", "de": "Deutsch", "it": "Italiano"}
+LANG_NAMES = {"es": "Español", "en": "English", "fr": "Français", "de": "Deutsch", "it": "Italiano", "nl": "Nederlands", "pl": "Polski"}
 
 # Page text. Spanish is the original wording of the site; English mirrors it
 # (French, German and Italian are in page_texts.py).
@@ -1070,6 +1081,10 @@ HOME_GUIDES = {
     "it": ["dove-nevichera-questa-settimana", "stazioni-sciistiche-piu-grandi-delle-alpi",
            "migliori-stazioni-sciistiche-per-principianti-nelle-alpi", "piste-da-sci-piu-ripide-delle-alpi",
            "stazioni-sciistiche-vicino-a-milano", "stazioni-sciistiche-vicino-a-torino"],
+    "nl": ["waar-gaat-het-deze-week-sneeuwen", "grootste-skigebieden-in-de-alpen", "beste-skigebieden-voor-beginners-in-de-alpen",
+           "steilste-pistes-in-de-alpen", "skigebieden-bij-amsterdam", "skigebieden-bij-brussel"],
+    "pl": ["gdzie-spadnie-snieg-w-tym-tygodniu", "najwieksze-osrodki-narciarskie-w-polsce", "najwieksze-osrodki-narciarskie-w-alpach",
+           "najbardziej-strome-trasy-w-polsce", "osrodki-narciarskie-w-poblizu-krakowa", "osrodki-narciarskie-w-poblizu-warszawy"],
 }
 
 
@@ -1099,7 +1114,7 @@ def fill_home_data(html_text: str, payload: str) -> str:
     return new_text
 
 
-# ---------- the app's copy in each language (/en/, /fr/, /de/, /it/) ----------
+# ---------- the app's copy in each language (/en/, /fr/, /de/...) ----------
 
 APP_HEAD = {
     "en": {"title": "Ski Info · Piste maps and snow forecasts for ski resorts",
@@ -1113,7 +1128,7 @@ APP_HEAD = {
 # Text nodes that are the same in every language (brand, symbols, numbers, language names...).
 SAME_IN_BOTH = {"Ski Info", "Info", "Freeride", "–", "+", "×", "›", "‹", "1.200+", "Android", "© Esri · OpenStreetMap"} | set(LANG_NAMES.values())
 # "1.200+" in the home's title, per language.
-HUNDREDS = {"en": "1,200+", "fr": "1\u00a0200+"}
+HUNDREDS = {"en": "1,200+", "fr": "1\u00a0200+", "pl": "1200+"}
 
 
 def build_localized_app(index_html: str, i18n: dict, lang: str, base_url: str) -> str:
@@ -1180,6 +1195,7 @@ def build_localized_app(index_html: str, i18n: dict, lang: str, base_url: str) -
 def country_slugify(name: str, lang: str) -> str:
     if lang == "de":  # German readers write umlauts out: Österreich -> oesterreich
         name = name.translate(str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "Ä": "Ae", "Ö": "Oe", "Ü": "Ue", "ß": "ss"}))
+    name = name.replace("ł", "l").replace("Ł", "L")  # not a decomposable letter: Włochy -> wlochy
     return slugify(name)
 
 

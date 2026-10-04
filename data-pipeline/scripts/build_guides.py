@@ -61,6 +61,7 @@ ZONES = {
     "world": lambda s: True,
     "north_america": lambda s: s["cc"] in {"US", "CA"},
     "japan": lambda s: s["cc"] == "JP",
+    "poland": lambda s: s["cc"] == "PL",
 }
 # The pool of resorts each language's "near <city>" guides consider (Spanish
 # readers drive to Spain, Andorra and France; the others' cities are central).

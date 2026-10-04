@@ -1,9 +1,9 @@
 // The language picker the app puts in its headers: a flag button that opens
-// the five languages. hrefFor(lang) gives where each one leads (worked out
+// the site's languages. hrefFor(lang) gives where each one leads (worked out
 // when the menu opens, so it follows the station on screen); picking one is
 // remembered like any other language link (below).
 var SKI_LANG_CHOICES = [['es', 'es', 'Español'], ['en', 'gb', 'English'], ['fr', 'fr', 'Français'],
-  ['de', 'de', 'Deutsch'], ['it', 'it', 'Italiano']];
+  ['de', 'de', 'Deutsch'], ['it', 'it', 'Italiano'], ['nl', 'nl', 'Nederlands'], ['pl', 'pl', 'Polski']];
 function mountLangPicker(container, hrefFor, className) {
   var page = (document.documentElement.getAttribute('lang') || 'es').slice(0, 2);
   var cur = SKI_LANG_CHOICES.filter(function (c) { return c[0] === page; })[0] || SKI_LANG_CHOICES[0];
@@ -63,9 +63,11 @@ function mountLangPicker(container, hrefFor, className) {
     en: { hint: 'This page is also available in English.', cta: 'View in English', close: 'Close' },
     fr: { hint: 'Cette page existe aussi en français.', cta: 'Voir en français', close: 'Fermer' },
     de: { hint: 'Diese Seite gibt es auch auf Deutsch.', cta: 'Auf Deutsch ansehen', close: 'Schließen' },
-    it: { hint: 'Questa pagina è disponibile anche in italiano.', cta: 'Vedi in italiano', close: 'Chiudi' }
+    it: { hint: 'Questa pagina è disponibile anche in italiano.', cta: 'Vedi in italiano', close: 'Chiudi' },
+    nl: { hint: 'Deze pagina is ook beschikbaar in het Nederlands.', cta: 'Bekijk in het Nederlands', close: 'Sluiten' },
+    pl: { hint: 'Ta strona jest dostępna także po polsku.', cta: 'Zobacz po polsku', close: 'Zamknij' }
   };
-  var HOMES = ['/', '/en/', '/fr/', '/de/', '/it/'];
+  var HOMES = ['/', '/en/', '/fr/', '/de/', '/it/', '/nl/', '/pl/'];
 
   document.addEventListener('click', function (ev) {
     var a = ev.target.closest && ev.target.closest('.lang-link');

@@ -11,11 +11,13 @@
 <link rel="alternate" hreflang="fr" href="https://skiinfoapp.com/fr/">
 <link rel="alternate" hreflang="de" href="https://skiinfoapp.com/de/">
 <link rel="alternate" hreflang="it" href="https://skiinfoapp.com/it/">
+<link rel="alternate" hreflang="nl" href="https://skiinfoapp.com/nl/">
+<link rel="alternate" hreflang="pl" href="https://skiinfoapp.com/pl/">
 <link rel="alternate" hreflang="x-default" href="https://skiinfoapp.com/en/">
 <!-- Someone who chose English (a language link) gets the English app from the
      Spanish home too. Only an explicit choice: nothing is inferred, so search
      engines and first visits always see the page they asked for. -->
-<script id="lang-redirect">try{var l=localStorage.getItem('si_lang'),q=location.search,m=/[?&]applang=(\w+)/.exec(q);if(m){q=q.replace(/[?&]applang=\w+/,'').replace(/^&/,'?');if(!l)l=m[1];}if(location.pathname==='/'&&/^(en|fr|de|it)$/.test(l))location.replace('/'+l+'/'+q+location.hash);else if(m)history.replaceState(null,'','/'+q+location.hash);}catch(e){}</script>
+<script id="lang-redirect">try{var l=localStorage.getItem('si_lang'),q=location.search,m=/[?&]applang=(\w+)/.exec(q);if(m){q=q.replace(/[?&]applang=\w+/,'').replace(/^&/,'?');if(!l)l=m[1];}if(location.pathname==='/'&&/^(en|fr|de|it|nl|pl)$/.test(l))location.replace('/'+l+'/'+q+location.hash);else if(m)history.replaceState(null,'','/'+q+location.hash);}catch(e){}</script>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
@@ -982,7 +984,7 @@
       <div class="home-feature"><div class="home-feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 2.5v1.6M9 13.9v1.6M2.5 9h1.6M3.4 3.4l1.1 1.1M13.5 4.5l1.1-1.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M10 19.5h8a3 3 0 0 0 .3-6 4.5 4.5 0 0 0-8.4 1.6A2.3 2.3 0 0 0 10 19.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div><h3>Nieve y tiempo</h3><p>Nevadas previstas para los próximos 7 días, temperatura en cota alta y en la base, isoterma de 0 °C y viento.</p></div>
     </div>
 
-    <p class="list-footer">Datos © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">colaboradores de OpenStreetMap</a> (ODbL), vía OpenSkiMap · imágenes Esri, Maxar, Earthstar Geographics<br><a href="/pais/">Todas las estaciones por país</a> · <a href="/guias/">Guías y rankings</a> · <a href="/app/">App para el móvil</a> · <a href="/privacy.html">Privacidad</a><br><span class="lang-links"><a class="lang-link" data-lang="en" href="/en/" hreflang="en" lang="en">English</a> · <a class="lang-link" data-lang="fr" href="/fr/" hreflang="fr" lang="fr">Français</a> · <a class="lang-link" data-lang="de" href="/de/" hreflang="de" lang="de">Deutsch</a> · <a class="lang-link" data-lang="it" href="/it/" hreflang="it" lang="it">Italiano</a></span></p>
+    <p class="list-footer">Datos © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">colaboradores de OpenStreetMap</a> (ODbL), vía OpenSkiMap · imágenes Esri, Maxar, Earthstar Geographics<br><a href="/pais/">Todas las estaciones por país</a> · <a href="/guias/">Guías y rankings</a> · <a href="/app/">App para el móvil</a> · <a href="/privacy.html">Privacidad</a><br><span class="lang-links"><a class="lang-link" data-lang="en" href="/en/" hreflang="en" lang="en">English</a> · <a class="lang-link" data-lang="fr" href="/fr/" hreflang="fr" lang="fr">Français</a> · <a class="lang-link" data-lang="de" href="/de/" hreflang="de" lang="de">Deutsch</a> · <a class="lang-link" data-lang="it" href="/it/" hreflang="it" lang="it">Italiano</a> · <a class="lang-link" data-lang="nl" href="/nl/" hreflang="nl" lang="nl">Nederlands</a> · <a class="lang-link" data-lang="pl" href="/pl/" hreflang="pl" lang="pl">Polski</a></span></p>
   </div>
 
   <div class="screen" id="screen-list" hidden>
@@ -1238,7 +1240,9 @@
     en: { home: '/en/', station: '/en/resort/', countries: '/en/country/', guides: '/en/guides/', app: '/en/app/', guidesJson: '/en/guides.json' },
     fr: { home: '/fr/', station: '/fr/station/', countries: '/fr/pays/', guides: '/fr/guides/', app: '/fr/app/', guidesJson: '/fr/guides.json' },
     de: { home: '/de/', station: '/de/skigebiet/', countries: '/de/land/', guides: '/de/ratgeber/', app: '/de/app/', guidesJson: '/de/ratgeber.json' },
-    it: { home: '/it/', station: '/it/stazione/', countries: '/it/paese/', guides: '/it/guide/', app: '/it/app/', guidesJson: '/it/guide.json' }
+    it: { home: '/it/', station: '/it/stazione/', countries: '/it/paese/', guides: '/it/guide/', app: '/it/app/', guidesJson: '/it/guide.json' },
+    nl: { home: '/nl/', station: '/nl/skigebied/', countries: '/nl/land/', guides: '/nl/gidsen/', app: '/nl/app/', guidesJson: '/nl/gidsen.json' },
+    pl: { home: '/pl/', station: '/pl/osrodek/', countries: '/pl/kraj/', guides: '/pl/poradniki/', app: '/pl/app/', guidesJson: '/pl/poradniki.json' }
   }[LANG] || null;
   if (!PATHS) { LANG = 'es'; PATHS = { home: '/', station: '/estacion/', countries: '/pais/', guides: '/guias/', app: '/app/', guidesJson: '/guias.json' }; }
 
@@ -1441,7 +1445,7 @@
   var GENERIC_RESORT_WORDS_PREFIX = /^(estaci[oó]n? (d'|de )?esqu[ií]( (y|i) (de )?(monta[ñn]a|muntanya))?|estaci[oó]n? (invernal|de muntanya)( y de monta[ñn]a)?|station (de ski|du)|centro (de )?ski|ski center|ski centre|skigebiet)( del?)?\s+/i;
   var GENERIC_RESORT_WORDS_SUFFIX = /\s+(ski resort|ski area|mountain resort|ski centre|ski center|skiarea|ski bowl|resort)$/i;
   function bookingUrl(raw) {
-    var dest = 'https://www.booking.com/searchresults.html?ss=' + encodeURIComponent(bookingSearchQuery(raw)) + '&lang=' + ({ en: 'en-gb', fr: 'fr', de: 'de', it: 'it' }[LANG] || 'es');
+    var dest = 'https://www.booking.com/searchresults.html?ss=' + encodeURIComponent(bookingSearchQuery(raw)) + '&lang=' + ({ en: 'en-gb', fr: 'fr', de: 'de', it: 'it', nl: 'nl', pl: 'pl' }[LANG] || 'es');
     return AFFILIATE.bookingDeepLinkPrefix ? AFFILIATE.bookingDeepLinkPrefix + encodeURIComponent(dest) : dest;
   }
 
@@ -1791,7 +1795,11 @@
       de: ['wo-schneit-es-diese-woche', 'groesste-skigebiete-der-alpen', 'beste-skigebiete-fuer-anfaenger-in-den-alpen',
            'steilste-pisten-der-alpen', 'skigebiete-in-der-naehe-von-muenchen', 'skigebiete-in-der-naehe-von-zuerich'],
       it: ['dove-nevichera-questa-settimana', 'stazioni-sciistiche-piu-grandi-delle-alpi', 'migliori-stazioni-sciistiche-per-principianti-nelle-alpi',
-           'piste-da-sci-piu-ripide-delle-alpi', 'stazioni-sciistiche-vicino-a-milano', 'stazioni-sciistiche-vicino-a-torino']
+           'piste-da-sci-piu-ripide-delle-alpi', 'stazioni-sciistiche-vicino-a-milano', 'stazioni-sciistiche-vicino-a-torino'],
+      nl: ['waar-gaat-het-deze-week-sneeuwen', 'grootste-skigebieden-in-de-alpen', 'beste-skigebieden-voor-beginners-in-de-alpen',
+           'steilste-pistes-in-de-alpen', 'skigebieden-bij-amsterdam', 'skigebieden-bij-brussel'],
+      pl: ['gdzie-spadnie-snieg-w-tym-tygodniu', 'najwieksze-osrodki-narciarskie-w-polsce', 'najwieksze-osrodki-narciarskie-w-alpach',
+           'najbardziej-strome-trasy-w-polsce', 'osrodki-narciarskie-w-poblizu-krakowa', 'osrodki-narciarskie-w-poblizu-warszawy']
     }[LANG];
     if (HOME_DATA && HOME_DATA.guides) { fill(HOME_DATA.guides); return; }
     fetch(PATHS.guidesJson).then(function (r) { return r.ok ? r.json() : null; }).then(fill).catch(function () {});
@@ -1821,7 +1829,7 @@
     STATIONS.forEach(function (s) { totalKm += s.pisteKm || 0; countries[s.country || 'ES'] = true; });
     var nStations = STATIONS.length;
     // Always group thousands ("1.276"): es-ES only does it from 10.000 up.
-    var big = function (n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, { en: ',', fr: '\u00a0' }[LANG] || '.'); };
+    var big = function (n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, { en: ',', fr: '\u00a0', pl: '\u00a0' }[LANG] || '.'); };
     var countText = big(Math.floor(nStations / 100) * 100) + '+';
     var countEl = document.getElementById('home-station-count');
     if (countEl.textContent !== countText) countEl.textContent = countText;
@@ -1830,7 +1838,7 @@
     setText('home-stat-km', big(Math.floor(totalKm / 1000) * 1000) + '+');
 
     var featured = document.getElementById('featured-list');
-    var featuredCountries = LANG === 'es' ? ['ES', 'AD'] : ['FR', 'CH', 'AT', 'IT'];
+    var featuredCountries = { es: ['ES', 'AD'], pl: ['PL'] }[LANG] || ['FR', 'CH', 'AT', 'IT'];
     STATIONS.filter(function (s) { return featuredCountries.indexOf(s.country) !== -1; })
       .sort(function (a, b) { return (b.pisteKm || 0) - (a.pisteKm || 0); })
       .slice(0, 6)
@@ -2006,6 +2014,10 @@
          '1eeb56a80185ff1dff644357f9f747842d0f620c', '180faeea32aba7b22fbe1438b0a3a82f6a2a4ad8', '10811e37c10a12d51810c68dc7022f23ca4f9970'],
     it: ['10811e37c10a12d51810c68dc7022f23ca4f9970', '02196b1e0dd473176e265318bc9c06e22df53ace', '4c87ad2b81e6af13513c56907fa5850c59fa5e32',
          'fd830ae87b04dcc7ab252d9b7f21cb21029dd61f', '04d84a3789b94eba19ce3c951fece8117d931c03', '35a6ed0e1f5424feddcbc15b62e84b1b97f07624'],
+    nl: ['78e5f98d8527df7216b08962f372659abcd4f711', '7c2f2690d339d9df6f820e7c6e596a9b0ba3dce5', '180faeea32aba7b22fbe1438b0a3a82f6a2a4ad8',
+         '0e7ba1fd10a2afbc6e188d1f9936f843cc665583', 'b66cd0bd82cf0860c0b65dbe7ba26066f8463554', 'e587928ea763f20b3232a5069c5d2438d09b6908'],
+    pl: ['e46979235b7900d705c2748e4571a7dccaf6aefe', '1792fc8f03e31f78fa320a9bdb3093d67a87149f', 'fd0ec06eda21e684cc4b06fe2d8d2b4f685ca07f',
+         '3e4f2615639f5fbffd8fcb502193a964d4ebbac0', '5e93b7412e8848483f1b21213775754a0a4b3409', '4c87ad2b81e6af13513c56907fa5850c59fa5e32'],
     // Whatever the language, visitors from North America get its big names.
     na: ['5b0f59702031fde8054a06b0c97a7b2d5593cf51', '88a22ba23468cf120025366ef40f004c9043546e', '3dad9d62b112c018cb658fd1eb49bcd41c96f257',
          '1e76d148ff8a2f2bec3fea6b6852cd020b13c377', 'ba4944ecd2e640acedf666287f228427b607680e', '52fb26d3b0f3b270334fbcdb4510c6b2c20d2f95']
@@ -2020,7 +2032,10 @@
     '180faeea32aba7b22fbe1438b0a3a82f6a2a4ad8': 'Saalbach', '02196b1e0dd473176e265318bc9c06e22df53ace': 'Cortina',
     'fd830ae87b04dcc7ab252d9b7f21cb21029dd61f': 'Madonna di Campiglio', '5b0f59702031fde8054a06b0c97a7b2d5593cf51': 'Whistler',
     '3dad9d62b112c018cb658fd1eb49bcd41c96f257': 'Park City', '1e76d148ff8a2f2bec3fea6b6852cd020b13c377': 'Jackson Hole',
-    'ba4944ecd2e640acedf666287f228427b607680e': 'Mammoth', '52fb26d3b0f3b270334fbcdb4510c6b2c20d2f95': 'Big Sky'
+    'ba4944ecd2e640acedf666287f228427b607680e': 'Mammoth', '52fb26d3b0f3b270334fbcdb4510c6b2c20d2f95': 'Big Sky',
+    '0e7ba1fd10a2afbc6e188d1f9936f843cc665583': 'Mayrhofen', 'e587928ea763f20b3232a5069c5d2438d09b6908': 'Serfaus-Fiss-Ladis',
+    'e46979235b7900d705c2748e4571a7dccaf6aefe': 'Szczyrk', '1792fc8f03e31f78fa320a9bdb3093d67a87149f': 'Białka Tatrzańska',
+    '5e93b7412e8848483f1b21213775754a0a4b3409': 'Jasná'
   };
   function kmBetween(a, b) {
     var r = Math.PI / 180, dLat = (b[0] - a[0]) * r, dLon = (b[1] - a[1]) * r;

@@ -1,6 +1,6 @@
 # Ski Info — guía para Claude
 
-Web y app de estaciones de esquí: **https://skiinfoapp.com**. Tiene mapa de pistas sobre satélite, el perfil de pendiente de cada pista, remontes, servicios y la previsión de nieve a 7 días de **1.409 estaciones en 45 países**, en 5 idiomas (es, en, fr, de, it). Los datos vienen de OpenStreetMap a través de OpenSkiMap (licencia ODbL: siempre hay que atribuirlos). También hay una app Android que es un envoltorio WebView de la web.
+Web y app de estaciones de esquí: **https://skiinfoapp.com**. Tiene mapa de pistas sobre satélite, el perfil de pendiente de cada pista, remontes, servicios y la previsión de nieve a 7 días de **1.409 estaciones en 45 países**, en 7 idiomas (es, en, fr, de, it, nl, pl). Los datos vienen de OpenStreetMap a través de OpenSkiMap (licencia ODbL: siempre hay que atribuirlos). También hay una app Android que es un envoltorio WebView de la web.
 
 El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico. **Háblale siempre en español**, claro y sin jerga. Cuando tenga que hacer algo en una consola (Play Console, Firebase, Search Console, GitHub), dale los pasos exactos uno a uno.
 
@@ -13,7 +13,7 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
 - **Secretos:** nunca subas el keystore de Android, contraseñas ni claves. Viven en los *secrets* de GitHub Actions.
 - **Panel de estadísticas:** los datos de `/stats` solo los puede leer `fsospedra2@gmail.com`. Lo imponen las reglas de Firestore y no se debe relajar.
 - **Afiliados:** no activar CJ ni otros programas de afiliados hasta que haya tráfico real. El de Booking todavía no está activo: `AFFILIATE.bookingDeepLinkPrefix` está vacío en `index.html`.
-- **Textos visibles:** todo texto nuevo de `docs/index.html` (marcado o `T('…')`) debe tener traducción en `docs/i18n/{en,fr,de,it}.js`. La clave es el texto en español. **El build falla** si falta alguna traducción del marcado. Los textos idénticos en todos los idiomas van en `SAME_IN_BOTH` (`build_seo_pages.py`).
+- **Textos visibles:** todo texto nuevo de `docs/index.html` (marcado o `T('…')`) debe tener traducción en `docs/i18n/{en,fr,de,it,nl,pl}.js`. La clave es el texto en español. **El build falla** si falta alguna traducción del marcado. Los textos idénticos en todos los idiomas van en `SAME_IN_BOTH` (`build_seo_pages.py`).
 - **Reglas de Firestore:** si añades un tipo de evento o un campo en `docs/track.js`, actualiza `firestore.rules` y **pide al usuario que las publique** en la consola de Firebase: no se despliegan solas.
   - Los campos nuevos van también en `NEW_FIELDS` de `track.js`. Así, si las reglas aún son las viejas, el evento se reenvía sin ese campo en vez de perderse.
   - Un tipo de evento nuevo no tiene esa red: se pierde hasta que se publiquen las reglas.
@@ -41,7 +41,7 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
 | `index.html` | **La app**: SPA de ~3.800 líneas con un único IIFE de JS inline y el CSS inline. Pantallas: portada, lista de país, mapa de país y ficha de estación (paneles Info / Mapa). URL: `?estacion=<id>` y `&vista=mapa`. |
 | `stations.js` | `STATIONS`: catálogo con id, nombre, región, km, país, lat y lon. También lo leen los scripts del pipeline. |
 | `data/<id>.json` | Una estación completa: `runs` y `lifts` con `geom` [lon, lat, ele], estadísticas, `services`, `run_convention`, etc. `data/borders` son las fronteras. |
-| `i18n.js` + `i18n/{en,fr,de,it}.js` | Traducción: `T('texto en español', args…)` con `{0}`. `SKI_LANG` y `SKI_LOCALE`. Los diccionarios son `window.SKI_I18N = {…}`. |
+| `i18n.js` + `i18n/{en,fr,de,it,nl,pl}.js` | Traducción: `T('texto en español', args…)` con `{0}`. `SKI_LANG` y `SKI_LOCALE`. Los diccionarios son `window.SKI_I18N = {…}`. |
 | `lang.js` | Selector de idioma con banderas (`mountLangPicker`), barra "esta página también está en…" (usa `<link rel=alternate hreflang>`) y elección recordada en `localStorage.si_lang`. |
 | `station-actions.js` | "Cómo llegar" (a la base, el punto de remonte más bajo), "Compartir" (puente Android `SkiInfoAndroid.share`, luego `navigator.share`, luego portapapeles) y **favoritos** (`localStorage.si_favs`, `setupFavButton`). |
 | `snow.js` / `snow.css` | Tiempo y previsión desde Open-Meteo, en el navegador, con 5 s de tiempo máximo. `snow.json` es el ranking de nieve que genera el despliegue. |
@@ -50,13 +50,13 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
 | `sw.js` | Service worker, `VERSION = 'v6'`. Las navegaciones y los datos se piden primero a la red y, si falla, a la caché. Sube `VERSION` si cambia la lista de archivos del shell. |
 | `track.js` | Contador de uso anónimo, sin cookies (ver 3.4). |
 | `stats.html` | Panel privado de estadísticas (ver 3.4). |
-| `privacy.html`, `privacy-{en,fr,de,it}.html` | Política de privacidad en los 5 idiomas (archivos fijos, enlazados por idioma con `LOC[lang]['privacy']` de `build_seo_pages.py`). |
+| `privacy.html`, `privacy-{en,fr,de,it,nl,pl}.html` | Política de privacidad en los 7 idiomas (archivos fijos, enlazados por idioma con `LOC[lang]['privacy']` de `build_seo_pages.py`). |
 | `flags/*.svg`, `icons/`, `fonts/` | Recursos. Las fuentes se sirven desde la propia web: Barlow Condensed e IBM Plex Sans. |
 
 **Generado en cada despliegue (está en `.gitignore`, no se commitea):**
-- `estacion/`, `pais/`, `guias/`, `app/`, `en/`, `fr/`, `de/`, `it/`;
+- `estacion/`, `pais/`, `guias/`, `app/`, `en/`, `fr/`, `de/`, `it/`, `nl/`, `pl/`;
 - `og/` (imágenes para compartir);
-- `sitemap.xml` (~7.400 URLs), `snow.json`, `slugs.json`, `guias.json`.
+- `sitemap.xml` (~10.300 URLs), `snow.json`, `slugs.json`, `guias.json`.
 
 **Rutas por idioma:**
 
@@ -67,9 +67,14 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
 | fr | `/fr/station/` | `/fr/pays/` | `/fr/guides/` |
 | de | `/de/skigebiet/` | `/de/land/` | `/de/ratgeber/` |
 | it | `/it/stazione/` | `/it/paese/` | `/it/guide/` |
+| nl | `/nl/skigebied/` | `/nl/land/` | `/nl/gidsen/` |
+| pl | `/pl/osrodek/` | `/pl/kraj/` | `/pl/poradniki/` |
 
 - La app tiene una copia por idioma (`/en/`, `/fr/`…), que genera `build_localized_app`.
-- fr, de e it reutilizan las imágenes OG en inglés (`/og/en/`) para no pasar de 1 GB en GitHub Pages.
+- fr, de, it, nl y pl reutilizan las imágenes OG en inglés (`/og/en/`) para no pasar de 1 GB en GitHub Pages.
+- **Tamaño:** cada idioma suma ~73 MB. Con 7 idiomas la web ronda los 760 MB (609 MB sin imágenes OG): caben 2–3 idiomas más como mucho.
+- Añadir un idioma toca: `i18n/<xx>.js`, `i18n.js` (`SKI_LOCALE`, `SKI_LANG_CHOICES`), `lang.js`, `sw.js`, `flags/`, `index.html` (hreflang, `lang-redirect`, enlaces del pie, `PATHS`, `FEATURED`, `POPULAR`, Booking), `LOC`/`FMT`/`LANG_NAMES`/`HOME_GUIDES` de `build_seo_pages.py`, `page_texts.py`, `guide_texts.py`, `.gitignore`, la política de privacidad y `smoke.js`.
+- En polaco los números van tras dos puntos ("trasy: 12") cuando la palabra cambiaría según la cifra. Las guías polacas incluyen rankings propios de Polonia (zona `poland`).
 
 **Piezas clave de `index.html`:**
 - `loadStation`: limpia la ficha, descarga `data/<id>.json` y la previsión, y llama a `renderDashboard`.
@@ -92,7 +97,7 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
 - `scripts/`:
   - `build_seo_pages.py`: fichas, países, página `/app`, sitemap, copias por idioma de la app y datos de la portada. Opciones: `--inject-home` (solo en el despliegue), `--write-slugs` para estaciones nuevas y `--base-url`.
   - `build_guides.py`: guías generadas con los datos; los textos están en `guide_texts.py`.
-  - `page_texts.py`: textos de las páginas en fr, de e it.
+  - `page_texts.py`: textos de las páginas en fr, de, it, nl y pl.
   - `fetch_snow_forecast.py`: previsión de todas las estaciones, que se guarda en `docs/snow.json`.
   - `build_share_images.py`: imágenes OG. Necesita Pillow y tarda unos 3 minutos.
   - `refresh_stations.py`: actualización semanal de `docs/data` desde OpenSkiMap. Nunca añade ni quita estaciones. Si una estación pierde más de la mitad de pistas o km, la deja como estaba. Si más del 20 % parecen rotas, no escribe nada. Detecta estaciones cuyo id ha cambiado. Tiene sus tests.
@@ -149,7 +154,7 @@ cd data-pipeline && python3 -m pytest -q                       # si tocas el pip
 ```
 
 **`web-tests/smoke.js` comprueba:**
-- las portadas en los 5 idiomas;
+- las portadas en los 7 idiomas;
 - la ficha de Baqueira en el móvil (lista de pistas, tarjeta del mapa y mapa) y en el ordenador;
 - una página estática;
 - `stats.html?demo=1`;

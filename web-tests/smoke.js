@@ -3,7 +3,7 @@
 // the usage counter (counts people, skips robots). Run it before pushing.
 //
 //   cd docs && python3 -m http.server 8903 &                        # serve docs/
-//   python3 data-pipeline/scripts/build_seo_pages.py --inject-home   # optional: /en/ /fr/ /de/ /it/ and static pages
+//   python3 data-pipeline/scripts/build_seo_pages.py --inject-home   # optional: /en/ /fr/ /de/ /it/ /nl/ /pl/ and static pages
 //   NODE_PATH=/opt/node22/lib/node_modules node web-tests/smoke.js
 //
 // Every request outside the local server is blocked (as in the sandbox), and
@@ -63,7 +63,7 @@ async function exists(p) {
   const browser = await chromium.launch({ executablePath: CHROMIUM });
 
   // ---- homes ----
-  for (const lang of ['', 'en/', 'fr/', 'de/', 'it/']) {
+  for (const lang of ['', 'en/', 'fr/', 'de/', 'it/', 'nl/', 'pl/']) {
     if (lang && !(await exists('/' + lang))) { console.log('skip  /' + lang + ' (not built: run build_seo_pages.py --inject-home)'); continue; }
     const p = await newPage(browser, devices['Pixel 7']);
     await p.goto(BASE + '/' + lang); await p.waitForTimeout(1200);

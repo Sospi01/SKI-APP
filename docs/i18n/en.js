@@ -402,6 +402,7 @@ window.SKI_I18N = {
   "Desde el final (abajo)": "From the bottom of the run",
   "Pie de pistas": "Resort base",
   "Toca otro punto del mapa para cambiar la salida.": "Tap another spot on the map to change where you start.",
-  "Toca en el mapa, cerca de una pista o un remonte, el punto desde el que sales.": "Tap the map near a run or lift where you start from."
+  "Toca en el mapa, cerca de una pista o un remonte, el punto desde el que sales.": "Tap the map near a run or lift where you start from.",
+  "Punto en el mapa": "Point on the map"
  }
 };

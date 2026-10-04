@@ -402,6 +402,7 @@ window.SKI_I18N = {
   "Desde el final (abajo)": "Vanaf de onderkant van de piste",
   "Pie de pistas": "Dalstation",
   "Toca otro punto del mapa para cambiar la salida.": "Tik op een ander punt op de kaart om je vertrekpunt te wijzigen.",
-  "Toca en el mapa, cerca de una pista o un remonte, el punto desde el que sales.": "Tik op de kaart, bij een piste of lift, het punt waar je vertrekt."
+  "Toca en el mapa, cerca de una pista o un remonte, el punto desde el que sales.": "Tik op de kaart, bij een piste of lift, het punt waar je vertrekt.",
+  "Punto en el mapa": "Punt op de kaart"
  }
 };

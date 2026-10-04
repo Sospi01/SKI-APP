@@ -402,6 +402,7 @@ window.SKI_I18N = {
   "Desde el final (abajo)": "Od końca trasy (dół)",
   "Pie de pistas": "Dolna stacja",
   "Toca otro punto del mapa para cambiar la salida.": "Dotknij innego miejsca na mapie, aby zmienić start.",
-  "Toca en el mapa, cerca de una pista o un remonte, el punto desde el que sales.": "Dotknij na mapie, blisko trasy lub wyciągu, miejsca, z którego ruszasz."
+  "Toca en el mapa, cerca de una pista o un remonte, el punto desde el que sales.": "Dotknij na mapie, blisko trasy lub wyciągu, miejsca, z którego ruszasz.",
+  "Punto en el mapa": "Punkt na mapie"
  }
 };

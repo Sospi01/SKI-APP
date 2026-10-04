@@ -3755,7 +3755,7 @@
     } catch (e) { return false; }
   })();
   var routeNet = null, routeDest = null, routeShown = null, routePicking = false, routePickPt = null, routeWaitTimer = null;
-  var routePlace = null, routeOrigin = 'base', routeLevel = (function () { try { return localStorage.getItem('si_route_level') || 'all'; } catch (e) { return 'all'; } })();
+  var routePlace = null, routeOrigin = 'pick', routeLevel = (function () { try { return localStorage.getItem('si_route_level') || 'all'; } catch (e) { return 'all'; } })();
   var routesLoaded = null;
   function loadRoutes() {
     if (!routesLoaded) {
@@ -3824,7 +3824,8 @@
   }
   function openRoute(f) {
     routeDest = f;
-    routeOrigin = mapState && mapState.loc && mapState.loc.pt ? 'me' : routeOrigin === 'pick' && (routePlace || routePickPt) ? 'pick' : 'base';
+    // From where I am when the map knows it; otherwise from a tap on the map.
+    routeOrigin = mapState && mapState.loc && mapState.loc.pt && !locBtn.hidden ? 'me' : 'pick';
     loadRoutes().then(renderRoute).catch(function () { map3dMsg(T('No se pudo calcular la ruta.')); setTimeout(function () { map3dMsg(''); }, 4000); });
   }
   function routeChips(label, options, current, onPick) {
@@ -3850,7 +3851,10 @@
     var f = routeDest, net = routeNetwork();
     var color = f.isLift ? 'var(--map-lift-color)' : f.svc ? 'var(--text-muted)' : DIFF[f.diffKey || 'other'].color;
     showRunPanel(T('Ruta hasta {0}', f.label || (f.isLift ? T('Remonte sin nombre') : T('Pista sin nombre'))), '', color, function (body) {
-      body.appendChild(routeChips(T('Desde'), [['me', T('Mi ubicación')], ['base', T('Pie de pistas')], ['pick', T('Otro punto')]], routeOrigin, function (v) {
+      // Where from: my location (where the device gives it) or a tap on the map.
+      var origins = locBtn.hidden ? [['pick', T('Punto en el mapa')]] : [['me', T('Mi ubicación')], ['pick', T('Punto en el mapa')]];
+      if (locBtn.hidden) routeOrigin = 'pick';
+      body.appendChild(routeChips(T('Desde'), origins, routeOrigin, function (v) {
         routeOrigin = v;
         if (v === 'me' && locWatch == null && !locBtn.hidden) locBtn.click();
         renderRoute();
@@ -3883,23 +3887,9 @@
       } else if (routeOrigin === 'pick' && !routePickPt) {
         drawRouteNone();
         return;
-      } else if (routeOrigin === 'pick' && routePickPt) {
+      } else {
         starts = SkiRoutes.near(net, routePickPt, 300);
         if (!starts.length) { msg(T('Ese punto está lejos de las pistas: toca más cerca de una pista o un remonte.')); drawRouteNone(); return; }
-      } else {
-        // The base: the lowest bottom of a lift, and every lift starting
-        // around it (Formigal has three at 1,502 m), so the route begins at
-        // whichever suits it rather than walking or skiing to it.
-        var low = null;
-        net.feats.forEach(function (x) { if (x.kind === 'lift') { var e = net.nodes[x.bottom].p[2]; if (low == null || (e != null && e < net.nodes[low].p[2])) low = x.bottom; } });
-        if (low == null) { msg(T('No encontramos ruta.')); drawRouteNone(); return; }
-        var lowP = net.nodes[low].p;
-        starts = [];
-        net.feats.forEach(function (x) {
-          if (x.kind !== 'lift') return;
-          var p = net.nodes[x.bottom].p;
-          if (SkiRoutes.dist(p, lowP) <= 500 && (p[2] == null || lowP[2] == null || p[2] - lowP[2] <= 25)) starts.push({ node: x.bottom, cost: 0 });
-        });
       }
 
       // Already there: the start is on the run (or at the lift, or the service) you asked for.
@@ -3907,7 +3897,7 @@
         var x = net.feats[fi];
         return x && ((x.kind === 'run' && f.geomPart && (f.runName ? x.run.name === f.runName : x.part === f.geomPart)) || (x.kind === 'lift' && f.isLift && x.part === f.geo));
       };
-      var here = routeOrigin !== 'base' && (starts.some(function (st) { return st.m != null && st.m <= 60 && destFeat(net.nodes[st.node].f); })
+      var here = (starts.some(function (st) { return st.m != null && st.m <= 60 && destFeat(net.nodes[st.node].f); })
         || (f.svc && starts[0] && SkiRoutes.dist(net.nodes[starts[0].node].p, [f.svc.lon, f.svc.lat]) <= 80));
       if (here) { msg(T('Ya estás en {0}.', f.label || (f.isLift ? T('Remonte sin nombre') : T('Pista sin nombre')))); drawRouteNone(); drawRouteStart(); return; }
       var targets = routeTargets(net, f);

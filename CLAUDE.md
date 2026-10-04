@@ -96,7 +96,7 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
   - relieve de AWS Terrain Tiles (Mapzen, gratis, sin clave; sí se pueden descargar desde el sandbox) e imágenes de Esri;
   - dibuja `mapState.features` (las mismas pistas y remontes que el 2D) y devuelve los toques al 2D: panel de pista en el ordenador y ventana con el perfil en el móvil. Reutiliza los botones de zoom, el modo Dificultad/Pendiente, "Dónde estoy" y el punto del perfil;
   - cámara: mira ladera arriba (del punto más bajo al más alto) salvo que girarla hasta 90° encuadre mucho mejor la estación (`frame()`); botón para dar una vuelta (`spin`);
-  - arranca con `style.load`, no con `load` (que espera a todas las teselas y se queda colgado si alguna está bloqueada).
+  - arranca con `style.load`, no con `load` (que espera a todas las teselas y se queda colgado si alguna está bloqueada). Se abre directamente en la vista final (inclinada) y oculta, y aparece con un fundido al primer `idle` o a los 5 s: la animación inicial de inclinación se quitó porque pedía teselas de todos los niveles intermedios y el relieve aparecía a saltos.
 - **Modo de prueba de "Dónde estoy"** (escondido): tras abrir la web con `?simular=1` (se recuerda en `localStorage.si_fake_loc`; `?simular=0` lo quita), el botón no pide la ubicación real: mueve el punto por la pista más larga de la estación a unos 8 m/s (`locFakeWalk`). Sirve para probar desde casa y para grabar vídeos. En modo prueba el botón sale aunque el aparato no dé ubicación (app 1.0.5).
 - **Código en el buscador de la portada** (la app Android no tiene barra de direcciones): escribir `simular=1` o `simular=0` activa o quita el modo de prueba y recarga la página.
 

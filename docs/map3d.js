@@ -100,8 +100,12 @@
     var map;
     try { map = new maplibregl.Map({
       container: el,
+      // Straight to the final view (tilted, a little closer: tilted, the near
+      // half of the view grows). An opening animation fetched imagery for every
+      // zoom level it passed through and made the terrain pop in mid-move.
       center: view.center,
-      zoom: view.zoom,
+      zoom: view.zoom + 0.25,
+      pitch: PITCH,
       bearing: bearing,
       maxPitch: 80,
       attributionControl: { compact: true, customAttribution: o.attribution },
@@ -132,7 +136,18 @@
         sky: { 'sky-color': '#7fb2e5', 'horizon-color': '#dfeaf4', 'sky-horizon-blend': 0.6, 'horizon-fog-blend': 0.5, 'fog-color': '#dfeaf4', 'fog-ground-blend': 0.85 }
       }
     }); } catch (e) { return null; }   // no usable WebGL after all
-    var home = null;
+    var home = { center: view.center, zoom: view.zoom + 0.25, bearing: bearing, pitch: PITCH };
+    // Hidden until the first view has its tiles (or 5 s at most), then faded in.
+    el.style.opacity = '0';
+    el.style.transition = 'opacity 0.35s ease';
+    var shown = false, revealTimer = null;
+    function reveal() {
+      if (shown) return;
+      shown = true;
+      clearTimeout(revealTimer);
+      el.style.opacity = '1';
+      if (o.onReady) o.onReady();
+    }
     // Missing tiles are normal (and MapLibre carries on without them): only
     // give up if the map never manages to draw.
     var watchdog = setTimeout(function () { if (o.onError) o.onError(); }, 25000);
@@ -143,11 +158,8 @@
       // The compact credits open themselves on small screens: keep them folded.
       var attrib = el.querySelector('.maplibregl-ctrl-attrib');
       if (attrib) attrib.classList.remove('maplibregl-compact-show');
-      // The mountain rises: start flat over the resort, then tilt. Tilted,
-      // the near half of the view grows, so it can come a little closer.
-      map.easeTo({ pitch: PITCH, zoom: map.getZoom() + 0.25, duration: 1400 });
-      map.once('moveend', function () { home = { center: map.getCenter(), zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch() }; });
-      if (o.onReady) o.onReady();
+      map.once('idle', reveal);
+      revealTimer = setTimeout(reveal, 5000);
     });
     map.on('error', function () {});   // logged by MapLibre otherwise; tiles that fail just stay blank
 
@@ -214,8 +226,7 @@
       zoomOut: function () { map.zoomOut(); },
       reset: function () {
         stopSpin();
-        if (home) map.easeTo(Object.assign({ duration: 900 }, home));
-        else map.easeTo({ center: view.center, zoom: view.zoom + 0.25, bearing: bearing, pitch: PITCH, duration: 900 });
+        map.easeTo(Object.assign({ duration: 900 }, home));
       },
       // A slow turn around the resort (also nice to record for a video).
       spin: function () {
@@ -231,7 +242,7 @@
         return true;
       },
       resize: function () { map.resize(); },
-      destroy: function () { clearTimeout(watchdog); stopSpin(); map.remove(); }
+      destroy: function () { clearTimeout(watchdog); clearTimeout(revealTimer); stopSpin(); el.style.opacity = ''; el.style.transition = ''; map.remove(); }
     };
     return api;
   }

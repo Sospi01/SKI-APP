@@ -1880,13 +1880,12 @@
     }
     function close() { box.hidden = true; active = -1; }
     function update() {
-      // Test switches typed into the search (the Android app has no address
-      // bar for ?3d=1 / ?simular=1): "3d=1", "3d=0", "simular=1", "simular=0".
-      var code = /^(3d|simular)=([01])$/.exec(input.value.trim().toLowerCase());
+      // The test switch typed into the search (the Android app has no address
+      // bar for ?simular=1): "simular=1" / "simular=0".
+      var code = /^simular=([01])$/.exec(input.value.trim().toLowerCase());
       if (code) {
         try {
-          var key = code[1] === '3d' ? 'si_3d' : 'si_fake_loc';
-          if (code[2] === '1') localStorage.setItem(key, '1'); else localStorage.removeItem(key);
+          if (code[1] === '1') localStorage.setItem('si_fake_loc', '1'); else localStorage.removeItem('si_fake_loc');
         } catch (e) {}
         location.reload();
         return;
@@ -3482,17 +3481,13 @@
   });
 
   // ---- 3D view (map3d.js + MapLibre GL, loaded on the first tap) ----
-  // Hidden for now: shown only after opening the site once with ?3d=1
-  // (remembered on the device; ?3d=0 hides it again).
+  // Shown wherever the browser has WebGL.
   var map3d = null, map3dOpening = false;
   var map3dBtn = document.getElementById('map-3d-btn'), map3dSpinBtn = document.getElementById('map-3d-spin');
   var map3dEl = document.getElementById('map-3d'), map3dMsgEl = document.getElementById('map-3d-msg');
   var MAPLIBRE_DIR = '/vendor/maplibre-gl-5.24.0/';
   map3dBtn.hidden = !(function () {
     try {
-      var m = /[?&]3d=([01])/.exec(location.search);
-      if (m) { if (m[1] === '1') localStorage.setItem('si_3d', '1'); else localStorage.removeItem('si_3d'); }
-      if (localStorage.getItem('si_3d') !== '1') return false;
       var c = document.createElement('canvas');
       return !!(c.getContext('webgl2') || c.getContext('webgl'));
     } catch (e) { return false; }

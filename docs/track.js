@@ -171,6 +171,9 @@ var SkiTrack = (function () {
     map: function (id, name, country) { send('map', stationFields(id, name, country)); },
     booking: function (id, name, country) { send('booking', stationFields(id, name, country)); },
     fav: function (id, name, country) { send('fav', stationFields(id, name, country)); },
+    // The 3D view opened, and "where am I" turned on (once per station visit each).
+    map3d: function (id, name, country) { send('map3d', stationFields(id, name, country)); },
+    locate: function (id, name, country) { send('locate', stationFields(id, name, country)); },
     // Any other page (guides, countries, /app): which one, for the stats.
     page: function () { send('page', { lp: location.pathname }); }
   };

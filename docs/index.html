@@ -1432,9 +1432,9 @@
   // ============== anonymous usage stats (docs/track.js) ==============
   // (Guarded: offline, or with the script blocked, the app must still work.)
   var track = {};
-  ['station', 'map', 'booking'].forEach(function (kind) {
+  ['station', 'map', 'booking', 'map3d', 'locate'].forEach(function (kind) {
     track[kind] = function (raw) {
-      if (window.SkiTrack) SkiTrack[kind](raw.id, raw.name, raw.country_code);
+      if (window.SkiTrack && SkiTrack[kind]) SkiTrack[kind](raw.id, raw.name, raw.country_code);
     };
   });
 
@@ -3471,6 +3471,7 @@
     locCentered = false;
     locBtn.setAttribute('aria-pressed', 'true');
     if (LOC_FAKE && locFakeWalk()) return;
+    if (currentRaw && locUsedFor !== currentRaw.id) { locUsedFor = currentRaw.id; track.locate(currentRaw); }
     locMsg(T('Buscando tu posición…'));
     locWatch = navigator.geolocation.watchPosition(locDraw, function (err) {
       var keep = locWatch;
@@ -3482,7 +3483,7 @@
 
   // ---- 3D view (map3d.js + MapLibre GL, loaded on the first tap) ----
   // Shown wherever the browser has WebGL.
-  var map3d = null, map3dOpening = false;
+  var map3d = null, map3dOpening = false, map3dUsedFor = null, locUsedFor = null;
   var map3dBtn = document.getElementById('map-3d-btn'), map3dSpinBtn = document.getElementById('map-3d-spin');
   var map3dEl = document.getElementById('map-3d'), map3dMsgEl = document.getElementById('map-3d-msg');
   var MAPLIBRE_DIR = '/vendor/maplibre-gl-5.24.0/';
@@ -3553,6 +3554,7 @@
         onError: map3dFailed
       });
       if (!map3d) { map3dFailed(); return; }
+      if (map3dUsedFor !== raw.id) { map3dUsedFor = raw.id; track.map3d(raw); }
       map3d.onSpinChange = function (on) { map3dSpinBtn.setAttribute('aria-pressed', on ? 'true' : 'false'); };
       document.getElementById('map-hint').classList.add('hidden');
       map3dBtn.textContent = '2D';

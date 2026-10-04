@@ -30,7 +30,7 @@ service cloud.firestore {
         && request.resource.data.exp is timestamp
         && request.resource.data.exp > request.time + duration.value(390, 'd')
         && request.resource.data.exp < request.time + duration.value(400, 'd')
-        && request.resource.data.type in ['open', 'station', 'map', 'booking', 'time', 'page', 'fav']
+        && request.resource.data.type in ['open', 'station', 'map', 'booking', 'time', 'page', 'fav', 'map3d', 'locate']
         && request.resource.data.uid is string && request.resource.data.uid.size() <= 40
         && request.resource.data.sid is string && request.resource.data.sid.size() <= 40
         && request.resource.data.platform in ['android', 'web']

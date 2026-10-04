@@ -161,6 +161,8 @@
   .chip.booked { border-color: var(--series-2); }
   .chip.saved { border-color: #e0b100; }
   .badge.saved { background: rgba(255,210,87,0.18); color: inherit; }
+  .badge.m3d { background: rgba(74,163,255,0.18); color: inherit; font-weight: 700; }
+  .badge.loc { background: rgba(26,115,232,0.14); color: inherit; }
   .linkbtn { background: none; border: none; padding: 0; color: var(--series-1); font: inherit; font-size: 12px; cursor: pointer; text-decoration: underline; }
   .hidden-bar { display: flex; justify-content: space-between; gap: 8px; font-size: 11.5px; color: var(--text-muted); margin: -2px 0 6px; }
   .more { margin-top: 8px; text-align: center; }
@@ -366,7 +368,8 @@ function compute(now) {
 
   function windowStats(from) {
     const users = new Set(), sessions = new Set(), viewUsers = new Set(), mapUsers = new Set(), bookUsers = new Set(), favUsers = new Set();
-    let newUsers = 0, views = 0, maps = 0, bookings = 0, favs = 0;
+    const m3dUsers = new Set(), locUsers = new Set();
+    let newUsers = 0, views = 0, maps = 0, bookings = 0, favs = 0, m3d = 0, locs = 0;
     // Same counts split by where the visit came from: the Android app or a browser.
     const by = { app: plat(), web: plat() };
     for (const e of ev) {
@@ -380,9 +383,12 @@ function compute(now) {
       else if (e.y === 'map') { maps++; mapUsers.add(e.u); }
       else if (e.y === 'booking') { bookings++; bookUsers.add(e.u); }
       else if (e.y === 'fav') { favs++; favUsers.add(e.u); }
+      else if (e.y === 'map3d') { m3d++; m3dUsers.add(e.u); }
+      else if (e.y === 'locate') { locs++; locUsers.add(e.u); }
     }
-    return { users: users.size, sessions: sessions.size, newUsers, views, maps, bookings, favs,
-      viewUsers: viewUsers.size, mapUsers: mapUsers.size, bookUsers: bookUsers.size, favUsers: favUsers.size, by };
+    return { users: users.size, sessions: sessions.size, newUsers, views, maps, bookings, favs, m3d, locs,
+      viewUsers: viewUsers.size, mapUsers: mapUsers.size, bookUsers: bookUsers.size, favUsers: favUsers.size,
+      m3dUsers: m3dUsers.size, locUsers: locUsers.size, by };
   }
   function plat() { return { users: new Set(), sessions: new Set(), bookings: 0 }; }
   const w = {};
@@ -434,20 +440,22 @@ function compute(now) {
       if (e.y === 'station') d.views++;
     }
     let u = perUser.get(e.u);
-    if (!u) { u = { uid: e.u, days: new Set(), sessions: new Set(), secs: 0, stations: new Map(), booked: new Map(), saved: new Set(), bookings: 0, maps: 0, first: firstSeen.get(e.u), last: e.t, platform: lastPlatform.get(e.u), origin: firstOpen.get(e.u), laterSrc: laterSrc.get(e.u), country: userCountry.get(e.u) }; perUser.set(e.u, u); }
+    if (!u) { u = { uid: e.u, days: new Set(), sessions: new Set(), secs: 0, stations: new Map(), booked: new Map(), saved: new Set(), m3d: new Set(), located: new Set(), bookings: 0, maps: 0, first: firstSeen.get(e.u), last: e.t, platform: lastPlatform.get(e.u), origin: firstOpen.get(e.u), laterSrc: laterSrc.get(e.u), country: userCountry.get(e.u) }; perUser.set(e.u, u); }
     u.days.add(dayKey(e.t)); u.sessions.add(e.s); u.last = Math.max(u.last, e.t);
     if (e.y !== 'open' && e.y !== 'page' && e.y !== 'time') u.acts = (u.acts || 0) + 1;
     if (e.y === 'time') {
       u.secs += e.sec || 0;
       perSession.set(e.s, (perSession.get(e.s) || 0) + (e.sec || 0));
-    } else if (e.y === 'station' || e.y === 'booking' || e.y === 'map' || e.y === 'fav') {
+    } else if (e.y === 'station' || e.y === 'booking' || e.y === 'map' || e.y === 'fav' || e.y === 'map3d' || e.y === 'locate') {
       const key = e.st || e.n;
       if (!key) continue;
       let s = perStation.get(key);
-      if (!s) { s = { name: e.n || key, country: e.c, views: 0, users: new Set(), bookings: 0, bookUsers: new Set(), maps: 0, favUsers: new Set() }; perStation.set(key, s); }
+      if (!s) { s = { name: e.n || key, country: e.c, views: 0, users: new Set(), bookings: 0, bookUsers: new Set(), maps: 0, favUsers: new Set(), m3dUsers: new Set() }; perStation.set(key, s); }
       if (e.y === 'station') { s.views++; s.users.add(e.u); u.stations.set(s.name, (u.stations.get(s.name) || 0) + 1); }
       else if (e.y === 'map') { s.maps++; u.maps++; }
       else if (e.y === 'fav') { s.favUsers.add(e.u); u.saved.add(s.name); }
+      else if (e.y === 'map3d') { s.m3dUsers.add(e.u); u.m3d.add(s.name); }
+      else if (e.y === 'locate') { u.located.add(s.name); }
       else { s.bookings++; s.bookUsers.add(e.u); u.bookings++; u.booked.set(s.name, (u.booked.get(s.name) || 0) + 1); }
     }
   }
@@ -609,7 +617,10 @@ function render() {
     ['Aperturas del mapa', fmtN(w.hoy.maps), fmtN(w.d7.maps), fmtN(w.d30.maps)],
     ['Clics en Booking', fmtN(w.hoy.bookings), fmtN(w.d7.bookings), fmtN(w.d30.bookings)],
     ['Estaciones guardadas', fmtN(w.hoy.favs), fmtN(w.d7.favs), fmtN(w.d30.favs)],
-    ['Usuarios que guardan alguna', fmtN(w.hoy.favUsers), fmtN(w.d7.favUsers), fmtN(w.d30.favUsers)]
+    ['Usuarios que guardan alguna', fmtN(w.hoy.favUsers), fmtN(w.d7.favUsers), fmtN(w.d30.favUsers)],
+    ['Aperturas de la vista 3D', fmtN(w.hoy.m3d), fmtN(w.d7.m3d), fmtN(w.d30.m3d)],
+    ['Usuarios que abren el 3D', fmtN(w.hoy.m3dUsers), fmtN(w.d7.m3dUsers), fmtN(w.d30.m3dUsers)],
+    ['Usuarios que activan "Dónde estoy"', fmtN(w.hoy.locUsers), fmtN(w.d7.locUsers), fmtN(w.d30.locUsers)]
   ]);
 
   barChart($('chart-users'), m.days, [{ valueOf: (d) => d.users.size, color: 'var(--series-1)' }], 'usuarios');
@@ -657,6 +668,7 @@ function render() {
   tableRows($('loyalty'), null, [
     ['Usuarios que vuelven (2 días o más)', fmtN(m.returning) + ' · ' + fmtPct(m.returning / m.users30Count)],
     ['Guardan alguna estación', fmtN(w.d30.favUsers) + ' · ' + fmtPct(w.d30.favUsers / m.users30Count)],
+    ['Abren la vista 3D', fmtN(w.d30.m3dUsers) + ' · ' + fmtPct(w.d30.m3dUsers / m.users30Count)],
     ['Días de uso medios por usuario', (Math.round(m.avgDaysPerUser * 10) / 10).toLocaleString('es-ES')],
     ['Usuarios activos / mes', fmtN(m.users30Count)],
     ['Sin actividad antes del filtro de robots (probables robots)', fmtN(m.idleBefore.length) + ' · ' + fmtPct(m.idleBefore.length / m.users30Count)],
@@ -683,7 +695,7 @@ function render() {
   $('stations').innerHTML = st.length ? st.map((s) =>
     '<div class="row"><span class="name">' + esc(s.name) + '</span>' +
     '<span class="nums">' + fmtN(s.views) + ' vistas · ' + fmtN(s.users.size) + ' usuarios</span>' +
-    '<span class="meta">' + fmtN(s.maps) + ' mapas · ' + (s.favUsers.size ? '⭐ ' + fmtN(s.favUsers.size) + (s.favUsers.size === 1 ? ' la guarda' : ' la guardan') + ' · ' : '') + fmtN(s.bookings) + ' clics Booking' + (s.views ? ' (' + fmtPct(s.bookings / s.views) + ')' : '') + (s.country ? ' · ' + esc(s.country) : '') + '</span></div>'
+    '<span class="meta">' + fmtN(s.maps) + ' mapas · ' + (s.m3dUsers.size ? fmtN(s.m3dUsers.size) + ' en 3D · ' : '') + (s.favUsers.size ? '⭐ ' + fmtN(s.favUsers.size) + (s.favUsers.size === 1 ? ' la guarda' : ' la guardan') + ' · ' : '') + fmtN(s.bookings) + ' clics Booking' + (s.views ? ' (' + fmtPct(s.bookings / s.views) + ')' : '') + (s.country ? ' · ' + esc(s.country) : '') + '</span></div>'
   ).join('') : '<div class="empty">Todavía no hay estaciones vistas.</div>';
 
   renderUsers(m);
@@ -809,11 +821,15 @@ function renderUsers(m) {
       '<span class="badges"><span class="badge">' + (u.platform === 'android' ? 'App' : 'Web') + '</span>' +
       (u.country ? '<span class="badge country"' + (u.country.how === 'lang' ? ' title="Aproximado, por el idioma del navegador">≈ ' : '>') + countryHtml(u.country.cc) + '</span>' : '') +
       (u.origin && u.origin.src !== 'app' ? '<span class="badge src' + (u.origin.src ? '' : ' none') + '">' + esc(sourceShort(u.origin.src, u.origin.ref)) + '</span>' : '') +
-      (u.saved.size ? '<span class="badge saved" title="Estaciones guardadas">⭐ ' + u.saved.size + '</span>' : '') + '</span>' +
+      (u.saved.size ? '<span class="badge saved" title="Estaciones guardadas">⭐ ' + u.saved.size + '</span>' : '') +
+      (u.m3d.size ? '<span class="badge m3d" title="Abrió la vista 3D">3D</span>' : '') +
+      (u.located.size ? '<span class="badge loc" title="Activó «Dónde estoy»">📍</span>' : '') + '</span>' +
       '<span class="when">' + ago(u.last, now) + '</span>' +
       '<span class="user-meta">' + u.days.size + (u.days.size === 1 ? ' día' : ' días') + ' · ' + u.sessions.size + (u.sessions.size === 1 ? ' sesión' : ' sesiones') + ' · ' + fmtDur(u.secs) +
-      ' · ' + u.stations.size + (u.stations.size === 1 ? ' estación' : ' estaciones') + (u.bookings ? ' · ' + u.bookings + ' Booking' : '') + (u.saved.size ? ' · ' + u.saved.size + (u.saved.size === 1 ? ' guardada' : ' guardadas') : '') + '</span>' +
+      ' · ' + u.stations.size + (u.stations.size === 1 ? ' estación' : ' estaciones') + (u.bookings ? ' · ' + u.bookings + ' Booking' : '') + (u.saved.size ? ' · ' + u.saved.size + (u.saved.size === 1 ? ' guardada' : ' guardadas') : '') + (u.m3d.size ? ' · 3D en ' + u.m3d.size + (u.m3d.size === 1 ? ' estación' : ' estaciones') : '') + '</span>' +
       '</summary><div class="user-body">' +
+      (u.m3d.size ? '<div class="origin">Vista 3D: <strong>' + esc([...u.m3d].join(', ')) + '</strong></div>' : '') +
+      (u.located.size ? '<div class="origin">«Dónde estoy»: <strong>' + esc([...u.located].join(', ')) + '</strong></div>' : '') +
       (u.country ? '<div class="origin">País: <strong>' + countryHtml(u.country.cc) + '</strong> ' +
         esc(u.country.how === 'tz' ? '(zona horaria ' + u.country.detail + ')' : '(aproximado, por el idioma del navegador ' + u.country.detail + ')') + '</div>' : '') +
       originHtml(u) +
@@ -876,6 +892,8 @@ function demoEvents() {
           t += 20000 + rnd() * 90000;
           out.push({ id: sid + 'v' + v, t, y: 'station', u: uid, s: sid, p: platform, st: st[0], n: st[1], c: st[2] });
           if (rnd() < 0.35) out.push({ id: sid + 'm' + v, t: t + 5000, y: 'map', u: uid, s: sid, p: platform, st: st[0], n: st[1], c: st[2] });
+          if (rnd() < 0.15) out.push({ id: sid + 'd' + v, t: t + 6000, y: 'map3d', u: uid, s: sid, p: platform, st: st[0], n: st[1], c: st[2] });
+          if (rnd() < 0.05) out.push({ id: sid + 'l' + v, t: t + 6500, y: 'locate', u: uid, s: sid, p: platform, st: st[0], n: st[1], c: st[2] });
           if (rnd() < 0.06) out.push({ id: sid + 'f' + v, t: t + 7000, y: 'fav', u: uid, s: sid, p: platform, st: st[0], n: st[1], c: st[2] });
           if (rnd() < 0.07) out.push({ id: sid + 'b' + v, t: t + 9000, y: 'booking', u: uid, s: sid, p: platform, st: st[0], n: st[1], c: st[2] });
         }

@@ -126,13 +126,13 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
 - **`docs/track.js`** escribe eventos directamente en Firestore mediante la API REST: proyecto `ski-info-9910e`, colección `events`.
   - Solo cuenta en `skiinfoapp.com` o `*.github.io`, nunca en localhost.
   - **Ignora robots:** Googlebot, la inspección de Search Console, Lighthouse, Bing, etc., y cualquier navegador con `navigator.webdriver`. Activo desde el 29 de septiembre a las 22:00 UTC.
-  - Tipos de evento: `open`, `station`, `map`, `booking`, `time`, `page` y `fav`.
+  - Tipos de evento: `open`, `station`, `map`, `booking`, `time`, `page`, `fav`, `map3d` (abre la vista 3D) y `locate` (activa "Dónde estoy"); estos dos, una vez por estación y visita, desde el 4 de octubre.
   - Campos: `uid` (id anónimo en localStorage), `sid` (sesión compartida entre pestañas; caduca tras 30 minutos sin actividad), `platform` (android/web), `lang`, `src`/`ref`/`lp` (procedencia y página de entrada) y `tz` (zona horaria, que da el país sin usar la IP; desde el 29 de septiembre).
   - Los enlaces con `?ref=nombre` aparecen en el panel como "Enlace marcado".
-- **`firestore.rules`:** solo permite crear eventos bien formados. Leer y borrar solo puede hacerlo el propietario. **Hay que publicarlas a mano** en Firebase → Firestore Database → Reglas; la versión publicada ya incluye `fav` y `tz`.
+- **`firestore.rules`:** solo permite crear eventos bien formados. Leer y borrar solo puede hacerlo el propietario. **Hay que publicarlas a mano** en Firebase → Firestore Database → Reglas; la versión publicada incluye `fav` y `tz`. `map3d` y `locate` se añadieron el 4 de octubre: **pendiente de que el usuario las publique** (hasta entonces esos eventos se pierden).
 - **`docs/stats.html`:** panel con acceso por Google (solo el propietario), en `/stats.html`.
   - Muestra resumen, gráficos, web o app, procedencia, países, Booking, fidelización y tiempo de uso.
-  - Lista de usuarios con país, procedencia, estaciones vistas y guardadas (⭐), y botón "Ocultar este usuario". En Fidelización, "Guardan alguna estación"; en Estaciones más vistas, cuántos la guardan.
+  - Lista de usuarios con país, procedencia, estaciones vistas y guardadas (⭐), insignias "3D" y 📍 (con las estaciones donde abrió el 3D o activó "Dónde estoy"), y botón "Ocultar este usuario". En el resumen, aperturas del 3D y usuarios que lo abren o activan "Dónde estoy"; en Fidelización, "Abren la vista 3D". En Fidelización, "Guardan alguna estación"; en Estaciones más vistas, cuántos la guardan.
   - Guarda en caché local `si_stats_cache_v2`. Los usuarios ocultos se guardan en localStorage.
   - `?demo=1` muestra datos de ejemplo, útil para probar sin Firebase.
   - `BOT_FILTER_SINCE` separa los usuarios sin actividad (probables robots) de antes y después del filtro.
@@ -215,7 +215,7 @@ cd data-pipeline && python3 -m pytest -q                       # si tocas el pip
 5. Hacia el 7–8 de octubre: terminar la prueba cerrada y solicitar producción.
 
 **De desarrollo, por prioridad:**
-0. **Vista 3D** (abierta a todos el 4 de octubre): medir su uso (nuevo campo o tipo de evento: requiere publicar las reglas de Firestore) y contarlo en Nevasport (echaban de menos FatMap).
+0. **Vista 3D** (abierta a todos el 4 de octubre; el usuario ya lo contó en Nevasport): su uso se mide con el evento `map3d`, que solo se guarda cuando el usuario publique las reglas nuevas de Firestore.
 1. Comprobar que se ejecutaron los despliegues programados (04:17 y 11:07 UTC) con `mcp__github__actions_list` sobre `deploy-pages.yml`, filtrando por el evento `schedule`.
 2. **Portada para quien llega por primera vez:** el 36 % se va sin abrir ninguna estación. Hay que dar más visibilidad a las estaciones populares o cercanas.
 3. Textos de la ficha de Play: hechos en los 7 idiomas (`STORE_LISTING.md`); falta que el usuario los pegue en Play Console.

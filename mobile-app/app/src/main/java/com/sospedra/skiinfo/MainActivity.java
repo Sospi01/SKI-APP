@@ -165,7 +165,7 @@ public class MainActivity extends AppCompatActivity {
         String lang = Locale.getDefault().getLanguage();
         switch (lang) {
             case "es": case "ca": case "eu": case "gl": return APP_URL;
-            case "fr": case "de": case "it": return APP_URL + "?applang=" + lang;
+            case "fr": case "de": case "it": case "nl": case "pl": return APP_URL + "?applang=" + lang;
             default: return APP_URL + "?applang=en";
         }
     }

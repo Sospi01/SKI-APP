@@ -137,10 +137,10 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
 - Desde 1.0.6:
   - permiso de ubicación (solo al pulsar "Dónde estoy" o "Usar mi ubicación"; se usa solo en el móvil);
   - `SkiInfoAndroid.hasLocation()` le dice a la web que la app da la ubicación (`canUseLocation()` en `index.html`); la 1.0.5 no lo tiene y la web oculta esos botones;
-  - abre la web en el idioma del móvil con `/?applang=xx`, que el script `lang-redirect` de `index.html` respeta salvo que el usuario ya haya elegido idioma (`si_lang`).
+  - abre la web en el idioma del móvil (es, en, fr, de, it, nl o pl) con `/?applang=xx`, que el script `lang-redirect` de `index.html` respeta salvo que el usuario ya haya elegido idioma (`si_lang`).
 - En Google Play está en **prueba cerrada** (hacen falta 14 días con 12 testers). Terminaría hacia el **7–8 de octubre**; después, el usuario solicita el acceso a producción.
 - Verificación de desarrollador de Android: hecha. Los dos paquetes de la cuenta están registrados.
-- `mobile-app/STORE_LISTING.md` tiene los textos de la ficha de Play en español e inglés, y los pasos del formulario de seguridad de los datos.
+- `mobile-app/STORE_LISTING.md` tiene los textos de la ficha de Play en los 7 idiomas (es, en, fr, de, it, nl, pl), y los pasos del formulario de seguridad de los datos.
 - `marketing/REDDIT_POSTS.md` tiene los posts para Reddit y foros, cada uno con su `?ref=`.
 
 ## 4. Cómo probar
@@ -208,7 +208,7 @@ cd data-pipeline && python3 -m pytest -q                       # si tocas el pip
 **De desarrollo, por prioridad:**
 1. Comprobar que se ejecutaron los despliegues programados (04:17 y 11:07 UTC) con `mcp__github__actions_list` sobre `deploy-pages.yml`, filtrando por el evento `schedule`.
 2. **Portada para quien llega por primera vez:** el 36 % se va sin abrir ninguna estación. Hay que dar más visibilidad a las estaciones populares o cercanas.
-3. Textos de la ficha de Play en francés, alemán e italiano, en `STORE_LISTING.md`.
+3. Textos de la ficha de Play: hechos en los 7 idiomas (`STORE_LISTING.md`); falta que el usuario los pegue en Play Console.
 4. **App 1.0.6:** abrir la versión del idioma del móvil entre los 5 disponibles. Cuando la app esté en producción, cambiar el botón "Muy pronto" de `/app` por el enlace de Google Play (en `build_seo_pages.py`, en `app_page`).
 5. **Política de privacidad** en inglés, francés, alemán e italiano.
 6. Lunes 5 de octubre: comprobar la ejecución de `refresh-stations.yml`.

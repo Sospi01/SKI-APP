@@ -379,6 +379,8 @@ window.SKI_I18N = {
   "{0} remontes": "{0} Lifte",
   "1 pista": "1 Piste",
   "{0} pistas": "{0} Pisten",
-  "{0} de {1}": "{0} von {1}"
+  "{0} de {1}": "{0} von {1}",
+  "Ya estás en {0}.": "Du bist schon hier: {0}.",
+  "Desde ese punto no hay forma de llegar por pistas: toca sobre una pista o un remonte.": "Von diesem Punkt aus führt keine Piste dorthin: Tippe auf eine Piste oder einen Lift."
  }
 };

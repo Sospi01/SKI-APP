@@ -379,6 +379,8 @@ window.SKI_I18N = {
   "{0} remontes": "{0} lifts",
   "1 pista": "1 run",
   "{0} pistas": "{0} runs",
-  "{0} de {1}": "{0} of {1}"
+  "{0} de {1}": "{0} of {1}",
+  "Ya estás en {0}.": "You're already at {0}.",
+  "Desde ese punto no hay forma de llegar por pistas: toca sobre una pista o un remonte.": "There's no way to get there on the runs from that point: tap on a run or a lift."
  }
 };

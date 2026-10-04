@@ -3816,15 +3816,33 @@
         });
       }
 
+      // Already there: the start is on the run (or at the lift, or the service) you asked for.
+      var destFeat = function (fi) {
+        var x = net.feats[fi];
+        return x && ((x.kind === 'run' && f.geomPart && (f.runName ? x.run.name === f.runName : x.part === f.geomPart)) || (x.kind === 'lift' && f.isLift && x.part === f.geo));
+      };
+      var here = routeOrigin !== 'base' && (starts.some(function (st) { return st.m != null && st.m <= 60 && destFeat(net.nodes[st.node].f); })
+        || (f.svc && starts[0] && SkiRoutes.dist(net.nodes[starts[0].node].p, [f.svc.lon, f.svc.lat]) <= 80));
+      if (here) { msg(T('Ya estás en {0}.', f.label || (f.isLift ? T('Remonte sin nombre') : T('Pista sin nombre')))); drawRouteNone(); drawRouteStart(); return; }
       var targets = routeTargets(net, f);
       var res = targets.length ? SkiRoutes.route(net, starts, targets, routeLevel) : null;
+      // Off the network near the start (a freeride itinerary heading down to
+      // the valley, say): look a little further around for a way in.
+      var fromPt = routeOrigin === 'pick' ? routePickPt : routeOrigin === 'me' ? mapState.loc && mapState.loc.pt : null;
+      if (!res && fromPt && targets.length) res = SkiRoutes.route(net, SkiRoutes.near(net, fromPt, 800, 30), targets, routeLevel);
       if (!res) {
-        msg(routeLevel !== 'all' ? T('No encontramos ruta con este nivel. Prueba con otro nivel o desde otro punto.') : T('No encontramos ruta: puede que falte algún tramo en el mapa de esta estación.'));
+        msg(routeLevel !== 'all' ? T('No encontramos ruta con este nivel. Prueba con otro nivel o desde otro punto.')
+          : routeOrigin === 'pick' ? T('Desde ese punto no hay forma de llegar por pistas: toca sobre una pista o un remonte.')
+          : T('No encontramos ruta: puede que falte algún tramo en el mapa de esta estación.'));
         if (net.q != null && net.q < 0.8) msg(T('El mapa de pistas de esta estación tiene huecos, así que no siempre encontramos la ruta.'));
         drawRouteNone();
+        drawRouteStart();
         return;
       }
       var legs = SkiRoutes.legs(net, res);
+      // From the point itself to where the route joins the runs.
+      var joinP = net.nodes[res.path[0].node].p, walk0 = fromPt ? SkiRoutes.dist(fromPt, joinP) : 0;
+      if (walk0 > 15) legs.unshift({ kind: 'walk', m: walk0, secs: walk0, coords: [fromPt, joinP] });
       // Steps to read: short walks dropped, and a short run (or a run of
       // unnamed ones) folded into the run next to it, named after the longest.
       // Links between runs (short walks, a few metres of another run) are
@@ -3849,7 +3867,7 @@
       var sum = document.createElement('div'); sum.className = 'route-summary';
       var nLifts = steps.filter(function (l) { return l.kind === 'lift'; }).length, nRuns = steps.filter(function (l) { return l.kind === 'run'; }).length;
       sum.textContent = [T('{0} min', Math.max(1, Math.round(res.cost / 60))),
-        nLifts === 1 ? T('1 remonte') : T('{0} remontes', nLifts), nRuns === 1 ? T('1 pista') : T('{0} pistas', nRuns)].join(' · ');
+        nLifts ? (nLifts === 1 ? T('1 remonte') : T('{0} remontes', nLifts)) : '', nRuns ? (nRuns === 1 ? T('1 pista') : T('{0} pistas', nRuns)) : ''].filter(Boolean).join(' · ');
       out.appendChild(sum);
       var ol = document.createElement('ol'); ol.className = 'route-steps';
       steps.forEach(function (l) {
@@ -3908,6 +3926,19 @@
     routePickPt = pt;
     routeOrigin = 'pick';
     renderRoute();
+  }
+  // The point picked on the map, marked even when no route starts there.
+  function drawRouteStart() {
+    if (routeOrigin !== 'pick' || !routePickPt || !mapState) return;
+    var q = mapState.project(routePickPt), c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    c.setAttribute('cx', q[0].toFixed(1)); c.setAttribute('cy', q[1].toFixed(1)); c.setAttribute('r', (6 / (mapState.zoom || 1)).toFixed(2));
+    c.setAttribute('class', 'map-route-start');
+    var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', 'map-route');
+    g.appendChild(c);
+    mapState.content.appendChild(g);
+    mapState.routeG = g;
+    if (map3d) map3d.showRoute([{ coords: [routePickPt, routePickPt], kind: 'walk', color: '#5f6b77' }]);
   }
   function drawRouteNone() {
     routeShown = null;

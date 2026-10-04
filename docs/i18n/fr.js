@@ -379,6 +379,8 @@ window.SKI_I18N = {
   "{0} remontes": "{0} remontées",
   "1 pista": "1 piste",
   "{0} pistas": "{0} pistes",
-  "{0} de {1}": "{0} sur {1}"
+  "{0} de {1}": "{0} sur {1}",
+  "Ya estás en {0}.": "Vous êtes déjà sur {0}.",
+  "Desde ese punto no hay forma de llegar por pistas: toca sobre una pista o un remonte.": "Impossible d'y arriver par les pistes depuis ce point : touchez une piste ou une remontée."
  }
 };

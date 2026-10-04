@@ -169,13 +169,17 @@
     return { cost: best[end], path: path };
   }
 
-  // The nodes near a point (within maxM), nearest first, as route() starts.
+  // Starts near a point (within maxM), as route() takes them: the nearest
+  // node of each run or lift around, nearest first -- not just the closest
+  // run's nodes, which may lead nowhere if that run ends in a gap of the map.
   function near(net, pt, maxM, limit) {
-    var out = [];
+    var byFeat = {};
     net.nodes.forEach(function (n, i) {
       var m = dist(pt, n.p);
-      if (m <= maxM && net.adj[i].length) out.push({ node: i, m: m, cost: m / WALK_SPEED });
+      if (m > maxM || !net.adj[i].length) return;
+      if (!byFeat[n.f] || m < byFeat[n.f].m) byFeat[n.f] = { node: i, m: m, f: n.f, cost: m / WALK_SPEED };
     });
+    var out = Object.keys(byFeat).map(function (k) { return byFeat[k]; });
     out.sort(function (a, b) { return a.m - b.m; });
     return out.slice(0, limit || 12);
   }

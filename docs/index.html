@@ -2618,6 +2618,8 @@
         'rotate(' + mapState.angle.toFixed(2) + ') scale(' + mapState.zoom.toFixed(3) + ')');
       mapState.updateScaleBar(mapState.zoom);
       if (mapState.onZoom) mapState.onZoom(mapState.zoom);
+      clearTimeout(refineTimer);
+      refineTimer = setTimeout(refineMapTiles, 250);
       var liftR = liftStationRadius(mapState.zoom).toFixed(3);
       (mapState.liftStationDots || []).forEach(function (d) { d.setAttribute('r', liftR); });
       var svcR = serviceMarkerRadius(mapState.zoom).toFixed(3);
@@ -2646,6 +2648,42 @@
         a.el.style.display = show ? 'inline' : 'none';
         if (show) a.el.setAttribute('points', arrowPolygonPoints(a.cx, a.cy, a.angle, arrowSz));
       });
+    }
+    // Zoomed in, the base tiles get blurry: load the tiles of the area in view
+    // at the zoom level the screen can show (up to TILE_MAX_ZOOM), on top.
+    var refineTimer = null;
+    function refineMapTiles() {
+      var ms = mapState;
+      if (!ms || !ms.detailG || ms.zoom < 1.4) return;
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      var z = Math.min(TILE_MAX_ZOOM, ms.tileZoom + Math.ceil(Math.log(ms.baseTile * ms.zoom * dpr / 300) / Math.LN2));
+      if (z <= ms.tileZoom) return;
+      var corners = [[0, 0], [ms.vbW, 0], [0, ms.vbH], [ms.vbW, ms.vbH]].map(function (c) { return ms.unproject(outerToContentPoint(c[0], c[1])); });
+      var lons = corners.map(function (c) { return c[0]; }), lats = corners.map(function (c) { return c[1]; });
+      var box = [Math.min.apply(null, lons), Math.max.apply(null, lons), Math.min.apply(null, lats), Math.max.apply(null, lats)];
+      var g;
+      for (; z > ms.tileZoom; z--) {
+        g = tileGridAt(box[0], box[1], box[2], box[3], z);
+        if ((g.xt1 - g.xt0 + 1) * (g.yt1 - g.yt0 + 1) <= 48) break;
+      }
+      if (z <= ms.tileZoom) return;
+      if (ms.detailG.childNodes.length > 240) { ms.detailG.innerHTML = ''; ms.detailTiles = {}; }
+      var SVGNS = 'http://www.w3.org/2000/svg';
+      for (var ty = g.yt0; ty <= g.yt1; ty++) {
+        for (var tx = g.xt0; tx <= g.xt1; tx++) {
+          var key = z + '/' + ty + '/' + tx;
+          if (ms.detailTiles[key]) continue;
+          ms.detailTiles[key] = true;
+          var nw = tile2deg(tx, ty, z), se = tile2deg(tx + 1, ty + 1, z);
+          var a = ms.project([nw[1], nw[0]]), b = ms.project([se[1], se[0]]);
+          var img = document.createElementNS(SVGNS, 'image');
+          img.setAttribute('href', 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/' + key);
+          img.setAttribute('x', a[0]); img.setAttribute('y', a[1]);
+          img.setAttribute('width', b[0] - a[0]); img.setAttribute('height', b[1] - a[1]);
+          img.setAttribute('preserveAspectRatio', 'none');
+          ms.detailG.appendChild(img);
+        }
+      }
     }
     function clamp() {
       // The min/max-translation box below assumes an axis-aligned (unrotated)
@@ -3100,6 +3138,14 @@
         content.appendChild(tileImg);
       }
     }
+    // Sharper tiles for the part in view, added on top of these as you zoom in
+    // (refineMapTiles): the base layer above stays a single, quick download.
+    var detailG = document.createElementNS(SVGNS, 'g');
+    content.appendChild(detailG);
+    var baseTile = (function () {
+      var a = project([tile2deg(grid.xt0, grid.yt0, tileZoom)[1], 0]), b = project([tile2deg(grid.xt0 + 1, grid.yt0, tileZoom)[1], 0]);
+      return b[0] - a[0];   // width of one base tile, in map units
+    })();
 
     var features = [];
     var liftStationDots = [];
@@ -3268,7 +3314,8 @@
       legend.appendChild(svcItem);
     });
 
-    mapState = { project: project, svg: svg, content: content, vbW: vbW, vbH: vbH, scale: scale, zoom: 1, tx: 0, ty: 0, angle: 0, updateScaleBar: updateScaleBar, features: features, liftStationDots: liftStationDots, serviceMarkers: serviceMarkers, serviceIcons: serviceIcons, directionArrows: directionArrows };
+    mapState = { project: project, unproject: function (q) { return [(q[0] / scale - padX) / cos + lonMin, latMax - (q[1] / scale - padY)]; },
+      tileZoom: tileZoom, baseTile: baseTile, detailG: detailG, detailTiles: {}, svg: svg, content: content, vbW: vbW, vbH: vbH, scale: scale, zoom: 1, tx: 0, ty: 0, angle: 0, updateScaleBar: updateScaleBar, features: features, liftStationDots: liftStationDots, serviceMarkers: serviceMarkers, serviceIcons: serviceIcons, directionArrows: directionArrows };
     updateScaleBar(1);
     setMapMode(mapMode || savedMapMode());
   }

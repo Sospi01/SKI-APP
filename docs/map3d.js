@@ -108,7 +108,8 @@
       style: {
         version: 8,
         sources: {
-          sat: { type: 'raster', tiles: [IMAGERY], tileSize: 256, maxzoom: 18, attribution: 'Esri, Maxar, Earthstar Geographics' },
+          // Declared at half size on sharp (high-DPI) screens, so MapLibre asks for one zoom level more.
+          sat: { type: 'raster', tiles: [IMAGERY], tileSize: (window.devicePixelRatio || 1) >= 2 ? 128 : 256, maxzoom: 18, attribution: 'Esri, Maxar, Earthstar Geographics' },
           dem: { type: 'raster-dem', tiles: [TERRAIN], tileSize: 256, maxzoom: 15, encoding: 'terrarium', attribution: 'Terrain Tiles (Mapzen, AWS)' },
           runs: { type: 'geojson', data: collection(runs) },
           slope: { type: 'geojson', data: collection(slope) },

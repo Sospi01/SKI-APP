@@ -78,7 +78,7 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
 
 **Piezas clave de `index.html`:**
 - `loadStation`: limpia la ficha, descarga `data/<id>.json` y la previsión, y llama a `renderDashboard`.
-- `buildMap`: mapa SVG con teselas de satélite de Esri y proyección equirectangular.
+- `buildMap`: mapa SVG con teselas de satélite de Esri y proyección equirectangular. La capa base es un solo nivel de zoom para toda la estación (máx. 130 teselas); al acercarse, `refineMapTiles` añade encima teselas más nítidas solo de la zona visible (hasta `TILE_MAX_ZOOM` = 17, máx. 48 por vez).
 - `renderMapPreview`: tarjeta del mapa en el móvil, sobre satélite; solo por debajo de 1000 px.
 - `trackMapUse`: cuenta el uso real del mapa una vez por estación. En el móvil, al abrirlo; en el ordenador, al arrastrar, hacer zoom o pulsar.
 - `displayName`: nombres en alfabeto latino.
@@ -92,6 +92,7 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
 - Portada: buscador `#global-search`, ranking de nieve, destacadas y guías. `#home-data` es el JSON que inyecta el despliegue.
 - **Vista 3D** (`docs/map3d.js` + MapLibre GL 5 en `docs/vendor/maplibre-gl-5.24.0/`, que solo se descargan al pulsar el botón "3D" del mapa):
   - **abierta a todos desde el 4 de octubre** (antes, escondida tras `?3d=1`): el botón sale si el navegador tiene WebGL. El usuario la probó en la web y en la app y va bien;
+  - en pantallas de alta resolución (devicePixelRatio ≥ 2) el satélite se declara con `tileSize: 128` para que pida un nivel más de detalle;
   - relieve de AWS Terrain Tiles (Mapzen, gratis, sin clave; sí se pueden descargar desde el sandbox) e imágenes de Esri;
   - dibuja `mapState.features` (las mismas pistas y remontes que el 2D) y devuelve los toques al 2D: panel de pista en el ordenador y ventana con el perfil en el móvil. Reutiliza los botones de zoom, el modo Dificultad/Pendiente, "Dónde estoy" y el punto del perfil;
   - cámara: mira ladera arriba (del punto más bajo al más alto) salvo que girarla hasta 90° encuadre mucho mejor la estación (`frame()`); botón para dar una vuelta (`spin`);

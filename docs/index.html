@@ -3023,7 +3023,7 @@
     var SVGNS = 'http://www.w3.org/2000/svg';
     var svg = document.getElementById('map-svg');
     svg.innerHTML = '';
-    document.getElementById('map-hint').classList.remove('hidden');
+    document.getElementById('map-hint').classList.toggle('hidden', !!map3d);   // a rebuild (resize) under the 3D view keeps it off
     document.getElementById('map-legend').innerHTML = '';
     mapState = null;
 
@@ -3376,14 +3376,26 @@
   // 1.0.6) asks for permission; the position stays on the device. It says
   // which run or lift you're on, or how far you are if you're not at the
   // resort, and centres the map on you the first time.
-  var locWatch = null, locCentered = false;
+  var locWatch = null, locCentered = false, locFakeTimer = null;
+  // Test mode, to try "where am I" away from the mountains: after opening the
+  // site once with ?simular=1 (remembered; ?simular=0 ends it) the button
+  // walks the position down the resort's longest run instead of asking for
+  // the real one.
+  var LOC_FAKE = (function () {
+    try {
+      var m = /[?&]simular=([01])/.exec(location.search);
+      if (m) { if (m[1] === '1') localStorage.setItem('si_fake_loc', '1'); else localStorage.removeItem('si_fake_loc'); }
+      return localStorage.getItem('si_fake_loc') === '1';
+    } catch (e) { return false; }
+  })();
   var locBtn = document.getElementById('map-locate'), locMsgEl = document.getElementById('map-loc-msg');
   locBtn.hidden = !canUseLocation();
   function locMsg(text) { locMsgEl.textContent = text || ''; locMsgEl.hidden = !text; }
   function locStop() {
     if (!locBtn) return;
-    if (locWatch != null) navigator.geolocation.clearWatch(locWatch);
-    locWatch = null;
+    if (locFakeTimer) clearInterval(locFakeTimer);
+    else if (locWatch != null) navigator.geolocation.clearWatch(locWatch);
+    locWatch = locFakeTimer = null;
     locBtn.setAttribute('aria-pressed', 'false');
     locMsg('');
     if (mapState && mapState.loc) { mapState.loc.dot.remove(); mapState.loc.acc.remove(); mapState.loc = null; }
@@ -3421,10 +3433,34 @@
     locMsg(best && bestM <= 60 && best.label ? T('Estás en: {0}', best.label) : '');
     if (!locCentered) { locCentered = true; centerMapOn(q); if (map3d) map3d.setLocation(pt, true); }
   }
+  // A skier going down the longest run, about 8 m/s, one position a second.
+  function locFakeWalk() {
+    var run = null, runLen = 0;
+    (mapState && mapState.features || []).forEach(function (f) {
+      if (f.isLift || !f.geomPart || f.geomPart.length < 2) return;
+      var len = 0;
+      for (var i = 1; i < f.geomPart.length; i++) len += haversineM(f.geomPart[i - 1], f.geomPart[i]);
+      if (len > runLen) { runLen = len; run = f.geomPart; }
+    });
+    if (!run) return false;
+    var seg = 0, along = 0;
+    function tick() {
+      along += 8;
+      while (seg < run.length - 1 && along > haversineM(run[seg], run[seg + 1])) { along -= haversineM(run[seg], run[seg + 1]); seg++; }
+      if (seg >= run.length - 1) { seg = 0; along = 0; }
+      var a = run[seg], b = run[seg + 1], t = Math.min(1, along / Math.max(1, haversineM(a, b)));
+      locDraw({ coords: { longitude: a[0] + (b[0] - a[0]) * t, latitude: a[1] + (b[1] - a[1]) * t, accuracy: 8 } });
+    }
+    locWatch = 'fake';
+    locFakeTimer = setInterval(tick, 1000);
+    tick();
+    return true;
+  }
   locBtn.addEventListener('click', function () {
     if (locWatch != null) { locStop(); return; }
     locCentered = false;
     locBtn.setAttribute('aria-pressed', 'true');
+    if (LOC_FAKE && locFakeWalk()) return;
     locMsg(T('Buscando tu posición…'));
     locWatch = navigator.geolocation.watchPosition(locDraw, function (err) {
       var keep = locWatch;

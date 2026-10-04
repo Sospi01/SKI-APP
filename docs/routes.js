@@ -83,6 +83,7 @@
           prev = n;
         });
         feats[fi].top = prev - pts.length + 1;   // first node: the run's start
+        feats[fi].end = prev;                    // last node: where it ends
       }
     }
 

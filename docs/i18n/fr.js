@@ -381,6 +381,15 @@ window.SKI_I18N = {
   "{0} pistas": "{0} pistes",
   "{0} de {1}": "{0} sur {1}",
   "Ya estás en {0}.": "Vous êtes déjà sur {0}.",
-  "Desde ese punto no hay forma de llegar por pistas: toca sobre una pista o un remonte.": "Impossible d'y arriver par les pistes depuis ce point : touchez une piste ou une remontée."
+  "Desde ese punto no hay forma de llegar por pistas: toca sobre una pista o un remonte.": "Impossible d'y arriver par les pistes depuis ce point : touchez une piste ou une remontée.",
+  "Otro punto": "Autre point",
+  "Salida de {0}": "Départ de {0}",
+  "Llegada de {0}": "Arrivée de {0}",
+  "Final de {0}": "Bas de {0}",
+  "Elige un punto de salida…": "Choisissez votre point de départ…",
+  "o tócalo en el mapa": "ou touchez-le sur la carte",
+  "Finales de pista": "Bas des pistes",
+  "Elige en la lista desde dónde sales, o tócalo en el mapa.": "Choisissez votre point de départ dans la liste, ou touchez-le sur la carte.",
+  "Punto elegido en el mapa": "Point choisi sur la carte"
  }
 };

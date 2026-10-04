@@ -381,6 +381,15 @@ window.SKI_I18N = {
   "{0} pistas": "{0} pistes",
   "{0} de {1}": "{0} van {1}",
   "Ya estás en {0}.": "Je bent al bij {0}.",
-  "Desde ese punto no hay forma de llegar por pistas: toca sobre una pista o un remonte.": "Vanaf dat punt kun je er niet via de pistes komen: tik op een piste of lift."
+  "Desde ese punto no hay forma de llegar por pistas: toca sobre una pista o un remonte.": "Vanaf dat punt kun je er niet via de pistes komen: tik op een piste of lift.",
+  "Otro punto": "Ander punt",
+  "Salida de {0}": "Onderkant van {0}",
+  "Llegada de {0}": "Bovenkant van {0}",
+  "Final de {0}": "Einde van {0}",
+  "Elige un punto de salida…": "Kies je startpunt…",
+  "o tócalo en el mapa": "of tik het aan op de kaart",
+  "Finales de pista": "Einde van pistes",
+  "Elige en la lista desde dónde sales, o tócalo en el mapa.": "Kies in de lijst waar je vertrekt, of tik het aan op de kaart.",
+  "Punto elegido en el mapa": "Punt gekozen op de kaart"
  }
 };

@@ -603,6 +603,9 @@
   .route-chips { display: flex; gap: 5px; flex-wrap: wrap; }
   .route-chips button { border: 1px solid var(--border); background: var(--surface-2); color: var(--text-primary); border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 12px; cursor: pointer; }
   .route-chips button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .route-place { padding-left: 52px; }
+  .route-select { flex: 1; min-width: 0; max-width: 100%; font: inherit; font-size: 13px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text-primary); }
+  .route-tap { border: none; background: none; color: var(--accent); font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; padding: 2px 0; }
   .route-result { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
   .route-summary { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 6px; }
   .route-steps { list-style: none; margin: 0; padding: 0; }
@@ -2510,6 +2513,8 @@
     currentRaw = null;
     clearRoute();
     routeNet = null;
+    routePlace = null;
+    routePickPt = null;
     close3d();
     mapUsedFor = null;
     if (paintFav) paintFav();
@@ -3696,7 +3701,7 @@
     } catch (e) { return false; }
   })();
   var routeNet = null, routeDest = null, routeShown = null, routePicking = false, routePickPt = null, routeWaitTimer = null;
-  var routeOrigin = 'base', routeLevel = (function () { try { return localStorage.getItem('si_route_level') || 'all'; } catch (e) { return 'all'; } })();
+  var routePlace = null, routeOrigin = 'base', routeLevel = (function () { try { return localStorage.getItem('si_route_level') || 'all'; } catch (e) { return 'all'; } })();
   var routesLoaded = null;
   function loadRoutes() {
     if (!routesLoaded) {
@@ -3748,7 +3753,7 @@
   }
   function openRoute(f) {
     routeDest = f;
-    routeOrigin = mapState && mapState.loc && mapState.loc.pt ? 'me' : routeOrigin === 'pick' && routePickPt ? 'pick' : 'base';
+    routeOrigin = mapState && mapState.loc && mapState.loc.pt ? 'me' : routeOrigin === 'pick' && (routePlace || routePickPt) ? 'pick' : 'base';
     loadRoutes().then(renderRoute).catch(function () { map3dMsg(T('No se pudo calcular la ruta.')); setTimeout(function () { map3dMsg(''); }, 4000); });
   }
   function routeChips(label, options, current, onPick) {
@@ -3774,12 +3779,12 @@
     var f = routeDest, net = routeNetwork();
     var color = f.isLift ? 'var(--map-lift-color)' : f.svc ? 'var(--text-muted)' : DIFF[f.diffKey || 'other'].color;
     showRunPanel(T('Ruta hasta {0}', f.label || (f.isLift ? T('Remonte sin nombre') : T('Pista sin nombre'))), '', color, function (body) {
-      body.appendChild(routeChips(T('Desde'), [['me', T('Mi ubicación')], ['base', T('La base')], ['pick', T('Elegir en el mapa')]], routeOrigin, function (v) {
+      body.appendChild(routeChips(T('Desde'), [['me', T('Mi ubicación')], ['base', T('La base')], ['pick', T('Otro punto')]], routeOrigin, function (v) {
         routeOrigin = v;
-        if (v === 'pick') { startRoutePick(); return; }
         if (v === 'me' && locWatch == null && !locBtn.hidden) locBtn.click();
         renderRoute();
       }));
+      if (routeOrigin === 'pick') body.appendChild(routePlaceRow(net));
       body.appendChild(routeChips(T('Nivel'), [['all', T('Todas')], ['noblack', T('Sin negras')], ['easy', T('Verdes y azules')]], routeLevel, function (v) {
         routeLevel = v;
         try { localStorage.setItem('si_route_level', v); } catch (e) {}
@@ -3801,6 +3806,13 @@
         }
         starts = SkiRoutes.near(net, pt, 300);
         if (!starts.length) { msg(T('Estás lejos de las pistas de esta estación: elige otro punto de partida.')); drawRouteNone(); return; }
+      } else if (routeOrigin === 'pick' && routePlace) {
+        starts = [{ node: routePlace.node, cost: 0 }];
+        if (routeTargets(net, f).indexOf(routePlace.node) !== -1) { msg(T('Ya estás en {0}.', f.label || (f.isLift ? T('Remonte sin nombre') : T('Pista sin nombre')))); drawRouteNone(); return; }
+      } else if (routeOrigin === 'pick' && !routePickPt) {
+        msg(T('Elige en la lista desde dónde sales, o tócalo en el mapa.'));
+        drawRouteNone();
+        return;
       } else if (routeOrigin === 'pick' && routePickPt) {
         starts = SkiRoutes.near(net, routePickPt, 300);
         if (!starts.length) { msg(T('Ese punto está lejos de las pistas: toca más cerca de una pista o un remonte.')); drawRouteNone(); return; }
@@ -3832,7 +3844,7 @@
       var res = targets.length ? SkiRoutes.route(net, starts, targets, routeLevel) : null;
       // Off the network near the start (a freeride itinerary heading down to
       // the valley, say): look a little further around for a way in.
-      var fromPt = routeOrigin === 'pick' ? routePickPt : routeOrigin === 'me' ? mapState.loc && mapState.loc.pt : null;
+      var fromPt = routeOrigin === 'pick' ? (routePlace ? null : routePickPt) : routeOrigin === 'me' ? mapState.loc && mapState.loc.pt : null;
       if (!res && fromPt && targets.length) res = SkiRoutes.route(net, SkiRoutes.near(net, fromPt, 800, 30), targets, routeLevel);
       if (!res) {
         msg(routeLevel !== 'all' ? T('No encontramos ruta con este nivel. Prueba con otro nivel o desde otro punto.')
@@ -3924,12 +3936,71 @@
     hideMapTapPopup();
     map3dMsg(T('Toca en el mapa tu punto de partida'));
   }
+  // A tap on the map snaps to the nearest of those places (within 250 m),
+  // which then shows as chosen in the list; failing that, the point itself.
   function routePicked(pt) {
     routePicking = false;
     map3dMsg('');
-    routePickPt = pt;
     routeOrigin = 'pick';
-    renderRoute();
+    var best = null, bestM = 250;
+    routePlaces(routeNetwork()).forEach(function (pl) { var m = SkiRoutes.dist(pt, pl.p); if (m < bestM) { bestM = m; best = pl; } });
+    routePlace = best;
+    routePickPt = best ? best.p : pt;
+    // Shown a moment later: on a phone the same tap's click would otherwise
+    // land on the panel appearing under the finger (and press a chip).
+    setTimeout(renderRoute, 350);
+  }
+  // Where one usually sets off from: the bottom and top of each lift, the end
+  // of each named run, and the services; each tied to a node of the network.
+  function routePlaces(net) {
+    if (net.places) return net.places;
+    var out = [], lifts = {}, runs = {};
+    net.feats.forEach(function (x) {
+      if (x.kind === 'lift' && x.lift.name) {
+        var l = lifts[x.lift.name] || (lifts[x.lift.name] = { bottom: x.bottom, top: x.topNode });
+        if (net.nodes[x.bottom].p[2] < net.nodes[l.bottom].p[2]) l.bottom = x.bottom;
+        if (net.nodes[x.topNode].p[2] > net.nodes[l.top].p[2]) l.top = x.topNode;
+      }
+      if (x.kind === 'run' && x.run.name) {
+        if (!(x.run.name in runs) || net.nodes[x.end].p[2] < net.nodes[runs[x.run.name]].p[2]) runs[x.run.name] = x.end;
+      }
+    });
+    var add = function (group, label, node) { out.push({ group: group, label: label, node: node, p: net.nodes[node].p }); };
+    Object.keys(lifts).forEach(function (n) { add('lift', T('Salida de {0}', n), lifts[n].bottom); add('lift', T('Llegada de {0}', n), lifts[n].top); });
+    Object.keys(runs).forEach(function (n) { add('run', T('Final de {0}', n), runs[n]); });
+    (currentRaw.services || []).forEach(function (svc) {
+      var cat = SERVICE_CATEGORIES[svc.category], at = SkiRoutes.near(net, [svc.lon, svc.lat], 150, 1)[0];
+      if (cat && at) add('svc', (svc.name || cat.label), at.node);
+    });
+    out.sort(function (a, b) { return a.label.localeCompare(b.label, LOCALE); });
+    net.places = out;
+    return out;
+  }
+  function routePlaceRow(net) {
+    var row = document.createElement('div'); row.className = 'route-row route-place';
+    var sel = document.createElement('select'); sel.className = 'route-select';
+    var none = document.createElement('option'); none.value = ''; none.textContent = !routePlace && routePickPt ? T('Punto elegido en el mapa') : T('Elige un punto de salida…');
+    sel.appendChild(none);
+    var places = routePlaces(net);
+    [['lift', T('Remontes')], ['run', T('Finales de pista')], ['svc', T('Servicios')]].forEach(function (g) {
+      var og = document.createElement('optgroup'); og.label = g[1];
+      places.forEach(function (pl, i) {
+        if (pl.group !== g[0]) return;
+        var o = document.createElement('option'); o.value = String(i); o.textContent = pl.label;
+        if (pl === routePlace) o.selected = true;
+        og.appendChild(o);
+      });
+      if (og.children.length) sel.appendChild(og);
+    });
+    sel.addEventListener('change', function () {
+      routePlace = sel.value ? places[+sel.value] : null;
+      routePickPt = routePlace ? routePlace.p : null;
+      renderRoute();
+    });
+    var tap = document.createElement('button'); tap.type = 'button'; tap.className = 'route-tap'; tap.textContent = T('o tócalo en el mapa');
+    tap.addEventListener('click', startRoutePick);
+    row.appendChild(sel); row.appendChild(tap);
+    return row;
   }
   // The point picked on the map, marked even when no route starts there.
   function drawRouteStart() {

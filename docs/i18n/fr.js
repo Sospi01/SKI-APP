@@ -399,6 +399,9 @@ window.SKI_I18N = {
   "Desde la salida (abajo)": "Depuis le départ (en bas)",
   "Desde el inicio (arriba)": "Depuis le haut de la piste",
   "Desde la llegada (arriba)": "Depuis l’arrivée (en haut)",
-  "Desde el final (abajo)": "Depuis le bas de la piste"
+  "Desde el final (abajo)": "Depuis le bas de la piste",
+  "Pie de pistas": "Pied des pistes",
+  "Toca otro punto del mapa para cambiar la salida.": "Touchez un autre point de la carte pour changer le départ.",
+  "Toca en el mapa, cerca de una pista o un remonte, el punto desde el que sales.": "Touchez sur la carte, près d’une piste ou d’une remontée, l’endroit d’où vous partez."
  }
 };

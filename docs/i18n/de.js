@@ -399,6 +399,9 @@ window.SKI_I18N = {
   "Desde la salida (abajo)": "Von der Talstation",
   "Desde el inicio (arriba)": "Vom Pistenanfang (oben)",
   "Desde la llegada (arriba)": "Von der Bergstation",
-  "Desde el final (abajo)": "Vom Pistenende (unten)"
+  "Desde el final (abajo)": "Vom Pistenende (unten)",
+  "Pie de pistas": "Talstation",
+  "Toca otro punto del mapa para cambiar la salida.": "Tippe auf einen anderen Punkt der Karte, um den Start zu ändern.",
+  "Toca en el mapa, cerca de una pista o un remonte, el punto desde el que sales.": "Tippe auf der Karte in der Nähe einer Piste oder eines Lifts auf deinen Startpunkt."
  }
 };

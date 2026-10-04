@@ -605,30 +605,11 @@
   .route-chips { display: flex; gap: 5px; flex-wrap: wrap; }
   .route-chips button { border: 1px solid var(--border); background: var(--surface-2); color: var(--text-primary); border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 12px; cursor: pointer; }
   .route-chips button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
-  .route-place { padding-left: 52px; margin-bottom: 8px; }
-  .route-place-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .route-place-current { display: inline-flex; align-items: center; gap: 7px; flex: 1; min-width: 0; max-width: 100%; padding: 6px 10px; border-radius: 8px;
-    border: 1px solid var(--border); background: var(--surface-2); color: var(--text-primary); font: inherit; font-size: 13px; cursor: pointer; text-align: left; }
-  .route-place-current[aria-expanded="true"] { border-color: var(--accent); }
+  .route-place { padding-left: 52px; margin-bottom: 10px; }
+  .route-place-current { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 3px; }
   .route-place-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-  .route-place-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .route-place-chev { color: var(--text-muted); font-size: 11px; }
-  .route-tap { border: none; background: none; color: var(--accent); font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; padding: 2px 0; }
-  .route-picker { margin-top: 8px; }
-  .route-picker-search { width: 100%; box-sizing: border-box; font: inherit; font-size: 13px; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text-primary); }
-  .route-picker-tabs { display: flex; gap: 4px; margin: 8px 0; padding: 3px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border); }
-  .route-picker-tabs.dim { opacity: 0.45; }
-  .route-picker-tab { flex: 1; border: none; background: none; border-radius: 7px; padding: 5px 4px; font: inherit; font-size: 12px; font-weight: 500; color: var(--text-secondary); cursor: pointer; }
-  .route-picker-tab[aria-pressed="true"] { background: var(--surface); color: var(--text-primary); font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,0.12); }
-  .route-picker-count { font-size: 10.5px; color: var(--text-muted); font-weight: 400; }
-  .route-picker-list { max-height: 230px; }
-  .route-picker-item { padding: 8px 10px; }
-  .route-picker-ends { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-  .route-picker-ask { width: 100%; font-size: 11.5px; color: var(--text-secondary); }
-  .route-picker-ends button { border: 1px solid var(--accent); background: var(--accent); color: #fff; border-radius: 999px; padding: 5px 11px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
-  .route-picker-ends button + button { background: var(--surface); color: var(--accent); }
+  .route-place-hint { font-size: 12px; color: var(--text-secondary); line-height: 1.4; }
   @media (max-width: 999px) { .route-place { padding-left: 0; } }
-  .route-picker-empty { padding: 12px; font-size: 12px; color: var(--text-muted); font-style: italic; }
   .route-result { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
   .route-summary { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 6px; }
   .route-steps { list-style: none; margin: 0; padding: 0; }
@@ -3869,12 +3850,12 @@
     var f = routeDest, net = routeNetwork();
     var color = f.isLift ? 'var(--map-lift-color)' : f.svc ? 'var(--text-muted)' : DIFF[f.diffKey || 'other'].color;
     showRunPanel(T('Ruta hasta {0}', f.label || (f.isLift ? T('Remonte sin nombre') : T('Pista sin nombre'))), '', color, function (body) {
-      body.appendChild(routeChips(T('Desde'), [['me', T('Mi ubicación')], ['base', T('La base')], ['pick', T('Otro punto')]], routeOrigin, function (v) {
+      body.appendChild(routeChips(T('Desde'), [['me', T('Mi ubicación')], ['base', T('Pie de pistas')], ['pick', T('Otro punto')]], routeOrigin, function (v) {
         routeOrigin = v;
         if (v === 'me' && locWatch == null && !locBtn.hidden) locBtn.click();
         renderRoute();
       }));
-      if (routeOrigin === 'pick') body.appendChild(routePlaceRow(net));
+      if (routeOrigin === 'pick') body.appendChild(routePlaceRow());
       body.appendChild(routeChips(T('Nivel'), [['all', T('Todas')], ['noblack', T('Sin negras')], ['easy', T('Verdes y azules')]], routeLevel, function (v) {
         routeLevel = v;
         try { localStorage.setItem('si_route_level', v); } catch (e) {}
@@ -3900,7 +3881,6 @@
         starts = [{ node: routePlace.node, cost: 0 }];
         if (routeTargets(net, f).indexOf(routePlace.node) !== -1) { msg(T('Ya estás en {0}.', f.label || (f.isLift ? T('Remonte sin nombre') : T('Pista sin nombre')))); drawRouteNone(); return; }
       } else if (routeOrigin === 'pick' && !routePickPt) {
-        msg(T('Elige en la lista desde dónde sales, o tócalo en el mapa.'));
         drawRouteNone();
         return;
       } else if (routeOrigin === 'pick' && routePickPt) {
@@ -4039,12 +4019,6 @@
       return { coords: l.coords, kind: l.kind, color: l.kind === 'run' ? DIFF[l.feat.diff].color : l.kind === 'lift' ? 'var(--map-lift-color)' : '#5f6b77' };
     });
   }
-  function startRoutePick() {
-    routePicking = true;
-    runPanel.hidden = true;
-    hideMapTapPopup();
-    map3dMsg(T('Toca en el mapa tu punto de partida'));
-  }
   // A tap on the map snaps to the nearest of those places (within 250 m),
   // which then shows as chosen in the list; failing that, the point itself.
   // A tapped lift or service starts from its own place (the nearer end of a
@@ -4104,111 +4078,22 @@
     net.places = out;
     return out;
   }
-  // "Otro punto": the chosen place as a button that opens a list like the
-  // pistes list (Pistas / Remontes / Servicios, with a search box). A piste
-  // or lift then asks which end to start from.
-  var routePickerOpen = false, routePickerTab = 'run', routePickerQuery = '', routePickerItem = null;
-  function routePlaceRow(net) {
-    var places = routePlaces(net);
-    var wrap = document.createElement('div'); wrap.className = 'route-place';
-    var head = document.createElement('div'); head.className = 'route-place-head';
-    var cur = document.createElement('button'); cur.type = 'button'; cur.className = 'route-place-current';
-    var open = routePickerOpen || !routePickPt;
-    cur.setAttribute('aria-expanded', open ? 'true' : 'false');
-    var curDot = document.createElement('span'); curDot.className = 'route-place-dot';
-    var curText = document.createElement('span'); curText.className = 'route-place-text';
-    curText.textContent = routePlace ? routePlace.label : routePickPt ? T('Punto elegido en el mapa') : T('Elige un punto de salida…');
-    if (routePlace) curDot.style.background = routePlace.group === 'lift' ? 'var(--map-lift-color)' : routePlace.color;
-    else curDot.hidden = true;
-    var chev = document.createElement('span'); chev.className = 'route-place-chev'; chev.textContent = '▾';
-    cur.appendChild(curDot); cur.appendChild(curText); cur.appendChild(chev);
-    cur.addEventListener('click', function () { routePickerOpen = !open; routePickerItem = null; renderRoute(); });
-    var tap = document.createElement('button'); tap.type = 'button'; tap.className = 'route-tap'; tap.textContent = T('o tócalo en el mapa');
-    tap.addEventListener('click', function () { routePickerOpen = false; startRoutePick(); });
-    head.appendChild(cur); head.appendChild(tap);
-    wrap.appendChild(head);
-    if (!open) return wrap;
-
-    var picker = document.createElement('div'); picker.className = 'route-picker';
-    var search = document.createElement('input'); search.type = 'search'; search.className = 'route-picker-search';
-    search.placeholder = T('Buscar pista, remonte o servicio…'); search.value = routePickerQuery;
-    var counts = { run: 0, lift: 0, svc: 0 };
-    places.forEach(function (pl) { if (pl.group === 'svc' || pl.side === 'start') counts[pl.group]++; });
-    if (!counts[routePickerTab]) routePickerTab = counts.run ? 'run' : counts.lift ? 'lift' : 'svc';
-    var tabs = document.createElement('div'); tabs.className = 'route-picker-tabs';
-    var list = document.createElement('div'); list.className = 'list-scroll route-picker-list';
-    var choose = function (pl) {
-      routePlace = pl; routePickPt = pl.p; routePickerOpen = false; routePickerItem = null; routePickerQuery = '';
-      renderRoute();
-    };
-    var fill = function () {
-      list.innerHTML = '';
-      var q = routePickerQuery.trim().toLowerCase();
-      var shown = places.filter(function (pl) {
-        if (pl.group !== 'svc' && pl.side !== 'start') return false;
-        return q ? pl.name.toLowerCase().indexOf(q) !== -1 || (pl.meta || '').toLowerCase().indexOf(q) !== -1 : pl.group === routePickerTab;
-      });
-      if (!shown.length) { var e = document.createElement('div'); e.className = 'route-picker-empty'; e.textContent = T('Nada coincide con la búsqueda.'); list.appendChild(e); return; }
-      shown.forEach(function (pl) {
-        var it = document.createElement('div'); it.className = 'item run-item route-picker-item'; it.tabIndex = 0;
-        var dot = document.createElement('span'); dot.className = 'dot';
-        dot.style.background = pl.group === 'lift' ? 'var(--map-lift-color)' : pl.color;
-        if (pl.group === 'lift') dot.style.borderRadius = '2px';
-        var main = document.createElement('div'); main.className = 'item-main';
-        var nm = document.createElement('div'); nm.className = 'item-name'; nm.textContent = (pl.icon ? pl.icon + ' ' : '') + pl.name;
-        main.appendChild(nm);
-        if (pl.meta) { var mt = document.createElement('div'); mt.className = 'item-meta'; mt.textContent = pl.meta; main.appendChild(mt); }
-        it.appendChild(dot); it.appendChild(main);
-        var other = pl.group === 'svc' ? null : places.filter(function (o) { return o.of === pl.of && o.side === 'end'; })[0];
-        if (other) {
-          var ch = document.createElement('span'); ch.className = 'item-chevron'; ch.textContent = '›';
-          it.appendChild(ch);
-          var expanded = routePickerItem === pl.of;
-          it.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-          if (expanded) {
-            var ends = document.createElement('div'); ends.className = 'route-picker-ends';
-            var ask = document.createElement('div'); ask.className = 'route-picker-ask'; ask.textContent = T('¿Desde dónde sales?');
-            ends.appendChild(ask);
-            [[pl, pl.group === 'lift' ? T('Desde la salida (abajo)') : T('Desde el inicio (arriba)')],
-             [other, pl.group === 'lift' ? T('Desde la llegada (arriba)') : T('Desde el final (abajo)')]].forEach(function (o) {
-              var b = document.createElement('button'); b.type = 'button'; b.textContent = o[1];
-              b.addEventListener('click', function (e) { e.stopPropagation(); choose(o[0]); });
-              ends.appendChild(b);
-            });
-            main.appendChild(ends);
-          }
-        }
-        var act = function () {
-          if (!other) { choose(pl); return; }
-          routePickerItem = routePickerItem === pl.of ? null : pl.of;
-          var top = list.scrollTop; fill(); list.scrollTop = top;
-          // Bring the question (and its two buttons) into view.
-          var ex = list.querySelector('[aria-expanded="true"]');
-          if (ex) ex.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-        };
-        it.addEventListener('click', act);
-        it.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(); } });
-        list.appendChild(it);
-      });
-    };
-    [['run', T('Pistas')], ['lift', T('Remontes')], ['svc', T('Servicios')]].forEach(function (t) {
-      if (!counts[t[0]]) return;
-      var b = document.createElement('button'); b.type = 'button'; b.className = 'route-picker-tab';
-      b.innerHTML = '<span></span> <span class="route-picker-count"></span>';
-      b.firstChild.textContent = t[1]; b.lastChild.textContent = counts[t[0]];
-      b.setAttribute('aria-pressed', t[0] === routePickerTab ? 'true' : 'false');
-      b.addEventListener('click', function () {
-        routePickerTab = t[0]; routePickerItem = null; routePickerQuery = ''; search.value = '';
-        [].forEach.call(tabs.children, function (c) { c.setAttribute('aria-pressed', c === b ? 'true' : 'false'); });
-        fill(); list.scrollTop = 0;
-      });
-      tabs.appendChild(b);
-    });
-    search.addEventListener('input', function () { routePickerQuery = search.value; routePickerItem = null; tabs.classList.toggle('dim', !!search.value.trim()); fill(); });
-    picker.appendChild(search); picker.appendChild(tabs); picker.appendChild(list);
-    wrap.appendChild(picker);
-    fill();
-    return wrap;
+  // "Otro punto": the start is wherever one taps on the map (see routePicked);
+  // the panel just says so, and names the start once there is one.
+  function routePlaceRow() {
+    var row = document.createElement('div'); row.className = 'route-place';
+    if (routePickPt) {
+      var cur = document.createElement('div'); cur.className = 'route-place-current';
+      var dot = document.createElement('span'); dot.className = 'route-place-dot';
+      dot.style.background = routePlace && routePlace.group === 'lift' ? 'var(--map-lift-color)' : routePlace && routePlace.color || '#2e7d32';
+      var txt = document.createElement('span'); txt.textContent = routePlace ? routePlace.label : T('Punto elegido en el mapa');
+      cur.appendChild(dot); cur.appendChild(txt);
+      row.appendChild(cur);
+    }
+    var hint = document.createElement('div'); hint.className = 'route-place-hint';
+    hint.textContent = routePickPt ? T('Toca otro punto del mapa para cambiar la salida.') : T('Toca en el mapa, cerca de una pista o un remonte, el punto desde el que sales.');
+    row.appendChild(hint);
+    return row;
   }
   // The point picked on the map, marked even when no route starts there.
   function drawRouteStart() {

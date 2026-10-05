@@ -227,12 +227,12 @@
       d.className = cls;
       return new maplibregl.Marker({ element: d });
     };
-    var locMarker = null, profMarker = null, routeMarkers = null, spinning = false, spinFrame = null;
+    var locMarker = null, profMarker = null, routeMarkers = null, spinning = 0, spinFrame = null;
     function stopSpin() {
-      spinning = false;
+      spinning = 0;
       if (spinFrame) cancelAnimationFrame(spinFrame);
       spinFrame = null;
-      if (api.onSpinChange) api.onSpinChange(false);
+      if (api.onSpinChange) api.onSpinChange(0);
     }
     ['mousedown', 'touchstart', 'wheel'].forEach(function (t) { el.addEventListener(t, function () { if (spinning) stopSpin(); }, { passive: true }); });
 
@@ -293,18 +293,24 @@
         stopSpin();
         map.easeTo(Object.assign({ duration: 900 }, home));
       },
-      // A slow turn around the resort (also nice to record for a video).
-      spin: function () {
-        if (spinning) { stopSpin(); return false; }
-        spinning = true;
+      // A slow turn around the resort (also nice to record for a video):
+      // dir 1 = clockwise, -1 = the other way. The same direction again
+      // stops it; the other one turns it round. Returns the direction, or 0.
+      spin: function (dir) {
+        dir = dir < 0 ? -1 : 1;
+        if (spinning === dir) { stopSpin(); return 0; }
+        var wasSpinning = !!spinning;
+        spinning = dir;
+        if (api.onSpinChange) api.onSpinChange(dir);
+        if (wasSpinning) return dir;
         var last = null;
         (function step(t) {
           if (!spinning) return;
-          if (last != null) map.setBearing(map.getBearing() + (t - last) * 0.006);
+          if (last != null) map.setBearing(map.getBearing() + (t - last) * 0.006 * spinning);
           last = t;
           spinFrame = requestAnimationFrame(step);
         })();
-        return true;
+        return dir;
       },
       resize: function () { map.resize(); },
       destroy: function () { clearTimeout(watchdog); clearTimeout(revealTimer); stopSpin(); el.style.opacity = ''; el.style.transition = ''; map.remove(); }

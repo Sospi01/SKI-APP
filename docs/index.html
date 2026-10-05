@@ -629,9 +629,9 @@
   #map-3d { position: absolute; inset: 0; background: #0b1218; } /* beats .maplibregl-map { position: relative } */
   .map-3d[hidden] { display: none; }
   #map-3d-btn { font-size: 11.5px; font-weight: 700; letter-spacing: 0.02em; }
-  #map-3d-btn[hidden], #map-3d-spin[hidden] { display: none; }
-  #map-3d-btn[aria-pressed="true"], #map-3d-spin[aria-pressed="true"] { color: #4aa3ff; }
-  #map-3d-spin svg { width: 17px; height: 17px; display: block; margin: auto; }
+  #map-3d-btn[hidden], .map-3d-spin[hidden] { display: none; }
+  #map-3d-btn[aria-pressed="true"], .map-3d-spin[aria-pressed="true"] { color: #4aa3ff; }
+  .map-3d-spin svg { width: 17px; height: 17px; display: block; margin: auto; }
   .map3d-loc { width: 16px; height: 16px; border-radius: 50%; background: #1a73e8; border: 3px solid #fff; box-shadow: 0 0 0 6px rgba(26,115,232,0.25); }
   .map3d-route-start, .map3d-route-end { width: 14px; height: 14px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
   .map3d-route-start { background: #2e7d32; }
@@ -1211,7 +1211,8 @@
         <button type="button" id="map-zoom-out" aria-label="Alejar">–</button>
         <button type="button" id="map-zoom-reset" aria-label="Restablecer vista">⤢</button>
         <button type="button" id="map-3d-btn" aria-label="Vista 3D" aria-pressed="false" hidden>3D</button>
-        <button type="button" id="map-3d-spin" aria-label="Dar una vuelta" aria-pressed="false" hidden><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16.2 7.5A6.6 6.6 0 1 0 16.6 12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M16.8 3.6v4.2h-4.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button type="button" id="map-3d-spin-l" class="map-3d-spin" data-dir="-1" aria-label="Girar a la izquierda" aria-pressed="false" hidden><svg viewBox="0 0 20 20" style="transform: scaleX(-1)" aria-hidden="true"><path d="M16.2 7.5A6.6 6.6 0 1 0 16.6 12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M16.8 3.6v4.2h-4.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button type="button" id="map-3d-spin" class="map-3d-spin" data-dir="1" aria-label="Girar a la derecha" aria-pressed="false" hidden><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16.2 7.5A6.6 6.6 0 1 0 16.6 12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M16.8 3.6v4.2h-4.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <button type="button" id="map-locate" aria-label="Dónde estoy" aria-pressed="false" hidden><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="3" fill="currentColor"/><circle cx="10" cy="10" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 1.5v2.5M10 16v2.5M1.5 10H4M16 10h2.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
       </div>
       <div class="map-loc-msg" id="map-loc-msg" role="status" hidden></div>
@@ -3720,7 +3721,8 @@
   // ---- 3D view (map3d.js + MapLibre GL, loaded on the first tap) ----
   // Shown wherever the browser has WebGL.
   var map3d = null, map3dOpening = false, map3dUsedFor = null, locUsedFor = null;
-  var map3dBtn = document.getElementById('map-3d-btn'), map3dSpinBtn = document.getElementById('map-3d-spin');
+  var map3dBtn = document.getElementById('map-3d-btn'), map3dSpinBtns = [].slice.call(document.querySelectorAll('.map-3d-spin'));
+  var map3dSpinShow = function (dir) { map3dSpinBtns.forEach(function (b) { b.setAttribute('aria-pressed', String(+b.dataset.dir === dir)); }); };
   var map3dEl = document.getElementById('map-3d'), map3dMsgEl = document.getElementById('map-3d-msg');
   var MAPLIBRE_DIR = '/vendor/maplibre-gl-5.24.0/';
   map3dBtn.hidden = !(function () {
@@ -3796,16 +3798,16 @@
         liftColor: 'var(--map-lift-color)', haloColor: 'var(--map-halo)',
         attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> (ODbL) · OpenSkiMap',
         onTap: map3dTap,
-        onReady: function () { map3dMsg(''); },
+        onReady: function () { map3dMsg(''); map3dHint(); },
         onError: map3dFailed
       });
       if (!map3d) { map3dFailed(); return; }
       if (map3dUsedFor !== raw.id) { map3dUsedFor = raw.id; track.map3d(raw); }
-      map3d.onSpinChange = function (on) { map3dSpinBtn.setAttribute('aria-pressed', on ? 'true' : 'false'); };
+      map3d.onSpinChange = map3dSpinShow;
       document.getElementById('map-hint').classList.add('hidden');
       map3dBtn.textContent = '2D';
       map3dBtn.setAttribute('aria-pressed', 'true');
-      map3dSpinBtn.hidden = false;
+      map3dSpinBtns.forEach(function (b) { b.hidden = false; });
       if (typeof selectedMapKey === 'string') map3dHighlight(featuresForRun(selectedMapKey.slice(4)));
       else if (selectedMapKey) map3dHighlight([selectedMapKey]);
       if (mapState.loc && mapState.loc.pt) map3d.setLocation(mapState.loc.pt);
@@ -3819,16 +3821,27 @@
     map3dEl.innerHTML = '';
     map3dBtn.textContent = '3D';
     map3dBtn.setAttribute('aria-pressed', 'false');
-    map3dSpinBtn.hidden = true;
-    map3dSpinBtn.setAttribute('aria-pressed', 'false');
+    map3dSpinBtns.forEach(function (b) { b.hidden = true; });
+    map3dSpinShow(0);
   }
   map3dBtn.addEventListener('click', function () {
     hideMapTapPopup();
     if (map3d) close3d(); else open3d();
   });
-  map3dSpinBtn.addEventListener('click', function () {
-    if (map3d) map3dSpinBtn.setAttribute('aria-pressed', map3d.spin() ? 'true' : 'false');
+  map3dSpinBtns.forEach(function (b) {
+    b.addEventListener('click', function () { if (map3d) map3dSpinShow(map3d.spin(+b.dataset.dir)); });
   });
+  // How to turn and tilt the 3D view by hand, shown for a few seconds the
+  // first times it opens (MapLibre: Ctrl or right button + drag; two fingers).
+  function map3dHint() {
+    var n = 0;
+    try { n = +localStorage.getItem('si_3d_hint') || 0; localStorage.setItem('si_3d_hint', String(n + 1)); } catch (e) {}
+    if (n >= 3) return;
+    var touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    var text = touch ? T('Con dos dedos: gira e inclina el mapa') : T('Ctrl + arrastrar (o botón derecho) para girar e inclinar el mapa');
+    map3dMsg(text);
+    setTimeout(function () { if (map3dMsgEl.textContent === text) map3dMsg(''); }, 6000);
+  }
 
   // ---- route planner (routes.js, loaded on the first use) ----
   // Hidden for now: shown after opening the site once with ?rutas=1, or typing

@@ -403,6 +403,10 @@ window.SKI_I18N = {
   "Pie de pistas": "Talstation",
   "Toca otro punto del mapa para cambiar la salida.": "Tippe auf einen anderen Punkt der Karte, um den Start zu ändern.",
   "Toca en el mapa, cerca de una pista o un remonte, el punto desde el que sales.": "Tippe auf der Karte in der Nähe einer Piste oder eines Lifts auf deinen Startpunkt.",
-  "Punto en el mapa": "Punkt auf der Karte"
+  "Punto en el mapa": "Punkt auf der Karte",
+  "Girar a la izquierda": "Nach links drehen",
+  "Girar a la derecha": "Nach rechts drehen",
+  "Con dos dedos: gira e inclina el mapa": "Mit zwei Fingern: Karte drehen und neigen",
+  "Ctrl + arrastrar (o botón derecho) para girar e inclinar el mapa": "Strg + ziehen (oder rechte Maustaste), um die Karte zu drehen und zu neigen"
  }
 };

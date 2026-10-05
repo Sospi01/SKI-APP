@@ -403,6 +403,10 @@ window.SKI_I18N = {
   "Pie de pistas": "Pied des pistes",
   "Toca otro punto del mapa para cambiar la salida.": "Touchez un autre point de la carte pour changer le départ.",
   "Toca en el mapa, cerca de una pista o un remonte, el punto desde el que sales.": "Touchez sur la carte, près d’une piste ou d’une remontée, l’endroit d’où vous partez.",
-  "Punto en el mapa": "Point sur la carte"
+  "Punto en el mapa": "Point sur la carte",
+  "Girar a la izquierda": "Tourner à gauche",
+  "Girar a la derecha": "Tourner à droite",
+  "Con dos dedos: gira e inclina el mapa": "À deux doigts : tournez et inclinez la carte",
+  "Ctrl + arrastrar (o botón derecho) para girar e inclinar el mapa": "Ctrl + glisser (ou bouton droit) pour tourner et incliner la carte"
  }
 };

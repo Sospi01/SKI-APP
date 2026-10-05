@@ -403,6 +403,10 @@ window.SKI_I18N = {
   "Pie de pistas": "Dalstation",
   "Toca otro punto del mapa para cambiar la salida.": "Tik op een ander punt op de kaart om je vertrekpunt te wijzigen.",
   "Toca en el mapa, cerca de una pista o un remonte, el punto desde el que sales.": "Tik op de kaart, bij een piste of lift, het punt waar je vertrekt.",
-  "Punto en el mapa": "Punt op de kaart"
+  "Punto en el mapa": "Punt op de kaart",
+  "Girar a la izquierda": "Naar links draaien",
+  "Girar a la derecha": "Naar rechts draaien",
+  "Con dos dedos: gira e inclina el mapa": "Met twee vingers: kaart draaien en kantelen",
+  "Ctrl + arrastrar (o botón derecho) para girar e inclinar el mapa": "Ctrl + slepen (of rechtermuisknop) om de kaart te draaien en te kantelen"
  }
 };

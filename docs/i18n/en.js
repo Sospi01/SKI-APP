@@ -403,6 +403,10 @@ window.SKI_I18N = {
   "Pie de pistas": "Resort base",
   "Toca otro punto del mapa para cambiar la salida.": "Tap another spot on the map to change where you start.",
   "Toca en el mapa, cerca de una pista o un remonte, el punto desde el que sales.": "Tap the map near a run or lift where you start from.",
-  "Punto en el mapa": "Point on the map"
+  "Punto en el mapa": "Point on the map",
+  "Girar a la izquierda": "Turn left",
+  "Girar a la derecha": "Turn right",
+  "Con dos dedos: gira e inclina el mapa": "Two fingers: turn and tilt the map",
+  "Ctrl + arrastrar (o botón derecho) para girar e inclinar el mapa": "Ctrl + drag (or right button) to turn and tilt the map"
  }
 };

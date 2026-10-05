@@ -19,7 +19,7 @@ export CHROMIUM_PATH=${CHROMIUM_PATH:-/opt/pw-browsers/chromium} NODE_PATH=${NOD
 export DEM_DIR=$WORK/dem
 FF=$(python3 -c "import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())" 2>/dev/null) || {
   pip install -q imageio-ffmpeg; FF=$(python3 -c "import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())"); }
-mkdir -p "$WORK"
+mkdir -p "$WORK" marketing/tiles marketing/videos
 curl -s -o /dev/null localhost:8903 || (cd docs && (setsid nohup python3 -m http.server 8903 >/dev/null 2>&1 &)); sleep 1
 "$FF" -y -loglevel error -f lavfi -i color=c=0x6f7560:s=256x256 -frames:v 1 "$WORK/fake.jpg"
 push() { for i in 1 2 3 4; do git fetch -q origin "$BRANCH" && git rebase -q "origin/$BRANCH" && git push -q origin "HEAD:$BRANCH" && return 0; sleep $((2 ** i)); done; return 1; }

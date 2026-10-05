@@ -35,8 +35,20 @@ const W = 540, H = 960;                   // CSS px; x2 = 1080x1920
   });
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: SCALE, serviceWorkers: 'block', locale: 'es-ES' });
   // Keep the open-meteo/stats/other calls from slowing things down; a mock route can be set for local tests.
-  if (process.env.FAKE_TILE) {
-    await ctx.route('**/World_Imagery/**', r => r.fulfill({ body: fs.readFileSync(process.env.FAKE_TILE), contentType: 'image/png', headers: { 'access-control-allow-origin': '*' } }));
+  // Satellite tiles: from a folder of downloaded tiles (TILE_DIR, files z_y_x.jpg,
+  // fetched where the imagery is reachable), else a stand-in (FAKE_TILE), else the
+  // network. TILE_LOG lists every tile asked for (to know which to download).
+  const asked = new Set();
+  if (process.env.TILE_DIR || process.env.FAKE_TILE || process.env.TILE_LOG) {
+    await ctx.route('**/World_Imagery/**', r => {
+      const m = /\/tile\/(\d+)\/(\d+)\/(\d+)/.exec(r.request().url());
+      const key = m ? m.slice(1).join('_') : null;
+      if (key) asked.add(key);
+      const file = key && process.env.TILE_DIR && path.join(process.env.TILE_DIR, key + '.jpg');
+      if (file && fs.existsSync(file)) return r.fulfill({ body: fs.readFileSync(file), contentType: 'image/jpeg', headers: { 'access-control-allow-origin': '*' } });
+      if (process.env.FAKE_TILE) return r.fulfill({ body: fs.readFileSync(process.env.FAKE_TILE), contentType: 'image/png', headers: { 'access-control-allow-origin': '*' } });
+      return r.continue();
+    });
   }
   await ctx.route(/open-meteo|firestore|googleapis/, r => r.abort());
   await ctx.addInitScript(() => {
@@ -127,5 +139,10 @@ const W = 540, H = 960;                   // CSS px; x2 = 1080x1920
     if (f % 24 === 0) console.log(`frame ${f + 1}/${total} · ${Math.round((Date.now() - t0) / 1000)} s`);
   }
   await browser.close();
+  if (process.env.TILE_LOG) fs.writeFileSync(process.env.TILE_LOG, [...asked].sort().join('\n') + '\n');
+  if (process.env.TILE_DIR) {
+    const missing = [...asked].filter(k => !fs.existsSync(path.join(process.env.TILE_DIR, k + '.jpg')));
+    console.log('tiles asked', asked.size, 'missing', missing.length);
+  }
   console.log('done:', total, 'frames');
 })().catch(e => { console.error(e); process.exit(1); });

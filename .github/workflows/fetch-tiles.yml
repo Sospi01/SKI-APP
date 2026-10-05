@@ -1,0 +1,40 @@
+name: Fetch satellite tiles for a video
+
+# The satellite imagery isn't reachable from Claude's sandbox, so the videos are
+# drawn there with tiles fetched here: reads marketing/tiles/<name>.txt (one
+# z_y_x per line, written by marketing/make_video.js with TILE_LOG), downloads
+# each Esri World Imagery tile to marketing/tiles/<name>/z_y_x.jpg and commits
+# them. Delete the folder once the video is made.
+
+on:
+  workflow_dispatch:
+    inputs:
+      name:
+        description: "List name (marketing/tiles/<name>.txt)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download the tiles
+        run: |
+          N="${{ inputs.name }}"
+          mkdir -p "marketing/tiles/$N"
+          grep -E '^[0-9]+_[0-9]+_[0-9]+$' "marketing/tiles/$N.txt" | xargs -P 8 -I{} sh -c '
+            k={}; z=${k%%_*}; r=${k#*_}; y=${r%%_*}; x=${r#*_}
+            curl -sf --retry 3 -o "marketing/tiles/'"$N"'/$k.jpg" \
+              "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/$z/$y/$x" || echo "failed $k"'
+          echo "$(ls marketing/tiles/$N | wc -l) tiles, $(du -sh marketing/tiles/$N | cut -f1)"
+      - name: Commit them
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add marketing/tiles
+          git commit -m "Satellite tiles for video: ${{ inputs.name }}"
+          for i in 1 2 3; do git pull --rebase -q && git push -q && break; sleep 5; done

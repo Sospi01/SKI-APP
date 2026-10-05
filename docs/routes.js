@@ -19,6 +19,10 @@
   var FLAT_M = 5, FLAT_GRADE = 0.03;   // a run this level end to end (or under 3 %) can go both ways
   var CLIMB_M = 8;             // a walk can't gain more than this
   var FLAT_LINK_M = 150, FLAT_LINK_DZ = 4;   // skating across a flat (Beret's plateau): longer, if nearly level
+  // Walks in a row, at most: each walk is short and nearly level, but chained
+  // across runs lying side by side they added up to half a kilometre on foot
+  // up the slope, next to a run or a lift that does it properly.
+  var MAX_WALKS = 2;
   var EASY = { novice: 1, easy: 1, other: 1 };
   var NO_BLACK = { novice: 1, easy: 1, intermediate: 1, other: 1 };
 
@@ -143,9 +147,12 @@
 
   // Binary-heap Dijkstra from several start nodes (with a starting cost each)
   // to the cheapest of several targets. level: 'all' | 'noblack' | 'easy'.
+  // The search runs on (node, walks in a row so far) states, so a walk can only
+  // follow at most MAX_WALKS - 1 others.
   function route(net, starts, targets, level) {
     var ok = level === 'easy' ? EASY : level === 'noblack' ? NO_BLACK : null;
-    var n = net.nodes.length, best = new Float64Array(n).fill(Infinity), from = new Int32Array(n).fill(-1);
+    var S = MAX_WALKS + 1, n = net.nodes.length * S;
+    var best = new Float64Array(n).fill(Infinity), from = new Int32Array(n).fill(-1);
     var via = new Array(n), isTarget = {};
     targets.forEach(function (t) { isTarget[t] = true; });
     var heap = [];
@@ -171,24 +178,26 @@
       }
       return top;
     }
-    starts.forEach(function (s) { if (s.cost < best[s.node]) { best[s.node] = s.cost; push(s.cost, s.node); } });
+    starts.forEach(function (s) { var k = s.node * S; if (s.cost < best[k]) { best[k] = s.cost; push(s.cost, k); } });
     var end = -1;
     while (heap.length) {
-      var cur = pop(), c = cur[0], i = cur[1];
-      if (c > best[i]) continue;
-      if (isTarget[i]) { end = i; break; }
+      var cur = pop(), c = cur[0], st = cur[1], i = Math.floor(st / S), w = st % S;
+      if (c > best[st]) continue;
+      if (isTarget[i]) { end = st; break; }
       net.adj[i].forEach(function (e) {
         if (ok && e.f >= 0) {
           var f = net.feats[e.f];
           if (f.kind === 'run' && !ok[f.diff]) return;
         }
-        var nc = c + e.w;
-        if (nc < best[e.to]) { best[e.to] = nc; from[e.to] = i; via[e.to] = e.f; push(nc, e.to); }
+        var nw = e.f < 0 ? w + 1 : 0;
+        if (nw > MAX_WALKS) return;
+        var to = e.to * S + nw, nc = c + e.w;
+        if (nc < best[to]) { best[to] = nc; from[to] = st; via[to] = e.f; push(nc, to); }
       });
     }
     if (end < 0) return null;
     var path = [];
-    for (var x = end; x >= 0; x = from[x]) path.push({ node: x, f: from[x] >= 0 ? via[x] : null });
+    for (var x = end; x >= 0; x = from[x]) path.push({ node: Math.floor(x / S), f: from[x] >= 0 ? via[x] : null });
     path.reverse();
     return { cost: best[end], path: path };
   }

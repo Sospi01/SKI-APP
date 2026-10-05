@@ -408,6 +408,11 @@ window.SKI_I18N = {
   "Girar a la derecha": "Obróć w prawo",
   "Con dos dedos: gira e inclina el mapa": "Dwoma palcami: obracaj i pochylaj mapę",
   "Ctrl + arrastrar (o botón derecho) para girar e inclinar el mapa": "Ctrl + przeciągnij (lub prawy przycisk), aby obracać i pochylać mapę",
-  "Orientar al norte": "Ustaw na północ"
+  "Orientar al norte": "Ustaw na północ",
+  "Cargando el dominio…": "Wczytywanie całego regionu…",
+  "No se pudo cargar el dominio.": "Nie udało się wczytać regionu.",
+  "Solo {0}": "Tylko {0}",
+  "Dominio entero ({0})": "Cały region ({0})",
+  "Ver el mapa del dominio entero": "Zobacz mapę całego regionu narciarskiego"
  }
 };

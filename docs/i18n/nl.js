@@ -408,6 +408,11 @@ window.SKI_I18N = {
   "Girar a la derecha": "Naar rechts draaien",
   "Con dos dedos: gira e inclina el mapa": "Met twee vingers: kaart draaien en kantelen",
   "Ctrl + arrastrar (o botón derecho) para girar e inclinar el mapa": "Ctrl + slepen (of rechtermuisknop) om de kaart te draaien en te kantelen",
-  "Orientar al norte": "Naar het noorden draaien"
+  "Orientar al norte": "Naar het noorden draaien",
+  "Cargando el dominio…": "Skigebied laden…",
+  "No se pudo cargar el dominio.": "Het skigebied kon niet worden geladen.",
+  "Solo {0}": "Alleen {0}",
+  "Dominio entero ({0})": "Heel skigebied ({0})",
+  "Ver el mapa del dominio entero": "Bekijk de kaart van het hele skigebied"
  }
 };

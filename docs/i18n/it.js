@@ -408,6 +408,11 @@ window.SKI_I18N = {
   "Girar a la derecha": "Ruota a destra",
   "Con dos dedos: gira e inclina el mapa": "Con due dita: ruota e inclina la mappa",
   "Ctrl + arrastrar (o botón derecho) para girar e inclinar el mapa": "Ctrl + trascina (o tasto destro) per ruotare e inclinare la mappa",
-  "Orientar al norte": "Orienta a nord"
+  "Orientar al norte": "Orienta a nord",
+  "Cargando el dominio…": "Caricamento del comprensorio…",
+  "No se pudo cargar el dominio.": "Impossibile caricare il comprensorio.",
+  "Solo {0}": "Solo {0}",
+  "Dominio entero ({0})": "Comprensorio intero ({0})",
+  "Ver el mapa del dominio entero": "Vedi la mappa del comprensorio intero"
  }
 };

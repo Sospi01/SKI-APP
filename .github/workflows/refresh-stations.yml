@@ -10,7 +10,12 @@ name: Refresh station data (weekly)
 on:
   schedule:
     - cron: '37 2 * * 1'   # Mondays, before the daily 04:17 rebuild
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Solo informe: calcula los cambios y no guarda nada"
+        type: boolean
+        default: true
 
 permissions:
   contents: write   # commit the refreshed data
@@ -38,9 +43,10 @@ jobs:
         run: python -m ski_pipeline.cli --db data/ski_info.db -v
 
       - name: Refresh the stations in docs/data
-        run: python3 data-pipeline/scripts/refresh_stations.py --db data-pipeline/data/ski_info.db --report "$GITHUB_STEP_SUMMARY"
+        run: python3 data-pipeline/scripts/refresh_stations.py --db data-pipeline/data/ski_info.db --report "$GITHUB_STEP_SUMMARY" ${{ inputs.dry_run && '--dry-run' || '' }}
 
       - name: Commit and push
+        if: ${{ !inputs.dry_run }}
         id: commit
         run: |
           git config user.name "github-actions[bot]"

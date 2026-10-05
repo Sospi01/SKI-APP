@@ -104,3 +104,34 @@ def test_float_noise_is_not_a_change(tmp_path):
     conn.commit()
     assert run(db_path, docs) == 0
     assert {p.name: p.read_text() for p in (docs / "data").glob("*.json")} == before
+
+
+def test_runs_of_no_station_join_the_one_they_touch(tmp_path):
+    """A run of a ski area the app doesn't list (or of none) is added to the
+    station it touches -- directly or through another such run -- and its km
+    to the station's stats; one far away is left out."""
+    db_path = build_db(tmp_path)
+    docs = make_docs(tmp_path, db_path)
+    conn = database.connect(db_path)
+
+    def add_run(rid, coords, length):
+        geom = json.dumps({"type": "LineString", "coordinates": coords})
+        conn.execute("INSERT INTO runs (id, name, status, difficulty, uses, geometry_json, length_m) "
+                     "VALUES (?, ?, 'operating', 'easy', 'downhill', ?, ?)", (rid, rid, geom, length))
+    # run-1 starts at (10.96, 46.96): ~110 m away, then a second one ~50 m on (~150 m
+    # from the station itself, but reached through the first), and one ~5 km off.
+    add_run("orphan-near", [[10.9614, 46.9600, 2100], [10.9630, 46.9600, 2000]], 120)
+    add_run("orphan-chain", [[10.9636, 46.9600, 1990], [10.9660, 46.9600, 1900]], 180)
+    add_run("orphan-far", [[11.03, 46.96, 2000], [11.04, 46.96, 1900]], 760)
+    conn.commit()
+
+    assert run(db_path, docs) == 0
+    rec = json.loads((docs / "data" / "skiarea-1.json").read_text())
+    names = [r["name"] for r in rec["runs"]]
+    assert "orphan-near" in names and "orphan-chain" in names and "orphan-far" not in names
+    easy = next(s for s in rec["run_stats"] if s["activity"] == "downhill" and s["difficulty"] == "easy")
+    assert easy["run_count"] >= 2 and easy["length_km"] >= 0.3
+    # Run again on the same data: nothing changes.
+    before = (docs / "data" / "skiarea-1.json").read_text()
+    assert run(db_path, docs) == 0
+    assert (docs / "data" / "skiarea-1.json").read_text() == before

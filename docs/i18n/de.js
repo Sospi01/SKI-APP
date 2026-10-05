@@ -408,6 +408,11 @@ window.SKI_I18N = {
   "Girar a la derecha": "Nach rechts drehen",
   "Con dos dedos: gira e inclina el mapa": "Mit zwei Fingern: Karte drehen und neigen",
   "Ctrl + arrastrar (o botón derecho) para girar e inclinar el mapa": "Strg + ziehen (oder rechte Maustaste), um die Karte zu drehen und zu neigen",
-  "Orientar al norte": "Nach Norden ausrichten"
+  "Orientar al norte": "Nach Norden ausrichten",
+  "Cargando el dominio…": "Skigebiet wird geladen…",
+  "No se pudo cargar el dominio.": "Das Skigebiet konnte nicht geladen werden.",
+  "Solo {0}": "Nur {0}",
+  "Dominio entero ({0})": "Ganzes Skigebiet ({0})",
+  "Ver el mapa del dominio entero": "Karte des ganzen Skigebiets ansehen"
  }
 };

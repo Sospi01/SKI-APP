@@ -408,6 +408,11 @@ window.SKI_I18N = {
   "Girar a la derecha": "Turn right",
   "Con dos dedos: gira e inclina el mapa": "Two fingers: turn and tilt the map",
   "Ctrl + arrastrar (o botón derecho) para girar e inclinar el mapa": "Ctrl + drag (or right button) to turn and tilt the map",
-  "Orientar al norte": "Point north"
+  "Orientar al norte": "Point north",
+  "Cargando el dominio…": "Loading the whole area…",
+  "No se pudo cargar el dominio.": "Could not load the ski area.",
+  "Solo {0}": "Only {0}",
+  "Dominio entero ({0})": "Whole area ({0})",
+  "Ver el mapa del dominio entero": "See the map of the whole ski area"
  }
 };

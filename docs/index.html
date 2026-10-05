@@ -571,6 +571,12 @@
   }
   .map-controls button:active { background: rgba(20,24,28,0.9); }
   #map-north[hidden] { display: none; }
+  .map-domain-pill { position: absolute; top: 10px; left: 10px; z-index: 5; max-width: calc(100% - 240px); }
+  .map-domain-pill[hidden] { display: none; }
+  .map-domain-pill button { border: none; border-radius: 999px; padding: 7px 12px; background: rgba(20,24,28,0.78); color: #fff;
+    font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; backdrop-filter: blur(2px); text-align: left;
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hero-domain .chip.chip-domain-map { background: #fff; color: #10324f; font-weight: 700; }
   #map-north svg { width: 20px; height: 20px; display: block; margin: auto; }
   /* "Colour runs by": difficulty (the piste's official colour) or the real
      slope of each stretch. Sits top right with the zoom buttons below it. */
@@ -1218,6 +1224,7 @@
         <button type="button" id="map-3d-spin" class="map-3d-spin" data-dir="1" aria-label="Girar a la derecha" aria-pressed="false" hidden><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16.2 7.5A6.6 6.6 0 1 0 16.6 12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M16.8 3.6v4.2h-4.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <button type="button" id="map-locate" aria-label="Dónde estoy" aria-pressed="false" hidden><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="3" fill="currentColor"/><circle cx="10" cy="10" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 1.5v2.5M10 16v2.5M1.5 10H4M16 10h2.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
       </div>
+      <div class="map-domain-pill" id="map-domain-pill" hidden></div>
       <div class="map-loc-msg" id="map-loc-msg" role="status" hidden></div>
       <div class="map-loc-msg" id="map-3d-msg" role="status" hidden></div>
       <div class="map-hint" id="map-hint">Arrastra para mover · pellizco para zoom · gira con dos dedos</div>
@@ -2307,13 +2314,18 @@
   // it sizes its viewBox to the pane's real width/height so it fills the
   // screen edge to edge, which can't be measured while the pane is hidden.
   var currentRaw = null;
+  // The whole connected domain on the map ("Ver el mapa del dominio"): the
+  // station's data plus its siblings' runs, lifts and services. The rest of
+  // the page (lists, favourite, share, stats) stays the station's own.
+  var domainRaw = null;
+  function mapRaw() { return domainRaw || currentRaw; }
   var mapBuiltKey = null;
   var paneInfo = document.getElementById('pane-info');
   var paneMap = document.getElementById('pane-map');
   var mapViewportEl = document.getElementById('map-viewport');
 
   function mapSizeKey() {
-    return currentRaw.id + '|' + mapViewportEl.clientWidth + 'x' + mapViewportEl.clientHeight;
+    return currentRaw.id + (domainRaw ? '+dom' : '') + '|' + mapViewportEl.clientWidth + 'x' + mapViewportEl.clientHeight;
   }
   function ensureMapBuilt() {
     // Measured rather than checking paneMap.hidden: on desktop the map pane is
@@ -2322,8 +2334,9 @@
     if (mapSizeKey() === mapBuiltKey) return;
     hideTooltip();
     hideMapTapPopup();
-    buildMap(currentRaw);
+    buildMap(mapRaw());
     mapBuiltKey = mapSizeKey();
+    paintDomainPill();
     reapplyMapSelection();
     if (routeShown) drawRoute2D(routeShown);
   }
@@ -2519,6 +2532,7 @@
     screenDashboard.hidden = false;
     document.getElementById('app').classList.add('dash-mode');
     currentRaw = null;
+    domainRaw = null;
     clearRoute();
     routeNet = null;
     routePlace = null;
@@ -2584,6 +2598,68 @@
         setText('h-place', T('Vuelve a la lista e inténtalo de nuevo.'));
         console.error(err);
       });
+  }
+
+  // ---- the whole connected domain on the map ----
+  var domainCache = {};
+  function loadStationData(id) {
+    if (!domainCache[id]) domainCache[id] = fetch('/data/' + id + '.json').then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }).then(function (d) {
+      d.runs = d.runs.filter(function (r) { return !r.uses || r.uses.split(',').indexOf('downhill') !== -1; });
+      d.runs.forEach(function (r) { r.difficulty = shownDifficulty(r.difficulty, d.run_convention); });
+      return d;
+    });
+    domainCache[id].catch(function () { delete domainCache[id]; });
+    return domainCache[id];
+  }
+  function showDomainMap(on) {
+    if (!currentRaw) return;
+    var raw = currentRaw, group = on && findGroupFor(raw.id);
+    var done = function (merged) {
+      if (currentRaw !== raw) return;
+      clearRoute();
+      routeNet = null; routePlace = null; routePickPt = null;
+      close3d();
+      domainRaw = merged;
+      mapBuiltKey = null;
+      selectedMapKey = null;
+      runPanel.hidden = true;
+      if (paneMap.hidden && !isDesktopLayout()) { trackMapUse(); showDashPane('map'); }
+      else ensureMapBuilt();
+    };
+    if (!group) { done(null); return; }
+    map3dMsg(T('Cargando el dominio…'));
+    Promise.all(group.filter(function (id) { return id !== raw.id; }).map(loadStationData)).then(function (others) {
+      map3dMsg('');
+      var merged = Object.assign({}, raw, {
+        runs: raw.runs.slice(), lifts: raw.lifts.slice(), services: (raw.services || []).slice(),
+        domainNames: [raw.name].concat(others.map(function (o) { return displayName(o.name); }))
+      });
+      others.forEach(function (o) {
+        merged.runs = merged.runs.concat(o.runs);
+        merged.lifts = merged.lifts.concat(o.lifts || []);
+        merged.services = merged.services.concat(o.services || []);
+      });
+      done(merged);
+    }).catch(function () {
+      map3dMsg(T('No se pudo cargar el dominio.'));
+      setTimeout(function () { map3dMsg(''); }, 4000);
+    });
+  }
+  // On the map: which view it is, and the way back.
+  function paintDomainPill() {
+    var pill = document.getElementById('map-domain-pill');
+    var group = currentRaw && findGroupFor(currentRaw.id);
+    pill.hidden = !group;
+    if (!group) return;
+    pill.innerHTML = '';
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = domainRaw ? T('Solo {0}', currentRaw.name) : T('Dominio entero ({0})', group.length);
+    b.addEventListener('click', function () { showDomainMap(!domainRaw); });
+    pill.appendChild(b);
   }
 
   Array.prototype.forEach.call(document.querySelectorAll('.js-back-btn'), function (btn) {
@@ -3928,10 +4004,11 @@
     if (pr && isDesktopLayout() && r.right > pr.left && r.left < pr.right && r.bottom > pr.top) mapTapPopup.style.left = Math.max(10, pr.left - r.width - 12) + 'px';
   }
   function routeNetwork() {
-    if (!routeNet || routeNet.id !== currentRaw.id) {
+    var key = currentRaw.id + (domainRaw ? '+dom' : '');
+    if (!routeNet || routeNet.id !== key) {
       var conv = currentRaw.run_convention;
-      var net = SkiRoutes.build(currentRaw, function (r) { return diffKey(shownDifficulty(r.difficulty, conv)); });
-      net.id = currentRaw.id;
+      var net = SkiRoutes.build(mapRaw(), function (r) { return diffKey(shownDifficulty(r.difficulty, conv)); });
+      net.id = key;
       net.q = SkiRoutes.quality(net);
       routeNet = net;
     }
@@ -4190,7 +4267,7 @@
       add({ group: 'run', name: n, meta: d.label, color: d.color, side: 'start', label: T('Inicio de {0}', n), node: runs[n].top, of: 'run:' + n });
       add({ group: 'run', name: n, meta: d.label, color: d.color, side: 'end', label: T('Final de {0}', n), node: runs[n].end, of: 'run:' + n });
     });
-    (currentRaw.services || []).forEach(function (svc) {
+    (mapRaw().services || []).forEach(function (svc) {
       var cat = SERVICE_CATEGORIES[svc.category], at = SkiRoutes.near(net, [svc.lon, svc.lat], 150, 1)[0];
       if (cat && at) add({ group: 'svc', name: svc.name || cat.label, meta: svc.name ? cat.label : '', icon: cat.icon, color: cat.color, label: svc.name || cat.label, node: at.node, of: svc });
     });
@@ -4692,6 +4769,12 @@
         chip.addEventListener('click', function () { goToStation(o.id); });
         linksEl.appendChild(chip);
       });
+      var whole = document.createElement('button');
+      whole.type = 'button';
+      whole.className = 'chip chip-domain-map';
+      whole.textContent = T('Ver el mapa del dominio entero');
+      whole.addEventListener('click', function () { showDomainMap(true); });
+      linksEl.insertBefore(whole, linksEl.firstChild);
       domainSection.hidden = false;
     } else {
       domainSection.hidden = true;

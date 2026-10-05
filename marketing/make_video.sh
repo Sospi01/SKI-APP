@@ -29,16 +29,33 @@ TILE_LOG=marketing/tiles/$NAME.txt FAKE_TILE=$WORK/fake.jpg node marketing/make_
 echo "$(wc -l < "marketing/tiles/$NAME.txt") tiles"
 
 echo "== 2. downloading them (GitHub Actions)"
+# Tiles already here (marketing/tiles/<name>/, e.g. from an earlier try) are kept.
+missing() { while read -r k; do [ -f "marketing/tiles/$NAME/$k.jpg" ] || echo "$k"; done < "marketing/tiles/$NAME.txt"; }
 git add "marketing/tiles/$NAME.txt"
 git commit -q -m "Video: satellite tiles needed for $NAME" || true
-push
-gh api -X POST "repos/Sospi01/SKI-APP/actions/workflows/fetch-tiles.yml/dispatches" -f "ref=$BRANCH" -f "inputs[name]=$NAME" >/dev/null
-for i in $(seq 1 60); do
-  sleep 15; git fetch -q origin "$BRANCH"
-  git log -1 --format=%s "origin/$BRANCH" -- "marketing/tiles/$NAME/" | grep -q "tiles for video: $NAME" && break
-done
-git rebase -q "origin/$BRANCH"
-echo "$(ls "marketing/tiles/$NAME" | wc -l) tiles here"
+if [ -n "$(missing)" ]; then
+  push
+  [ -d "marketing/tiles/$NAME" ] && mv "marketing/tiles/$NAME" "$WORK/tiles-kept"
+  ok=
+  for try in 1 2 3; do
+    since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    gh api -X POST "repos/Sospi01/SKI-APP/actions/workflows/fetch-tiles.yml/dispatches" -f "ref=$BRANCH" -f "inputs[name]=$NAME" >/dev/null
+    state=
+    for i in $(seq 1 80); do   # up to 20 min
+      sleep 15
+      state=$(gh api "repos/Sospi01/SKI-APP/actions/workflows/fetch-tiles.yml/runs?per_page=5&created=>=$since" \
+        --jq '[.workflow_runs[]] | sort_by(.created_at) | last | "\(.status) \(.conclusion)"' 2>/dev/null || true)
+      case "$state" in "completed success") ok=1; break ;; completed*) break ;; esac
+    done
+    [ -n "$ok" ] && break
+    echo "tile download didn't work ($state), trying again"
+  done
+  [ -n "$ok" ] || { echo "the tile download failed 3 times: try again later"; exit 1; }
+  git fetch -q origin "$BRANCH"
+  git rebase -q "origin/$BRANCH"
+  [ -d "$WORK/tiles-kept" ] && { cp -n "$WORK/tiles-kept/"* "marketing/tiles/$NAME/" 2>/dev/null || true; rm -rf "$WORK/tiles-kept"; }
+fi
+echo "$(ls "marketing/tiles/$NAME" | wc -l) tiles here, $(missing | wc -l) missing"
 
 echo "== 3. frames"
 rm -rf "$WORK/frames"
@@ -53,7 +70,7 @@ T=$SECONDS_ARG
 ls -la "marketing/videos/$NAME.mp4"
 
 echo "== 5. commit"
-git rm -rq "marketing/tiles/$NAME" "marketing/tiles/$NAME.txt"
+git rm -rq --ignore-unmatch "marketing/tiles/$NAME" "marketing/tiles/$NAME.txt"; rm -rf "marketing/tiles/$NAME"
 git add "marketing/videos/$NAME.mp4" "marketing/videos/$NAME-preview.jpg"
 git commit -q -m "Video: $NAME 'which ski resort is it?' for TikTok"
 push

@@ -166,6 +166,12 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
 - Verificación de desarrollador de Android: hecha. Los dos paquetes de la cuenta están registrados.
 - `mobile-app/STORE_LISTING.md` tiene los textos de la ficha de Play en los 7 idiomas (es, en, fr, de, it, nl, pl), y los pasos del formulario de seguridad de los datos.
 - `marketing/REDDIT_POSTS.md` tiene los posts para Reddit y foros, cada uno con su `?ref=`.
+- **Vídeos para TikTok "¿Qué estación de esquí es?"** (`marketing/make_video.js`, 5 de octubre; el primero, `marketing/videos/formigal-adivina.mp4`): el 3D girando una vuelta sobre el satélite, sin nombres ni botones, con la pregunta, una pista y "Respuesta en los comentarios", 1080×1920, 12 s, sin música. **Se graba en el sandbox** (en GitHub Actions el WebGL por software va a ~68 s por fotograma; el workflow `make-video.yml` queda pero no sirve). Pasos:
+  1. `TILE_LOG=marketing/tiles/<n>.txt FAKE_TILE=<png> CHROMIUM_PATH=/opt/pw-browsers/chromium NODE_PATH=/opt/node22/lib/node_modules node marketing/make_video.js --station <id> --hint "..." --out <dir>` (lista las teselas de satélite que pide la vuelta; ~13 min);
+  2. commit de la lista y workflow `fetch-tiles.yml` (input `name`): las descarga y commitea en `marketing/tiles/<n>/`; `git pull`;
+  3. la misma orden con `TILE_DIR=marketing/tiles/<n>` (debe decir `missing 0`);
+  4. ffmpeg de `pip install imageio-ffmpeg`: `-framerate 24 -i frames/%04d.jpg -vf scale=1080:1920:flags=lanczos -r 30 -c:v libx264 -crf 23 -pix_fmt yuv420p -movflags +faststart`;
+  5. commit del mp4 en `marketing/videos/` y `git rm -r marketing/tiles/<n>`.
 
 ## 4. Cómo probar
 

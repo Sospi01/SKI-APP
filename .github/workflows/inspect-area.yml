@@ -1,0 +1,31 @@
+name: Inspect an area (OpenSkiMap)
+
+# Read-only: lists the runs and lifts OpenSkiMap has in a box, with their ski
+# areas and whether a station of the app takes them (data-pipeline/scripts/inspect_area.py).
+
+on:
+  workflow_dispatch:
+    inputs:
+      bbox:
+        description: "lon_min,lat_min,lon_max,lat_max"
+        required: true
+        default: "6.74,44.92,6.84,44.98"
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r data-pipeline/requirements.txt
+      - name: Download OpenSkiMap data and build the database
+        working-directory: data-pipeline
+        run: python -m ski_pipeline.cli --db data/ski_info.db -v
+      - name: List the area
+        run: python3 data-pipeline/scripts/inspect_area.py --db data-pipeline/data/ski_info.db --bbox "${{ inputs.bbox }}" --report "$GITHUB_STEP_SUMMARY"

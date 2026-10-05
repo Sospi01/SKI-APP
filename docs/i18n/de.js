@@ -407,6 +407,7 @@ window.SKI_I18N = {
   "Girar a la izquierda": "Nach links drehen",
   "Girar a la derecha": "Nach rechts drehen",
   "Con dos dedos: gira e inclina el mapa": "Mit zwei Fingern: Karte drehen und neigen",
-  "Ctrl + arrastrar (o botón derecho) para girar e inclinar el mapa": "Strg + ziehen (oder rechte Maustaste), um die Karte zu drehen und zu neigen"
+  "Ctrl + arrastrar (o botón derecho) para girar e inclinar el mapa": "Strg + ziehen (oder rechte Maustaste), um die Karte zu drehen und zu neigen",
+  "Orientar al norte": "Nach Norden ausrichten"
  }
 };

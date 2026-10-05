@@ -407,6 +407,7 @@ window.SKI_I18N = {
   "Girar a la izquierda": "Turn left",
   "Girar a la derecha": "Turn right",
   "Con dos dedos: gira e inclina el mapa": "Two fingers: turn and tilt the map",
-  "Ctrl + arrastrar (o botón derecho) para girar e inclinar el mapa": "Ctrl + drag (or right button) to turn and tilt the map"
+  "Ctrl + arrastrar (o botón derecho) para girar e inclinar el mapa": "Ctrl + drag (or right button) to turn and tilt the map",
+  "Orientar al norte": "Point north"
  }
 };

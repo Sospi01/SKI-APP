@@ -407,6 +407,7 @@ window.SKI_I18N = {
   "Girar a la izquierda": "Naar links draaien",
   "Girar a la derecha": "Naar rechts draaien",
   "Con dos dedos: gira e inclina el mapa": "Met twee vingers: kaart draaien en kantelen",
-  "Ctrl + arrastrar (o botón derecho) para girar e inclinar el mapa": "Ctrl + slepen (of rechtermuisknop) om de kaart te draaien en te kantelen"
+  "Ctrl + arrastrar (o botón derecho) para girar e inclinar el mapa": "Ctrl + slepen (of rechtermuisknop) om de kaart te draaien en te kantelen",
+  "Orientar al norte": "Naar het noorden draaien"
  }
 };

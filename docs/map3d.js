@@ -204,6 +204,7 @@
       var l = labelImg[e.id];
       if (l && !map.hasImage(e.id)) { var im = drawLabel(l); map.addImage(e.id, { width: im.width, height: im.height, data: im.data }, { pixelRatio: im.pixelRatio }); }
     });
+    map.on('rotate', function () { if (api.onRotate) api.onRotate(map.getBearing()); });
     map.on('error', function () {});   // logged by MapLibre otherwise; tiles that fail just stay blank
 
     var tappable = function () { return ['lift', mode === 'slope' ? 'slope' : 'run']; };
@@ -287,6 +288,8 @@
         map.fitBounds([[Math.min.apply(null, xs), Math.min.apply(null, ys)], [Math.max.apply(null, xs), Math.max.apply(null, ys)]],
           { padding: padding, bearing: map.getBearing(), pitch: map.getPitch(), maxZoom: 16, duration: 800 });
       },
+      // Turn the view back to north (the compass button).
+      north: function () { stopSpin(); map.easeTo({ bearing: 0, duration: 600 }); },
       zoomIn: function () { map.zoomIn(); },
       zoomOut: function () { map.zoomOut(); },
       reset: function () {

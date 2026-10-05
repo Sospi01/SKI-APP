@@ -92,6 +92,7 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
   - Lo replican `build_guides.py`, `build_seo_pages.py` y `build_share_images.py`.
 - `renderFavs`: sección "Mis estaciones" de la portada, con la nieve a 7 días.
 - Portada para quien llega por primera vez: botones "Populares" (`POPULAR`, por idioma o Norteamérica) y "Cerca de ti" (por zona horaria, `TZ_COORDS`, o ubicación real guardada redondeada en `si_loc`). Botón "Instalar como app" (`beforeinstallprompt`).
+- **Brújula** (5 de octubre, idea de Nevasport): botón `#map-north` arriba de los controles; solo sale cuando el mapa está girado (más de 1°), la aguja marca el norte y al pulsarlo el mapa vuelve al norte sin moverse del sitio (2D: anima `angle` alrededor del centro; 3D: `map3d.north()`, aguja con `onRotate`). `setNorth` lo pone el controlador del mapa.
 - Mapa de estación: modo de color "Dificultad | Pendiente" (`setMapMode`, `si_map_mode`), botón "Dónde estoy" (`locDraw`, `watchPosition`), compartir desde el mapa (`#mapa` al final de la URL de la ficha: `static-pages.js` salta al mapa), y el perfil de cada pista se puede recorrer con el dedo (`addProfileScrubber` en `profile.js`, que marca el punto en el mapa con `window.onProfilePoint`).
 - Portada: buscador `#global-search`, ranking de nieve, destacadas y guías. `#home-data` es el JSON que inyecta el despliegue.
 - **Vista 3D** (`docs/map3d.js` + MapLibre GL 5 en `docs/vendor/maplibre-gl-5.24.0/`, que solo se descargan al pulsar el botón "3D" del mapa):

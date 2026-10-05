@@ -570,6 +570,8 @@
     font-family: 'IBM Plex Sans', sans-serif; backdrop-filter: blur(2px);
   }
   .map-controls button:active { background: rgba(20,24,28,0.9); }
+  #map-north[hidden] { display: none; }
+  #map-north svg { width: 20px; height: 20px; display: block; margin: auto; }
   /* "Colour runs by": difficulty (the piste's official colour) or the real
      slope of each stretch. Sits top right with the zoom buttons below it. */
   .map-mode {
@@ -1207,6 +1209,7 @@
         <button type="button" data-mode="slope" aria-pressed="false">Pendiente</button>
       </div>
       <div class="map-controls">
+        <button type="button" id="map-north" aria-label="Orientar al norte" hidden><svg viewBox="0 0 20 20" aria-hidden="true"><g id="map-north-needle"><path d="M10 2.5l3 7.5h-6z" fill="#ff5a4f"/><path d="M10 17.5l-3-7.5h6z" fill="currentColor"/></g></svg></button>
         <button type="button" id="map-zoom-in" aria-label="Acercar">+</button>
         <button type="button" id="map-zoom-out" aria-label="Alejar">–</button>
         <button type="button" id="map-zoom-reset" aria-label="Restablecer vista">⤢</button>
@@ -1555,7 +1558,8 @@
   var highlightFeatures = function () {};
   var centerMapOn = function () {};
   var fitMapTo = function () {};
-  var relabelMap = function () {};   // set by the map controller   // set by the map controller: fit a box of map points into part of the view
+  var relabelMap = function () {};   // set by the map controller
+  var setNorth = function () {};     // the compass, set by the map controller   // set by the map controller: fit a box of map points into part of the view
   var currentRunGroups = {};   // run name -> group from renderDashboard
   var selectedMapKey = null;   // 'run:<name>' | feature object for unnamed runs/lifts
   var runPanel = document.getElementById('map-run-panel');
@@ -2675,6 +2679,7 @@
       if (mapState.routeG) mapState.routeG.querySelectorAll('circle').forEach(function (c) { c.setAttribute('r', (6 / mapState.zoom).toFixed(2)); });
       clearTimeout(refineTimer);
       refineTimer = setTimeout(refineMapTiles, 250);
+      if (!map3d) setNorth(mapState.angle);
       // Name labels live outside the zoomed group (fixed size, upright): a pan
       // just slides them, a zoom or turn hides them until they're laid out again.
       var la = mapState.labelAt, lg = mapState.labelG;
@@ -2715,6 +2720,29 @@
         if (show) a.el.setAttribute('points', arrowPolygonPoints(a.cx, a.cy, a.angle, arrowSz));
       });
     }
+    // ---- compass: shown once the map is turned; a tap turns it back to north ----
+    var northBtn = document.getElementById('map-north'), northNeedle = document.getElementById('map-north-needle');
+    setNorth = function (deg) {
+      var a = ((deg % 360) + 540) % 360 - 180;
+      northBtn.hidden = Math.abs(a) < 1;
+      northNeedle.setAttribute('transform', 'rotate(' + a.toFixed(1) + ' 10 10)');
+    };
+    northBtn.addEventListener('click', function () {
+      if (map3d) { map3d.north(); return; }
+      if (!mapState) return;
+      var state = mapState, from = ((state.angle % 360) + 540) % 360 - 180, t0 = null;
+      var c = outerToContentPoint(state.vbW / 2, state.vbH / 2);
+      (function step(ts) {
+        if (state !== mapState) return;
+        if (t0 == null) t0 = ts;
+        var k = Math.min(1, (ts - t0) / 400), e = 1 - Math.pow(1 - k, 3);
+        state.angle = from * (1 - e);
+        var o = rotateXY(c[0] * state.zoom, c[1] * state.zoom, state.angle);
+        state.tx = state.vbW / 2 - o[0]; state.ty = state.vbH / 2 - o[1];
+        apply();
+        if (k < 1) requestAnimationFrame(step);
+      })(performance.now());
+    });
     // ---- names of the pistes and lifts, written along their line ----
     // Laid out in screen space each time the view settles: the longest ones
     // first, each on a fairly straight stretch, skipping any that would
@@ -3804,6 +3832,8 @@
       if (!map3d) { map3dFailed(); return; }
       if (map3dUsedFor !== raw.id) { map3dUsedFor = raw.id; track.map3d(raw); }
       map3d.onSpinChange = map3dSpinShow;
+      map3d.onRotate = function (bearing) { setNorth(-bearing); };
+      setNorth(-map3d.map.getBearing());
       document.getElementById('map-hint').classList.add('hidden');
       map3dBtn.textContent = '2D';
       map3dBtn.setAttribute('aria-pressed', 'true');
@@ -3823,6 +3853,7 @@
     map3dBtn.setAttribute('aria-pressed', 'false');
     map3dSpinBtns.forEach(function (b) { b.hidden = true; });
     map3dSpinShow(0);
+    setNorth(mapState ? mapState.angle : 0);
   }
   map3dBtn.addEventListener('click', function () {
     hideMapTapPopup();

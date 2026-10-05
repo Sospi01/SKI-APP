@@ -407,6 +407,7 @@ window.SKI_I18N = {
   "Girar a la izquierda": "Tourner à gauche",
   "Girar a la derecha": "Tourner à droite",
   "Con dos dedos: gira e inclina el mapa": "À deux doigts : tournez et inclinez la carte",
-  "Ctrl + arrastrar (o botón derecho) para girar e inclinar el mapa": "Ctrl + glisser (ou bouton droit) pour tourner et incliner la carte"
+  "Ctrl + arrastrar (o botón derecho) para girar e inclinar el mapa": "Ctrl + glisser (ou bouton droit) pour tourner et incliner la carte",
+  "Orientar al norte": "Orienter vers le nord"
  }
 };

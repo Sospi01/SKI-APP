@@ -407,6 +407,7 @@ window.SKI_I18N = {
   "Girar a la izquierda": "Obróć w lewo",
   "Girar a la derecha": "Obróć w prawo",
   "Con dos dedos: gira e inclina el mapa": "Dwoma palcami: obracaj i pochylaj mapę",
-  "Ctrl + arrastrar (o botón derecho) para girar e inclinar el mapa": "Ctrl + przeciągnij (lub prawy przycisk), aby obracać i pochylać mapę"
+  "Ctrl + arrastrar (o botón derecho) para girar e inclinar el mapa": "Ctrl + przeciągnij (lub prawy przycisk), aby obracać i pochylać mapę",
+  "Orientar al norte": "Ustaw na północ"
  }
 };

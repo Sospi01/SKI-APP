@@ -1,0 +1,73 @@
+name: Make a TikTok video
+
+# Records a vertical "¿Qué estación de esquí es?" video of a station's 3D map
+# turning round (marketing/make_video.js: frame by frame, real satellite
+# imagery -- reachable from here, not from Claude's sandbox), joins the frames
+# with ffmpeg and commits the mp4 and a preview to marketing/videos/ (not
+# deployed). Add the music in TikTok itself.
+
+on:
+  workflow_dispatch:
+    inputs:
+      station:
+        description: "Station id (docs/data/<id>.json)"
+        required: true
+      name:
+        description: "File name (e.g. formigal-adivina)"
+        required: true
+      hint:
+        description: "Clue under the question (empty for none)"
+        required: false
+        default: ""
+      seconds:
+        description: "Length in seconds"
+        required: false
+        default: "12"
+      title:
+        description: "Question on top (\\n = new line)"
+        required: false
+        default: "¿Qué estación\\nde esquí es?"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: make-video
+  cancel-in-progress: false
+
+jobs:
+  video:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install Playwright, ffmpeg and fonts
+        run: |
+          npm install --no-save playwright@1.48.2
+          npx playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-noto-color-emoji
+      - name: Serve the site
+        run: (cd docs && python3 -m http.server 8903 >/dev/null 2>&1 &) && sleep 2
+      - name: Record the frames
+        run: |
+          node marketing/make_video.js --station "${{ inputs.station }}" --hint "${{ inputs.hint }}" \
+            --seconds "${{ inputs.seconds }}" --title "$(printf '%b' "${{ inputs.title }}")" --out out
+      - name: Join them into the video
+        run: |
+          N="${{ inputs.name }}"
+          ffmpeg -y -loglevel error -framerate 30 -i out/frames/%04d.jpg -c:v libx264 -preset slow -crf 20 \
+            -pix_fmt yuv420p -movflags +faststart "marketing/videos/$N.mp4"
+          COUNT=$(ls out/frames | wc -l)
+          cp "out/frames/$(printf '%04d' $((COUNT / 3))).jpg" "marketing/videos/$N-preview.jpg"
+          ls -la marketing/videos
+      - name: Commit the video
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add marketing/videos
+          git commit -m "Video: ${{ inputs.name }}"
+          for i in 1 2 3; do git pull --rebase -q && git push -q && break; sleep 5; done

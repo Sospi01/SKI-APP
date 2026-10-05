@@ -11,12 +11,13 @@
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
+const { execFile } = require('child_process');
 
 const arg = (name, def) => { const i = process.argv.indexOf('--' + name); return i > 0 ? process.argv[i + 1] : def; };
 const STATION = arg('station');
 const HINT = arg('hint', '');
 const OUT = arg('out', 'out');
-const SECONDS = +arg('seconds', 12);
+const SECONDS = +arg('seconds', 20);   // one full turn: 18 degrees a second
 const FPS = +arg('fps', 24);
 const SCALE = +arg('scale', 1.5);   // drawn at 810x1440, scaled to 1080x1920 by ffmpeg: WebGL in software is slow
 const TITLE = arg('title', '¿Qué estación\nde esquí es?');
@@ -24,6 +25,7 @@ const CTA = arg('cta', 'Respuesta en los comentarios 👇');
 const OUTRO = arg('outro', 'Mapa 3D de 1.400 estaciones · skiinfoapp.com');
 const BASE = arg('base', 'http://localhost:8903');
 const ZOOM = +arg('zoom', 0.6);           // closer than the default framing
+const NAMES = arg('names', '1') !== '0';  // run and lift names, as on the web
 const W = 540, H = 960;                   // CSS px; x2 = 1080x1920
 
 (async () => {
@@ -50,6 +52,21 @@ const W = 540, H = 960;                   // CSS px; x2 = 1080x1920
       return r.continue();
     });
   }
+  // Elevation tiles: fetched with curl into a cache folder and served from there
+  // (Chromium here doesn't trust the sandbox proxy's certificate, so it got none
+  // and the first video came out flat).
+  const demDir = process.env.DEM_DIR || path.join(OUT, 'dem');
+  fs.mkdirSync(demDir, { recursive: true });
+  await ctx.route('**/elevation-tiles-prod/**', async r => {
+    const url = r.request().url(), m = /terrarium\/(\d+)\/(\d+)\/(\d+)\.png/.exec(url);
+    if (!m) return r.continue();
+    const file = path.join(demDir, m.slice(1).join('_') + '.png');
+    if (!fs.existsSync(file)) {
+      await new Promise(res => execFile('curl', ['-sSf', '--retry', '3', '-o', file, url], () => res()));
+    }
+    if (!fs.existsSync(file)) return r.fulfill({ status: 404, headers: { 'access-control-allow-origin': '*' } });
+    return r.fulfill({ body: fs.readFileSync(file), contentType: 'image/png', headers: { 'access-control-allow-origin': '*' } });
+  });
   await ctx.route(/open-meteo|firestore|googleapis/, r => r.abort());
   await ctx.addInitScript(() => {
     try {
@@ -69,8 +86,8 @@ const W = 540, H = 960;                   // CSS px; x2 = 1080x1920
   await page.click('#map-3d-btn');
   await page.waitForFunction(() => window.__m3d && window.__m3d.map && window.__m3d.map.isStyleLoaded(), null, { timeout: 120000 });
 
-  // Video mode: only the 3D map, full screen, no names (they'd give the answer
-  // away) and no buttons; the overlay with the texts on top.
+  // Video mode: only the 3D map, full screen, no buttons; the overlay with the
+  // texts on top.
   await page.addStyleTag({ content: `
     body * { visibility: hidden !important; }
     #map-3d, #map-3d *, #video-overlay, #video-overlay * { visibility: visible !important; }
@@ -99,14 +116,14 @@ const W = 540, H = 960;                   // CSS px; x2 = 1080x1920
     document.body.appendChild(o);
   }, { TITLE, HINT, CTA });
 
-  // The camera: the app's own framing, a little closer, no names.
-  const startBearing = await page.evaluate((ZOOM) => {
+  // The camera: the app's own framing, a little closer.
+  const startBearing = await page.evaluate(({ ZOOM, NAMES }) => {
     const m = window.__m3d.map;
     m.resize();
-    if (m.getLayer('labels')) m.setLayoutProperty('labels', 'visibility', 'none');
+    if (!NAMES && m.getLayer('labels')) m.setLayoutProperty('labels', 'visibility', 'none');
     m.jumpTo({ zoom: m.getZoom() + ZOOM, pitch: 64 });
     return m.getBearing();
-  }, ZOOM);
+  }, { ZOOM, NAMES });
   const idle = (max) => page.evaluate((max) => new Promise(res => {
     const m = window.__m3d.map;
     let done = false;

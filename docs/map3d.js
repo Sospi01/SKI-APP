@@ -7,8 +7,33 @@
 // Elevation: AWS Terrain Tiles (Mapzen's open terrain, "terrarium" encoding,
 // public and free, CORS enabled). Imagery: the same Esri tiles as the 2D map.
 (function () {
-  var TERRAIN = 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png';
-  var IMAGERY = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+  // Both through the "retry" protocol below: a tile that fails (a slow or
+  // dropped connection) is asked for again instead of leaving a hole -- a
+  // missing elevation tile shows as a black gap with stretched edges.
+  var TERRAIN = 'retry://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png';
+  var IMAGERY = 'retry://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+  // The elevation data is a ~30 m survey: zoom 12 (~27 m a pixel in the Alps)
+  // already holds all of it, and every level more is 4x the tiles.
+  var TERRAIN_MAXZOOM = 12;
+  function addRetryProtocol() {
+    if (!window.maplibregl || !maplibregl.addProtocol || addRetryProtocol.done) return;
+    addRetryProtocol.done = true;
+    maplibregl.addProtocol('retry', function (params, abort) {
+      var url = params.url.replace(/^retry:\/\//, 'https://');
+      var wait = function (n) { return new Promise(function (r) { setTimeout(r, 400 * (n + 1)); }); };
+      var attempt = function (n) {
+        return fetch(url, { signal: abort.signal }).then(function (res) {
+          if (res.ok) return res.arrayBuffer();
+          if (res.status === 404 || res.status === 403 || n >= 2) throw new Error('HTTP ' + res.status);
+          return wait(n).then(function () { return attempt(n + 1); });
+        }, function (err) {
+          if (abort.signal.aborted || n >= 2) throw err;
+          return wait(n).then(function () { return attempt(n + 1); });
+        });
+      };
+      return attempt(0).then(function (buf) { return { data: buf }; });
+    });
+  }
   var PITCH = 62, EXAGGERATION = 1.3;
 
   // "var(--diff-easy)" or "hsl(208 88% 41%)" -> "#1a73c9" (WebGL needs a plain colour).
@@ -126,6 +151,12 @@
     var round = { 'line-cap': 'round', 'line-join': 'round' };
     var mode = o.mode === 'slope' ? 'slope' : 'diff';
 
+    addRetryProtocol();
+    // Sharp (high-DPI) small screens -- phones -- get the satellite one zoom
+    // level sharper (tiles declared at half size). On a big screen that would
+    // be 4x the tiles for the whole wide, tilted view, and it loaded slowly.
+    var dpr = window.devicePixelRatio || 1, area = (el.clientWidth || 400) * (el.clientHeight || 400);
+    var satTile = dpr >= 2 && area <= 520000 ? 128 : 256;
     var map;
     try { map = new maplibregl.Map({
       container: el,
@@ -142,8 +173,8 @@
         version: 8,
         sources: {
           // Declared at half size on sharp (high-DPI) screens, so MapLibre asks for one zoom level more.
-          sat: { type: 'raster', tiles: [IMAGERY], tileSize: (window.devicePixelRatio || 1) >= 2 ? 128 : 256, maxzoom: 18, attribution: 'Esri, Maxar, Earthstar Geographics' },
-          dem: { type: 'raster-dem', tiles: [TERRAIN], tileSize: 256, maxzoom: 15, encoding: 'terrarium', attribution: 'Terrain Tiles (Mapzen, AWS)' },
+          sat: { type: 'raster', tiles: [IMAGERY], tileSize: satTile, maxzoom: 18, attribution: 'Esri, Maxar, Earthstar Geographics' },
+          dem: { type: 'raster-dem', tiles: [TERRAIN], tileSize: 256, maxzoom: TERRAIN_MAXZOOM, encoding: 'terrarium', attribution: 'Terrain Tiles (Mapzen, AWS)' },
           runs: { type: 'geojson', data: collection(runs) },
           slope: { type: 'geojson', data: collection(slope) },
           lifts: { type: 'geojson', data: collection(lifts) },

@@ -17,7 +17,8 @@ const STATION = arg('station');
 const HINT = arg('hint', '');
 const OUT = arg('out', 'out');
 const SECONDS = +arg('seconds', 12);
-const FPS = +arg('fps', 30);
+const FPS = +arg('fps', 24);
+const SCALE = +arg('scale', 1.5);   // drawn at 810x1440, scaled to 1080x1920 by ffmpeg: WebGL in software is slow
 const TITLE = arg('title', '¿Qué estación\nde esquí es?');
 const CTA = arg('cta', 'Respuesta en los comentarios 👇');
 const OUTRO = arg('outro', 'Mapa 3D de 1.400 estaciones · skiinfoapp.com');
@@ -32,7 +33,7 @@ const W = 540, H = 960;                   // CSS px; x2 = 1080x1920
     executablePath: process.env.CHROMIUM_PATH || undefined,
     args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
   });
-  const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 2, serviceWorkers: 'block', locale: 'es-ES' });
+  const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: SCALE, serviceWorkers: 'block', locale: 'es-ES' });
   // Keep the open-meteo/stats/other calls from slowing things down; a mock route can be set for local tests.
   if (process.env.FAKE_TILE) {
     await ctx.route('**/World_Imagery/**', r => r.fulfill({ body: fs.readFileSync(process.env.FAKE_TILE), contentType: 'image/png', headers: { 'access-control-allow-origin': '*' } }));
@@ -94,18 +95,25 @@ const W = 540, H = 960;                   // CSS px; x2 = 1080x1920
     m.jumpTo({ zoom: m.getZoom() + ZOOM, pitch: 64 });
     return m.getBearing();
   }, ZOOM);
-  const idle = () => page.evaluate(() => new Promise(res => {
+  const idle = (max) => page.evaluate((max) => new Promise(res => {
     const m = window.__m3d.map;
     let done = false;
     const finish = () => { if (!done) { done = true; res(); } };
     if (m.loaded() && m.areTilesLoaded()) { requestAnimationFrame(() => requestAnimationFrame(finish)); }
     m.once('idle', finish);
-    setTimeout(finish, 8000);
-  }));
+    setTimeout(finish, max);
+  }), max);
   // Let the first view load fully (imagery and terrain), then step round.
   await page.evaluate(() => window.__m3d.map.triggerRepaint());
-  for (let i = 0; i < 3; i++) await idle();
-  await page.waitForTimeout(2000);
+  for (let i = 0; i < 3; i++) await idle(15000);
+  // Warm the tile cache all the way round, so each frame then only has to draw.
+  for (let k = 1; k <= 8; k++) {
+    await page.evaluate(b => window.__m3d.map.jumpTo({ bearing: b }), startBearing + 45 * k);
+    await idle(15000);
+  }
+  await page.evaluate(b => window.__m3d.map.jumpTo({ bearing: b }), startBearing);
+  await idle(15000);
+  const t0 = Date.now();
 
   const total = Math.round(SECONDS * FPS);
   const outroFrom = total - Math.round(2.5 * FPS);
@@ -114,9 +122,9 @@ const W = 540, H = 960;                   // CSS px; x2 = 1080x1920
     // Ease in and out over the full turn, so the loop doesn't jerk.
     const t = f / total, e = t - Math.sin(2 * Math.PI * t) / (2 * Math.PI) * 0.15;
     await page.evaluate(b => window.__m3d.map.jumpTo({ bearing: b }), startBearing + 360 * e);
-    await idle();
+    await idle(1500);
     await page.screenshot({ path: path.join(OUT, 'frames', String(f + 1).padStart(4, '0') + '.jpg'), type: 'jpeg', quality: 92 });
-    if (f % 30 === 0) console.log(`frame ${f + 1}/${total}`);
+    if (f % 24 === 0) console.log(`frame ${f + 1}/${total} · ${Math.round((Date.now() - t0) / 1000)} s`);
   }
   await browser.close();
   console.log('done:', total, 'frames');

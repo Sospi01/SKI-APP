@@ -38,7 +38,7 @@ concurrency:
 jobs:
   video:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -59,7 +59,7 @@ jobs:
       - name: Join them into the video
         run: |
           N="${{ inputs.name }}"
-          ffmpeg -y -loglevel error -framerate 30 -i out/frames/%04d.jpg -c:v libx264 -preset slow -crf 20 \
+          ffmpeg -y -loglevel error -framerate 24 -i out/frames/%04d.jpg -vf "scale=1080:1920:flags=lanczos" -r 30 -c:v libx264 -preset slow -crf 20 \
             -pix_fmt yuv420p -movflags +faststart "marketing/videos/$N.mp4"
           COUNT=$(ls out/frames | wc -l)
           cp "out/frames/$(printf '%04d' $((COUNT / 3))).jpg" "marketing/videos/$N-preview.jpg"

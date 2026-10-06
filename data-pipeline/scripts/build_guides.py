@@ -304,6 +304,12 @@ def item_html(it: Item, pos: int, e, lang: str) -> str:
             f'<span class="guide-metric"><b>{e(it.metric)}</b><small>{e(it.metric_label)}</small></span></a></li>')
 
 
+# A back button goes back to the page you came from when it's this site (a
+# guide opened from the home or another guide); otherwise it follows its link.
+BACK_JS = ("var r=document.referrer;if(r&&r.indexOf(location.origin+'/')===0&&r!==location.href&&history.length>1)"
+           "{history.back();return false}")
+
+
 def guide_url(base_url: str, lang: str, slug: str | None = None) -> str:
     return f"{base_url}{PATHS[lang]['guides']}" + (f"{slug}/" if slug else "")
 
@@ -329,7 +335,10 @@ def guide_page(g: Guide, guides: list[Guide], page, e, base_url: str, lang: str,
     related = [x for x in guides if x.slug != g.slug and x.group == g.group][:6]
     related += [x for x in guides if x.slug != g.slug and x.group != g.group and x not in related][: max(0, 8 - len(related))]
     related_html = "".join(f'<a class="chip" href="{gpath}{x.slug}/">{e(x.h1)}</a>' for x in related)
-    body = f"""<div class="guide-head">
+    # Top bar as on the station pages: back (to the page you came from, else
+    # the guides) and Ski Info. In the Android app there's no browser bar.
+    body = f"""<div class="topbar"><a class="back-btn" href="{gpath}" onclick="{BACK_JS}"><span class="chev">‹</span> {tx['guides']}</a><a class="back-btn" href="{PATHS[lang]['home']}">Ski Info</a></div>
+<div class="guide-head">
 <div class="eyebrow"><a href="{PATHS[lang]['home']}">Ski Info</a> · <a href="{gpath}">{tx['guides']}</a> · {e(g.group)}</div>
 <h1>{e(g.h1)}</h1>
 <p class="list-sub">{e(g.intro)}</p>
@@ -369,7 +378,8 @@ def index_page(guides: list[Guide], page, e, base_url: str, lang: str, alternate
             + (f'<span class="guide-card-sub">{e(tx["no1"].format(g.items[0].title or g.items[0].station["name"]))}</span>' if g.items else "")
             + '</span></a>' for g in groups[name])
         sections += f'<section class="guide-group"><h2>{e(name)}</h2><div class="guide-cards">{cards}</div></section>'
-    body = f"""<div class="guide-head">
+    body = f"""<div class="topbar"><a class="back-btn" href="{PATHS[lang]['home']}" onclick="{BACK_JS}"><span class="chev">‹</span> Ski Info</a></div>
+<div class="guide-head">
 <div class="eyebrow"><a href="{PATHS[lang]['home']}">Ski Info</a> · {tx['guides']}</div>
 <h1>{tx['index_h1']}</h1>
 <p class="list-sub">{tx['index_sub']}</p>

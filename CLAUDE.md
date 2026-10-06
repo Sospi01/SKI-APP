@@ -120,7 +120,7 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
 - `ski_pipeline/`: CLI que descarga el GeoJSON de OpenSkiMap y crea un SQLite: `python -m ski_pipeline.cli --db data/ski_info.db -v`. Tests: `cd data-pipeline && python3 -m pytest -q` (39 pasan).
 - `scripts/`:
   - `build_seo_pages.py`: fichas, países, página `/app`, sitemap, copias por idioma de la app y datos de la portada. Opciones: `--inject-home` (solo en el despliegue), `--write-slugs` para estaciones nuevas y `--base-url`.
-  - `build_guides.py`: guías generadas con los datos; los textos están en `guide_texts.py`.
+  - `build_guides.py`: guías generadas con los datos; los textos están en `guide_texts.py`. Arriba llevan la misma barra que las fichas (6 de octubre, la app no tiene barra del navegador): "‹ Guías" (en el índice, "‹ Ski Info"), que vuelve a la página anterior si era de la web (`BACK_JS`) y si no va al enlace, y "Ski Info" a la portada.
   - `page_texts.py`: textos de las páginas en fr, de, it, nl y pl.
   - `fetch_snow_forecast.py`: previsión de todas las estaciones, que se guarda en `docs/snow.json`.
   - `build_share_images.py`: imágenes OG. Necesita Pillow y tarda unos 3 minutos.

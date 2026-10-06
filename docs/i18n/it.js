@@ -413,6 +413,8 @@ window.SKI_I18N = {
   "No se pudo cargar el dominio.": "Impossibile caricare il comprensorio.",
   "Solo {0}": "Solo {0}",
   "Dominio entero ({0})": "Comprensorio intero ({0})",
-  "Ver el mapa del dominio entero": "Vedi la mappa del comprensorio intero"
+  "Ver el mapa del dominio entero": "Vedi la mappa del comprensorio intero",
+  "Sobre estos datos": "Informazioni sui dati",
+  "Datos © colaboradores de OpenStreetMap (ODbL), vía OpenSkiMap.": "Dati © contributori di OpenStreetMap (ODbL), tramite OpenSkiMap."
  }
 };

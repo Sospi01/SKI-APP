@@ -111,14 +111,41 @@ def latin_name(name: str, keep_parens: bool) -> str:
     return ""
 
 
-def display_name(name: str) -> str:
-    """The name to show: OSM's own unless it starts in another script, then
-    its first Latin-script form ("ニセコユナイテッド, Niseko United" -> "Niseko
-    United"). Mirrors displayName() in docs/index.html."""
-    first = (name or "").split(",")[0]
-    if not name or LATIN.search(PARENS.sub("", first)):
+# Shown names only (slugs keep strip_generic): more generic words to drop.
+DISPLAY_PREFIX = re.compile(
+    r"^(domaine skiable|area sciistica|ski ?area|station touristique|skipisten|stacja narciarska"
+    r"|o[sś]rodek narciarski|skiare[aá]l|gletscher-skigebiet|ski cent(ar|er|re)|ski resort)( (de|di|du|del))?\s+",
+    re.IGNORECASE,
+)
+# Not "mountain resort" as strip_generic: "Red Mountain Resort" -> "Red Mountain", not "Red".
+DISPLAY_SUFFIX = re.compile(r"\s+(alpine resort|ski resort|ski area|ski centre|ski center|skiarea|ski bowl|skigebiet"
+                            r"|ski ?arena|resort)$", re.IGNORECASE)
+NAMES_JS = Path(__file__).resolve().parents[2] / "docs" / "station-names.js"
+NAME_OVERRIDES = json.loads(re.search(r"var STATION_NAMES = (\{.*?\});", re.sub(
+    r"^\s*//.*$", "", NAMES_JS.read_text(encoding="utf-8"), flags=re.M), re.S).group(1))
+
+
+def display_name(name: str, sid: str | None = None) -> str:
+    """The name to show: docs/station-names.js if listed, else OSM's first
+    Latin-script form ("ニセコユナイテッド, Niseko United" -> "Niseko United")
+    without the generic words ("Estació d'Esquí Baqueira-Beret" -> "Baqueira-Beret",
+    "Big Sky Resort" -> "Big Sky"). Mirrors displayName() in docs/index.html."""
+    if sid and sid in NAME_OVERRIDES:
+        return NAME_OVERRIDES[sid]
+    if not name:
         return name
-    return latin_name(name, keep_parens=True) or name
+    base = latin_name(name, keep_parens=True) or name
+    text = DISPLAY_PREFIX.sub("", GENERIC_PREFIX.sub("", base))
+    prev = None
+    while prev != text:
+        prev, text = text, DISPLAY_SUFFIX.sub("", text)
+    return text.strip().strip('"“”«»').strip() or base
+
+
+def feature_name(name: str | None) -> str | None:
+    """A run's or lift's name as shown: OSM's "Rabadá BIS;Rabadá baby" (two
+    names in one tag) -> "Rabadá BIS / Rabadá baby". Mirrors featureName() in index.html."""
+    return " / ".join(p.strip() for p in name.split(";") if p.strip()) if name else name
 
 
 def strip_generic(text: str) -> str:
@@ -179,14 +206,6 @@ def fmt_pl(n: float, d: int = 0) -> str:
 
 
 FMT = {"es": fmt, "en": fmt_en, "fr": fmt_fr, "de": fmt_de, "it": fmt_de, "nl": fmt_de, "pl": fmt_pl}
-
-
-def format_coord(lat, lon, lang: str = "es") -> str:
-    if lat is None or lon is None:
-        return "–"
-    f = FMT[lang]
-    west = "W" if lang in ("en", "de", "nl", "pl") else "O"
-    return f"{f(abs(lat), 2)}°{'N' if lat >= 0 else 'S'} {f(abs(lon), 2)}°{'E' if lon >= 0 else west}"
 
 
 def haversine_km(a: tuple, b: tuple) -> float:
@@ -323,7 +342,7 @@ TX = {
         "no_lifts": "No hay remontes en los datos de esta estación.",
         "q_named": "Pistas con nombre", "q_diff": "Dificultad etiquetada", "q_lit": "Iluminación etiquetada",
         "q_snow": "Nieve artificial etiquetada", "q_cap": "Capacidad de remonte etiquetada", "q_grip": "Tipo de agarre etiquetado",
-        "quality": "Calidad del dato",
+        "quality": "Calidad del dato", "about_data": "Sobre estos datos",
         "quality_note": "Nieve artificial y vigilancia rara vez están etiquetadas en OpenStreetMap — "
                         "no significa que no existan, es que casi nadie las mapea todavía.",
         "map_h2": "Mapa interactivo",
@@ -377,7 +396,7 @@ TX = {
         "no_lifts": "There are no lifts in this resort's data.",
         "q_named": "Named runs", "q_diff": "Difficulty tagged", "q_lit": "Lighting tagged",
         "q_snow": "Snowmaking tagged", "q_cap": "Lift capacity tagged", "q_grip": "Grip type tagged",
-        "quality": "Data quality",
+        "quality": "Data quality", "about_data": "About this data",
         "quality_note": "Snowmaking and ski patrol are rarely tagged in OpenStreetMap — "
                         "it doesn't mean they don't exist, just that hardly anyone maps them yet.",
         "map_h2": "Interactive map",
@@ -544,7 +563,7 @@ def station_page(raw: dict, meta: dict, ctx: dict, lang: str = "es") -> tuple[st
     slug = ctx["slug"][sid]
     cc = raw.get("country_code")
     country_name = meta["countries"].get(cc, (cc or "", ""))[0]
-    name = display_name(raw.get("name")) or tx["resort"]
+    name = display_name(raw.get("name"), sid) or tx["resort"]
     short = short_name(name) or name
     place = ", ".join(p for p in [raw.get("locality"), raw.get("region")] if p) or country_name
     place_full = ", ".join(p for p in [raw.get("locality"), raw.get("region"), country_name] if p)
@@ -553,9 +572,9 @@ def station_page(raw: dict, meta: dict, ctx: dict, lang: str = "es") -> tuple[st
     app_link = f"{loc['home']}?estacion={sid}&amp;vista=mapa"
 
     convention = raw.get("run_convention")
-    runs = [dict(r, difficulty=shown_difficulty(r.get("difficulty"), convention))
+    runs = [dict(r, name=feature_name(r.get("name")), difficulty=shown_difficulty(r.get("difficulty"), convention))
             for r in raw.get("runs", []) if is_downhill(r)]
-    lifts = raw.get("lifts", [])
+    lifts = [dict(l, name=feature_name(l.get("name"))) for l in raw.get("lifts", [])]
     services = [s for s in raw.get("services") or [] if s.get("category") in meta["services"]]
     total_m = sum(r.get("length_m") or 0 for r in runs)
     lo, hi = raw.get("min_elevation_m"), raw.get("max_elevation_m")
@@ -565,7 +584,10 @@ def station_page(raw: dict, meta: dict, ctx: dict, lang: str = "es") -> tuple[st
 
     # ----- hero (badges, title, stats, connected domain) -----
     badges = [meta["activity"].get(a, a) for a in (raw.get("activities") or "").split(",") if a]
-    badges += [meta["status"].get(raw.get("status"), raw.get("status")), country_name]
+    # The status only when it's news (closed, a project...): "operating" said nothing.
+    if raw.get("status") and raw.get("status") != "operating":
+        badges.append(meta["status"].get(raw.get("status"), raw.get("status")))
+    badges.append(country_name)
     badges_html = "".join(f'<span class="badge">{e(b)}</span>' for b in badges if b)
     site = (raw.get("websites") or [None])[0]
     site_html = f'<a class="site" href="{e(site)}" target="_blank" rel="noopener">{tx["official_site"]}</a>' if site else ""
@@ -573,7 +595,7 @@ def station_page(raw: dict, meta: dict, ctx: dict, lang: str = "es") -> tuple[st
         (f"{f(round(lo))}–{f(round(hi))} m" if lo is not None and hi is not None else "–", tx["altitude"]),
         (f"{f(round(hi - lo))} m" if lo is not None and hi is not None else "–", tx["vertical"]),
         (f"{f(round(total_m / 1000))} km", tx["km_pistes"]),
-        (format_coord(raw.get("latitude"), raw.get("longitude"), lang), tx["coords"]),
+        (f(len(lifts)), tx["lifts"]),
     ]
     stats_html = "".join(f'<div class="hero-stat"><div class="v">{e(v)}</div><div class="k">{e(k)}</div></div>' for v, k in stats)
     domain_html = ""
@@ -765,9 +787,11 @@ def station_page(raw: dict, meta: dict, ctx: dict, lang: str = "es") -> tuple[st
         (tx["q_cap"], pct(sum(1 for l in lifts if l.get("capacity") is not None), lift_n)),
         (tx["q_grip"], pct(sum(1 for l in lifts if l.get("detachable") is not None), lift_n)),
     ]
-    quality_html = (f'<section><div class="section-head"><h2>{tx["quality"]}</h2></div><div class="quality-list">'
+    # Folded away: it's for the curious, not what a skier comes for.
+    quality_html = (f'<section><details class="about-data"><summary>{tx["about_data"]}</summary>'
+                    f'<h3>{tx["quality"]}</h3><div class="quality-list">'
                     + "".join(f'<div class="quality-row"><span class="name">{e(k)}</span><span class="val">{e(v)}</span></div>' for k, v in quality)
-                    + f'</div><p class="quality-note">{tx["quality_note"]}</p></section>')
+                    + f'</div><p class="quality-note">{tx["quality_note"]}</p></details></section>')
 
     # ----- sidebar: map card, rankings, nearby stations -----
     map_card = (f'<section class="map-card"><div class="section-head"><h2>{tx["map_h2"]}</h2></div>'
@@ -1236,7 +1260,7 @@ def main() -> None:
     (args.docs / "slugs.json").write_text(json.dumps(slug, separators=(",", ":")), encoding="utf-8")
     # Slugs are settled: from here on names are only shown.
     for s in stations:
-        s["name"] = display_name(s["name"])
+        s["name"] = display_name(s["name"], s["id"])
 
     by_country: dict[str, list] = {}
     for s in stations:

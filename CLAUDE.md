@@ -47,7 +47,8 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
 | `snow.js` / `snow.css` | Tiempo y previsión desde Open-Meteo, en el navegador, con 5 s de tiempo máximo. `snow.json` es el ranking de nieve que genera el despliegue. |
 | `profile.js` | Perfil de pendiente de una pista (panel del mapa). |
 | `static-pages.js` / `.css` | JS y CSS de las páginas generadas: fichas de estación, países y guías. |
-| `sw.js` | Service worker, `VERSION = 'v6'`. Las navegaciones y los datos se piden primero a la red y, si falla, a la caché. Sube `VERSION` si cambia la lista de archivos del shell. |
+| `station-names.js` | `STATION_NAMES`: id → nombre revisado a mano ("Baqueira Beret", "Candanchú", "Cerler"…, y los que si no saldrían repetidos). Ver "Nombres" abajo. |
+| `sw.js` | Service worker, `VERSION = 'v7'`. Las navegaciones y los datos se piden primero a la red y, si falla, a la caché. Sube `VERSION` si cambia la lista de archivos del shell. |
 | `track.js` | Contador de uso anónimo, sin cookies (ver 3.4). |
 | `stats.html` | Panel privado de estadísticas (ver 3.4). |
 | `privacy.html`, `privacy-{en,fr,de,it,nl,pl}.html` | Política de privacidad en los 7 idiomas (archivos fijos, enlazados por idioma con `LOC[lang]['privacy']` de `build_seo_pages.py`). |
@@ -85,7 +86,8 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
 - **Mapa del dominio entero** (5 de octubre): en "Dominio esquiable conectado", el botón "Ver el mapa del dominio entero" y, en el mapa, la pastilla "Dominio entero (N)" / "Solo X" (`showDomainMap`, `domainRaw`, `mapRaw()`): el mapa (y las rutas) usan las pistas, remontes y servicios de todas las estaciones del grupo; el resto de la ficha sigue siendo de la estación.
 - `renderMapPreview`: tarjeta del mapa en el móvil, sobre satélite; solo por debajo de 1000 px.
 - `trackMapUse`: cuenta el uso real del mapa una vez por estación. En el móvil, al abrirlo; en el ordenador, al arrastrar, hacer zoom o pulsar.
-- `displayName`: nombres en alfabeto latino.
+- **Nombres** (6 de octubre, para que la app parezca más profesional): `displayName(name, id)` (y `display_name()` en `build_seo_pages.py`, idénticos) da el nombre que se muestra: el de `station-names.js` si está; si no, la primera forma en alfabeto latino, solo lo de antes de la primera coma, sin palabras genéricas ("Estació d'Esquí", "Skigebiet", "Domaine skiable", "… Ski Resort", "… Resort"; no "Mountain Resort": "Red Mountain Resort" → "Red Mountain"). Los datos y `stations.js` guardan el nombre de OSM (la actualización semanal los reescribe); los slugs no cambian (usan `strip_generic`) y el buscador también busca por el nombre original (`localName`). Las pistas y remontes con dos nombres en la etiqueta ("Rabadá BIS;Rabadá baby") salen como "Rabadá BIS / Rabadá baby" (`featureNames`, `feature_name`).
+- **Ficha sin "cocina" de datos** (6 de octubre): en la cabecera, "Remontes" en vez de las coordenadas; la etiqueta de estado solo si no está operativa; "Calidad del dato" plegada bajo "Sobre estos datos" (`details.about-data`); el pie sin el ID; la escala del mapa con coma decimal. En Europa, "expert" se muestra como "Negra" (`DIFF_SHOWN_AS.europe`, también en `build_guides.py`): antes salían "Negra" y "Negra (experta)" del mismo color.
 - `DIFF`, `DIFF_ORDER`, `DIFF_SHOWN_AS` y `shownDifficulty`: colores por región.
   - **Mismos colores en modo claro y oscuro** (5 de octubre, queja de un usuario de iPhone que veía las negras blancas): el modo oscuro ya no cambia `--diff-*` ni `--map-lift-color` (`index.html` y `static-pages.css`). Los mapas (`#map-viewport`, `#map-preview`) llevan siempre el borde blanco (`--map-halo`). En modo oscuro, los puntos y barras negros de las listas llevan un anillo claro (selector `[style*="--diff-advanced"]`).
   - Norteamérica: *easy* → verde, *intermediate* → azul, *expert* → doble negra (`double`).

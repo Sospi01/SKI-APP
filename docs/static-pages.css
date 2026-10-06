@@ -385,3 +385,7 @@ footer.credit a { color: var(--text-secondary); }
   .guide-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .guide-card { background: var(--bg); }
 }
+
+/* "Sobre estos datos": the data quality, folded away */
+.about-data summary { cursor: pointer; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 15px; color: var(--text-secondary); padding: 4px 0; }
+.about-data h3 { font-size: 13px; margin: 12px 0 10px; color: var(--text-secondary); }

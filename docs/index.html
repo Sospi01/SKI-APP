@@ -430,6 +430,8 @@
   .run-profile-axis { stroke: var(--text-muted); stroke-width: 1; opacity: 0.35; }
   .run-profile-gridline { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 2 3; opacity: 0.35; }
 
+  .about-data summary { cursor: pointer; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 15px; color: var(--text-secondary); padding: 4px 0; }
+  .about-data h3 { font-size: 13px; margin: 12px 0 10px; color: var(--text-secondary); }
   .quality-list { display: flex; flex-direction: column; gap: 10px; }
   .quality-row { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; }
   .quality-row .name { color: var(--text-secondary); }
@@ -1113,7 +1115,7 @@
           <div class="hero-stat"><div class="v" id="f-alt">–</div><div class="k">Altitud</div></div>
           <div class="hero-stat"><div class="v" id="f-vert">–</div><div class="k">Desnivel</div></div>
           <div class="hero-stat"><div class="v" id="k-km">–</div><div class="k">Km pista</div></div>
-          <div class="hero-stat"><div class="v" id="f-coords">–</div><div class="k">Coordenadas</div></div>
+          <div class="hero-stat"><div class="v" id="k-lifts">–</div><div class="k">Remontes</div></div>
           <div class="hero-stat"><div class="v" id="k-sunrise">–</div><div class="k">Amanecer</div></div>
           <div class="hero-stat"><div class="v" id="k-sunset">–</div><div class="k">Atardecer</div></div>
           <div class="hero-stat"><div class="v" id="k-temp">–</div><div class="k" id="k-weather-desc">Tiempo</div></div>
@@ -1193,9 +1195,13 @@
     </section>
 
     <section>
-      <div class="section-head"><h2>Calidad del dato</h2></div>
-      <div class="quality-list" id="quality-list"></div>
-      <p class="quality-note" id="quality-note"></p>
+      <!-- Folded away: it's for the curious, not what a skier comes for. -->
+      <details class="about-data">
+        <summary>Sobre estos datos</summary>
+        <h3>Calidad del dato</h3>
+        <div class="quality-list" id="quality-list"></div>
+        <p class="quality-note" id="quality-note"></p>
+      </details>
     </section>
 
     <footer class="credit" id="dashboard-credit"></footer>
@@ -1280,6 +1286,7 @@
      with the rest of the page instead of jumping in later. null = fetch it. -->
 <script id="home-data" type="application/json">null</script>
 <script src="/stations.js"></script>
+<script src="/station-names.js"></script>
 <script src="/i18n.js"></script>
 <script src="/profile.js"></script>
 <script src="/snow.js"></script>
@@ -1311,10 +1318,18 @@
   // form instead. Mirrors display_name() in build_seo_pages.py; the original
   // stays searchable (localName).
   var LATIN_RE = /[A-Za-zÀ-ɏ]/, PARENS_RE = /\s*[(（][^)）]*[)）]/g;
-  function displayName(name) {
-    if (!name) return name;
+  // The name to show: station-names.js if listed, else OSM's first Latin-script
+  // form ("ニセコユナイテッド, Niseko United" -> "Niseko United") without the
+  // generic words ("Estació d'Esquí Baqueira-Beret" -> "Baqueira-Beret", "Big
+  // Sky Resort" -> "Big Sky"). Mirrors display_name() in build_seo_pages.py.
+  var NAME_PREFIX = new RegExp("^(estaci[oó]n? (d'|de )?esqu[ií]( (y|i) (de )?(monta[ñn]a|muntanya))?" +
+    "|estaci[oó]n? (invernal|de muntanya)( y de monta[ñn]a)?" +
+    "|station (de ski|du)|centro (de )?ski|ski center|ski centre|skigebiet)( del?)?\\s+", 'i');
+  var NAME_PREFIX2 = new RegExp("^(domaine skiable|area sciistica|ski ?area|station touristique|skipisten|stacja narciarska" +
+    "|o[sś]rodek narciarski|skiare[aá]l|gletscher-skigebiet|ski cent(ar|er|re)|ski resort)( (de|di|du|del))?\\s+", 'i');
+  var NAME_SUFFIX = /\s+(alpine resort|ski resort|ski area|ski centre|ski center|skiarea|ski bowl|skigebiet|ski ?arena|resort)$/i;
+  function latinPart(name) {
     var parts = name.split(',').map(function (p) { return p.trim(); });
-    if (LATIN_RE.test(parts[0].replace(PARENS_RE, ''))) return name;
     for (var i = 0; i < parts.length; i++) {
       if (LATIN_RE.test(parts[i].replace(PARENS_RE, ''))) return parts[i];
       var inside = parts[i].match(/[(（][^)）]*[)）]/g) || [];
@@ -1325,7 +1340,24 @@
     }
     return name;
   }
-  STATIONS.forEach(function (s) { s.localName = s.name; s.name = displayName(s.name); });
+  function displayName(name, id) {
+    var names = window.STATION_NAMES || {};
+    if (id && names[id]) return names[id];
+    if (!name) return name;
+    var base = latinPart(name), text = base.replace(NAME_PREFIX, '').replace(NAME_PREFIX2, '');
+    for (var prev = null; prev !== text;) { prev = text; text = text.replace(NAME_SUFFIX, ''); }
+    return text.trim().replace(/^["“”«»]+|["“”«»]+$/g, '').trim() || base;
+  }
+  // A run's or lift's name as shown: OSM's "Rabadá BIS;Rabadá baby" (two names
+  // in one tag) -> "Rabadá BIS / Rabadá baby". Mirrors feature_name().
+  function featureNames(d) {
+    [d.runs || [], d.lifts || []].forEach(function (list) {
+      list.forEach(function (f) {
+        if (f.name && f.name.indexOf(';') !== -1) f.name = f.name.split(';').map(function (p) { return p.trim(); }).filter(Boolean).join(' / ');
+      });
+    });
+  }
+  STATIONS.forEach(function (s) { s.localName = s.name; s.name = displayName(s.name, s.id); });
 
   var DIFF = {
     novice:       { label: "Verde",  color: "var(--diff-novice)" },
@@ -1343,7 +1375,10 @@
   // its own way (OpenSkiMap's run_convention): "easy" is a blue run in Europe
   // and a green circle in North America. Map it to the grade shown, named
   // after the European key with that colour. Mirrors build_guides.py.
+  // In Europe "expert" is still a black run (same colour): shown as one, not
+  // as "Negra" and "Negra (experta)" side by side.
   var DIFF_SHOWN_AS = {
+    europe: { expert: 'advanced' },
     north_america: { easy: 'novice', intermediate: 'easy', expert: 'double' },
     japan: { easy: 'novice' }
   };
@@ -1518,11 +1553,7 @@
   function setText(id, text) { var el = document.getElementById(id); if (el) el.textContent = text; }
   function diffKey(d) { return d && DIFF[d] ? d : "other"; }
   function normalize(s) { return (s || "").toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ""); }
-  function formatCoord(lat, lon) {
-    if (lat == null || lon == null) return "–";
-    var latDir = lat >= 0 ? 'N' : 'S', lonDir = lon >= 0 ? 'E' : T('O');
-    return fmt(Math.abs(lat), 2) + '°' + latDir + ' ' + fmt(Math.abs(lon), 2) + '°' + lonDir;
-  }
+
 
   var tooltip = document.getElementById('tooltip');
   function showTooltip(x, y, label, valueText) {
@@ -2552,7 +2583,7 @@
     setText('h-name', T('Cargando…'));
     setText('h-place', '');
     // Nothing from the station seen before stays on screen while this one loads.
-    ['f-alt', 'f-vert', 'k-km', 'f-coords', 'k-sunrise', 'k-sunset', 'k-temp', 'k-wind'].forEach(function (elId) { setText(elId, '–'); });
+    ['f-alt', 'f-vert', 'k-km', 'k-lifts', 'k-sunrise', 'k-sunset', 'k-temp', 'k-wind'].forEach(function (elId) { setText(elId, '–'); });
     ['h-site', 'h-directions', 'weather-note', 'map-preview-section'].forEach(function (elId) { document.getElementById(elId).hidden = true; });
     setText('map-station-name', '');
     ['runs-count', 'lifts-count', 'services-count'].forEach(function (elId) { setText(elId, ''); });
@@ -2575,7 +2606,8 @@
           return !r.uses || r.uses.split(',').indexOf('downhill') !== -1;
         });
         raw.runs.forEach(function (r) { r.difficulty = shownDifficulty(r.difficulty, raw.run_convention); });
-        raw.name = displayName(raw.name);
+        raw.name = displayName(raw.name, raw.id);
+        featureNames(raw);
         // Live weather + 7-day snow forecast straight from the browser
         // (Open-Meteo via snow.js): no pipeline, always up to date.
         var weatherFetch = (raw.latitude != null && raw.longitude != null)
@@ -2609,6 +2641,7 @@
     }).then(function (d) {
       d.runs = d.runs.filter(function (r) { return !r.uses || r.uses.split(',').indexOf('downhill') !== -1; });
       d.runs.forEach(function (r) { r.difficulty = shownDifficulty(r.difficulty, d.run_convention); });
+      featureNames(d);
       return d;
     });
     domainCache[id].catch(function () { delete domainCache[id]; });
@@ -2635,7 +2668,7 @@
       map3dMsg('');
       var merged = Object.assign({}, raw, {
         runs: raw.runs.slice(), lifts: raw.lifts.slice(), services: (raw.services || []).slice(),
-        domainNames: [raw.name].concat(others.map(function (o) { return displayName(o.name); }))
+        domainNames: [raw.name].concat(others.map(function (o) { return displayName(o.name, o.id); }))
       });
       others.forEach(function (o) {
         merged.runs = merged.runs.concat(o.runs);
@@ -3556,7 +3589,7 @@
       var barMeters = niceSteps.reduce(function (best, v) { return Math.abs(v - targetMeters) < Math.abs(best - targetMeters) ? v : best; }, niceSteps[0]);
       var barPx = (barMeters / 111320) * scale * zoomScale;
       scaleLine.setAttribute('x2', bx + barPx);
-      scaleLabel.textContent = barMeters >= 1000 ? (barMeters / 1000) + ' km' : barMeters + ' m';
+      scaleLabel.textContent = barMeters >= 1000 ? fmt(barMeters / 1000, barMeters % 1000 ? 1 : 0) + ' km' : fmt(barMeters) + ' m';
     }
 
     var attrib = document.createElementNS(SVGNS, 'text');
@@ -4739,7 +4772,8 @@
 
     var badgesEl = document.getElementById('badges');
     (raw.activities || '').split(',').filter(Boolean).map(function (a) { return ACTIVITY[a] || a; })
-      .concat([STATUS[raw.status] || raw.status, countryName])
+      // The status only when it's news (closed, a project...): "operating" said nothing.
+      .concat([raw.status && raw.status !== 'operating' ? (STATUS[raw.status] || raw.status) : null, countryName])
       .filter(Boolean)
       .forEach(function (label) {
         var b = document.createElement('span'); b.className = 'badge'; b.textContent = label;
@@ -4752,7 +4786,7 @@
     } else {
       setText('f-alt', '–'); setText('f-vert', '–');
     }
-    setText('f-coords', formatCoord(raw.latitude, raw.longitude));
+    setText('k-lifts', fmt((raw.lifts || []).length));
 
     var group = findGroupFor(raw.id);
     var domainSection = document.getElementById('domain-section');
@@ -5093,7 +5127,7 @@
     });
     setText('quality-note', T('Nieve artificial y vigilancia rara vez están etiquetadas en OpenStreetMap — no significa que no existan, es que casi nadie las mapea todavía.'));
 
-    setText('dashboard-credit', T('Datos © colaboradores de OpenStreetMap (ODbL), vía OpenSkiMap. ID: {0}…', (raw.id || '').slice(0, 12)));
+    setText('dashboard-credit', T('Datos © colaboradores de OpenStreetMap (ODbL), vía OpenSkiMap.'));
   }
 
   // Offline support (docs/sw.js): the app shell and the stations you've

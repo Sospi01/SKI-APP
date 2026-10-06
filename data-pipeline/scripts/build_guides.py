@@ -27,6 +27,7 @@ from guide_texts import CITIES, GROUPS, GT, PAGE, PATHS, RANK_ITEM, RUN_PREFIX, 
 # named after the European key with that colour ("double" = double black
 # diamond). Mirrors DIFF_SHOWN_AS in docs/index.html.
 DIFF_SHOWN_AS = {
+    "europe": {"expert": "advanced"},   # still a black run: one "Negra", not two
     "north_america": {"easy": "novice", "intermediate": "easy", "expert": "double"},
     "japan": {"easy": "novice"},
 }
@@ -86,7 +87,8 @@ def station_stats(raw: dict, is_downhill) -> dict:
     for r in runs:
         if not r.get("name"):
             continue
-        g = groups.setdefault(r["name"], {"name": r["name"], "len": 0.0, "vert": 0.0,
+        name = " / ".join(p.strip() for p in r["name"].split(";") if p.strip())   # as feature_name()
+        g = groups.setdefault(name, {"name": name, "len": 0.0, "vert": 0.0,
                                           "diff": shown_difficulty(r.get("difficulty"), convention)})
         g["len"] += r.get("length_m") or 0
         g["vert"] += r.get("vertical_m") or 0

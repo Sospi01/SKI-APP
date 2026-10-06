@@ -413,6 +413,8 @@ window.SKI_I18N = {
   "No se pudo cargar el dominio.": "Nie udało się wczytać regionu.",
   "Solo {0}": "Tylko {0}",
   "Dominio entero ({0})": "Cały region ({0})",
-  "Ver el mapa del dominio entero": "Zobacz mapę całego regionu narciarskiego"
+  "Ver el mapa del dominio entero": "Zobacz mapę całego regionu narciarskiego",
+  "Sobre estos datos": "O tych danych",
+  "Datos © colaboradores de OpenStreetMap (ODbL), vía OpenSkiMap.": "Dane © współtwórcy OpenStreetMap (ODbL), przez OpenSkiMap."
  }
 };

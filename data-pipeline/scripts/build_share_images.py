@@ -23,7 +23,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from build_seo_pages import (fmt, fmt_en, is_downhill, latin_name, load_app_metadata, load_i18n,  # noqa: E402
+from build_seo_pages import (display_name, fmt, fmt_en, is_downhill, latin_name, load_app_metadata, load_i18n,  # noqa: E402
                              localized_meta, read_app_sources, short_name)
 from build_guides import shown_difficulty  # noqa: E402
 
@@ -218,7 +218,7 @@ def station_images(raw: dict, metas: dict, outs: dict) -> None:
     for i, (lang, out) in enumerate(outs.items()):
         tx, f = IMG_TX[lang], NUM[lang]
         country = metas[lang]["countries"].get(cc, (cc or "", ""))[0]
-        name = short_name(raw.get("name") or "") or raw.get("name") or ""
+        name = short_name(display_name(raw.get("name") or "", raw.get("id"))) or raw.get("name") or ""
         # The fonts have no CJK glyphs: use a Latin form of the name when there is one.
         if any(ord(c) >= 0x2E80 for c in name):
             name = latin_name(raw.get("name") or "", False) or tx["resort_in"].format(raw.get("region") or country)

@@ -413,6 +413,8 @@ window.SKI_I18N = {
   "No se pudo cargar el dominio.": "Impossible de charger le domaine.",
   "Solo {0}": "Seulement {0}",
   "Dominio entero ({0})": "Domaine entier ({0})",
-  "Ver el mapa del dominio entero": "Voir la carte du domaine entier"
+  "Ver el mapa del dominio entero": "Voir la carte du domaine entier",
+  "Sobre estos datos": "À propos des données",
+  "Datos © colaboradores de OpenStreetMap (ODbL), vía OpenSkiMap.": "Données © contributeurs d'OpenStreetMap (ODbL), via OpenSkiMap."
  }
 };

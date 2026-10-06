@@ -413,6 +413,8 @@ window.SKI_I18N = {
   "No se pudo cargar el dominio.": "Het skigebied kon niet worden geladen.",
   "Solo {0}": "Alleen {0}",
   "Dominio entero ({0})": "Heel skigebied ({0})",
-  "Ver el mapa del dominio entero": "Bekijk de kaart van het hele skigebied"
+  "Ver el mapa del dominio entero": "Bekijk de kaart van het hele skigebied",
+  "Sobre estos datos": "Over deze gegevens",
+  "Datos © colaboradores de OpenStreetMap (ODbL), vía OpenSkiMap.": "Gegevens © OpenStreetMap-bijdragers (ODbL), via OpenSkiMap."
  }
 };

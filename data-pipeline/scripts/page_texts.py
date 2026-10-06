@@ -30,7 +30,7 @@ TX = {
         "no_lifts": "Aucune remontée dans les données de cette station.",
         "q_named": "Pistes nommées", "q_diff": "Difficulté renseignée", "q_lit": "Éclairage renseigné",
         "q_snow": "Neige de culture renseignée", "q_cap": "Débit des remontées renseigné", "q_grip": "Type d'attache renseigné",
-        "quality": "Qualité des données",
+        "quality": "Qualité des données", "about_data": "À propos des données",
         "quality_note": "La neige de culture et les pistes surveillées sont rarement renseignées dans OpenStreetMap — "
                         "cela ne veut pas dire qu'elles n'existent pas, mais que presque personne ne les cartographie encore.",
         "map_h2": "Carte interactive",
@@ -83,7 +83,7 @@ TX = {
         "no_lifts": "In den Daten dieses Skigebiets gibt es keine Lifte.",
         "q_named": "Benannte Pisten", "q_diff": "Schwierigkeit erfasst", "q_lit": "Beleuchtung erfasst",
         "q_snow": "Beschneiung erfasst", "q_cap": "Liftkapazität erfasst", "q_grip": "Klemmenart erfasst",
-        "quality": "Datenqualität",
+        "quality": "Datenqualität", "about_data": "Über diese Daten",
         "quality_note": "Beschneiung und Pistenrettung sind in OpenStreetMap selten erfasst — das heißt nicht, dass es sie "
                         "nicht gibt, sondern dass sie kaum jemand kartiert.",
         "map_h2": "Interaktive Karte",
@@ -136,7 +136,7 @@ TX = {
         "no_lifts": "Nei dati di questa stazione non ci sono impianti.",
         "q_named": "Piste con nome", "q_diff": "Difficoltà indicata", "q_lit": "Illuminazione indicata",
         "q_snow": "Innevamento indicato", "q_cap": "Portata impianti indicata", "q_grip": "Tipo di ammorsamento indicato",
-        "quality": "Qualità dei dati",
+        "quality": "Qualità dei dati", "about_data": "Informazioni sui dati",
         "quality_note": "Innevamento e soccorso piste sono raramente indicati in OpenStreetMap: non significa che non esistano, "
                         "solo che quasi nessuno li mappa ancora.",
         "map_h2": "Mappa interattiva",
@@ -287,7 +287,7 @@ TX["nl"] = {
     "no_lifts": "Er zijn geen liften in de gegevens van dit skigebied.",
     "q_named": "Pistes met naam", "q_diff": "Moeilijkheid vastgelegd", "q_lit": "Verlichting vastgelegd",
     "q_snow": "Kunstsneeuw vastgelegd", "q_cap": "Liftcapaciteit vastgelegd", "q_grip": "Koppelingstype vastgelegd",
-    "quality": "Kwaliteit van de gegevens",
+    "quality": "Kwaliteit van de gegevens", "about_data": "Over deze gegevens",
     "quality_note": "Kunstsneeuw en pistebewaking staan zelden in OpenStreetMap — dat betekent niet dat ze er niet zijn, "
                     "maar dat bijna niemand ze nog in kaart brengt.",
     "map_h2": "Interactieve kaart",
@@ -340,7 +340,7 @@ TX["pl"] = {
     "no_lifts": "W danych tego ośrodka nie ma wyciągów.",
     "q_named": "Trasy z nazwą", "q_diff": "Trudność oznaczona", "q_lit": "Oświetlenie oznaczone",
     "q_snow": "Naśnieżanie oznaczone", "q_cap": "Przepustowość wyciągów oznaczona", "q_grip": "Typ sprzęgła oznaczony",
-    "quality": "Jakość danych",
+    "quality": "Jakość danych", "about_data": "O tych danych",
     "quality_note": "Naśnieżanie i ratownictwo narciarskie rzadko są oznaczane w OpenStreetMap — nie znaczy to, że ich nie ma, "
                     "tylko że prawie nikt ich jeszcze nie mapuje.",
     "map_h2": "Interaktywna mapa",

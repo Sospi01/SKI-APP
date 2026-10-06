@@ -33,7 +33,10 @@ const BASE = arg('base', 'http://localhost:8903');
 const ZOOM = +arg('zoom', 0.6);            // closer than the default framing
 const NAMES = arg('names', '1') !== '0';   // run and lift names, as on the web
 const LIST = +arg('list-tiles', 0);
-const W = 540, H = 960;                    // CSS px; x2 = 1080x1920
+// --still <file.jpg>: one picture at the app's framing (the home's station
+// images, docs/img/home/), no turn and no texts.
+const STILL = arg('still', '');
+const W = +arg('width', 540), H = +arg('height', 960);   // CSS px; x2 = 1080x1920
 
 const OVERLAY_CSS = `
   html, body { margin: 0; background: transparent; }
@@ -77,7 +80,7 @@ async function overlays(browser) {
     executablePath: process.env.CHROMIUM_PATH || undefined,
     args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
   });
-  if (!LIST) await overlays(browser);
+  if (!LIST && !STILL) await overlays(browser);
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: SCALE, serviceWorkers: 'block', locale: 'es-ES' });
   // Satellite tiles: from a folder of downloaded tiles (TILE_DIR, files z_y_x.jpg,
   // fetched where the imagery is reachable), else a stand-in (FAKE_TILE), else the
@@ -159,10 +162,16 @@ async function overlays(browser) {
   // cache all the way round, so each frame then only has to draw.
   await page.evaluate(() => window.__m3d.map.triggerRepaint());
   for (let i = 0; i < 3; i++) await idle(15000);
-  const steps = LIST || 8;
+  const steps = STILL ? 0 : LIST || 8;
   for (let k = 1; k <= steps; k++) { await turnTo(startBearing + 360 / steps * k); await idle(15000); await idle(4000); }
 
-  if (!LIST) {
+  if (STILL) {
+    await turnTo(startBearing);
+    await idle(15000); await idle(4000);
+    const jpg = await page.evaluate(() => { const m = window.__m3d.map; m.redraw(); return m.getCanvas().toDataURL('image/jpeg', 0.84); });
+    fs.writeFileSync(STILL, Buffer.from(jpg.split(',')[1], 'base64'));
+    console.log('still:', STILL);
+  } else if (!LIST) {
     await turnTo(startBearing);
     await idle(15000);
     const t0 = Date.now();

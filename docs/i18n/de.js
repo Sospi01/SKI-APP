@@ -415,6 +415,24 @@ window.SKI_I18N = {
   "Dominio entero ({0})": "Ganzes Skigebiet ({0})",
   "Ver el mapa del dominio entero": "Karte des ganzen Skigebiets ansehen",
   "Sobre estos datos": "Über diese Daten",
-  "Datos © colaboradores de OpenStreetMap (ODbL), vía OpenSkiMap.": "Daten © OpenStreetMap-Mitwirkende (ODbL), über OpenSkiMap."
+  "Datos © colaboradores de OpenStreetMap (ODbL), vía OpenSkiMap.": "Daten © OpenStreetMap-Mitwirkende (ODbL), über OpenSkiMap.",
+  "Ver en 3D ›": "In 3D ansehen ›",
+  "Estaciones populares": "Beliebte Skigebiete",
+  "Así es cada estación en Ski Info": "So sieht jedes Skigebiet in Ski Info aus",
+  "Mapa 3D con relieve": "3D-Karte mit Gelände",
+  "Gíralo, inclínalo y toca cualquier pista.": "Drehen, neigen und jede Piste antippen.",
+  "La pendiente real, tramo a tramo": "Die echte Steilheit, Abschnitt für Abschnitt",
+  "Cada pista coloreada por inclinación para saber qué te espera.": "Jede Piste nach Neigung eingefärbt: Du weißt, was dich erwartet.",
+  "Nieve a 7 días": "Schnee für 7 Tage",
+  "Nevadas previstas, temperatura arriba y abajo, viento.": "Neuschneeprognose, Temperatur oben und unten, Wind.",
+  "Ver los {0} países": "Alle {0} Länder ansehen",
+  "{0} cm en 7 días": "{0} cm in 7 Tagen",
+  "{0} en 3D": "{0} in 3D",
+  "Tu estación": "Dein Skigebiet",
+  "Ver ficha": "Details",
+  "nieve 7 días": "Schnee 7 Tage",
+  "arriba ahora": "oben jetzt",
+  "espesor": "Schneehöhe",
+  "{0} km de pistas": "{0} km Pisten"
  }
 };

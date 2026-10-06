@@ -84,9 +84,22 @@ async function exists(p) {
     const chips = await p.$$eval('#home-popular button', (b) => b.map((x) => x.textContent));
     const near = await p.$$eval('#near-list .station-card', (c) => c.length);
     check(chips.length >= 4 && near === 6, 'home: popular chips and "Cerca de ti"', chips.join(', ') + ' · ' + near + ' near');
+    const home = await p.evaluate(() => ({ pics: document.querySelectorAll('#featured-list .home-pic').length,
+      flags: document.querySelectorAll('#country-grid .country-tile').length, hero: !!document.getElementById('home-hero-3d') }));
+    check(home.pics === 4 && home.flags === 12 && home.hero, 'home: popular picture cards, country flags and the 3D hero', JSON.stringify(home));
     await p.click('#home-popular button');
     await p.waitForSelector('#screen-dashboard:not([hidden])', { timeout: 8000 }).catch(() => {});
     check(await p.$eval('#screen-dashboard', (e) => !e.hidden), 'home: a popular chip opens its station');
+    await p.context().close();
+  }
+  // ---- the Android app (a WebView): no 3D hero; the saved station on top ----
+  {
+    const p = await newPage(browser, { ...devices['Pixel 7'], userAgent: devices['Pixel 7'].userAgent.replace(')', '; wv)') });
+    await p.addInitScript(() => localStorage.setItem('si_favs', JSON.stringify(['125d02338620dc079d5d635595a099370161bf83'])));
+    await p.goto(BASE + '/'); await p.waitForTimeout(1500);
+    const app = await p.evaluate(() => ({ hero: !!document.getElementById('home-hero-3d'), show: !!document.getElementById('home-show'),
+      mine: (document.querySelector('#home-mine:not([hidden]) .n') || {}).textContent || '' }));
+    check(!app.hero && !app.show && app.mine === 'Baqueira Beret', 'app home: no 3D hero, "Tu estación" on top', JSON.stringify(app));
     await p.context().close();
   }
 

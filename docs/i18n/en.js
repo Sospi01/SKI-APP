@@ -415,6 +415,24 @@ window.SKI_I18N = {
   "Dominio entero ({0})": "Whole area ({0})",
   "Ver el mapa del dominio entero": "See the map of the whole ski area",
   "Sobre estos datos": "About this data",
-  "Datos © colaboradores de OpenStreetMap (ODbL), vía OpenSkiMap.": "Data © OpenStreetMap contributors (ODbL), via OpenSkiMap."
+  "Datos © colaboradores de OpenStreetMap (ODbL), vía OpenSkiMap.": "Data © OpenStreetMap contributors (ODbL), via OpenSkiMap.",
+  "Ver en 3D ›": "See it in 3D ›",
+  "Estaciones populares": "Popular ski resorts",
+  "Así es cada estación en Ski Info": "What every resort looks like in Ski Info",
+  "Mapa 3D con relieve": "3D map with terrain",
+  "Gíralo, inclínalo y toca cualquier pista.": "Turn it, tilt it and tap any run.",
+  "La pendiente real, tramo a tramo": "The real slope, section by section",
+  "Cada pista coloreada por inclinación para saber qué te espera.": "Every run coloured by steepness, so you know what's coming.",
+  "Nieve a 7 días": "7-day snow",
+  "Nevadas previstas, temperatura arriba y abajo, viento.": "Forecast snowfall, temperature at the top and bottom, wind.",
+  "Ver los {0} países": "See all {0} countries",
+  "{0} cm en 7 días": "{0} cm in 7 days",
+  "{0} en 3D": "{0} in 3D",
+  "Tu estación": "Your resort",
+  "Ver ficha": "See details",
+  "nieve 7 días": "snow, 7 days",
+  "arriba ahora": "at the top now",
+  "espesor": "snow depth",
+  "{0} km de pistas": "{0} km of pistes"
  }
 };

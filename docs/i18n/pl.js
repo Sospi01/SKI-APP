@@ -415,6 +415,24 @@ window.SKI_I18N = {
   "Dominio entero ({0})": "Cały region ({0})",
   "Ver el mapa del dominio entero": "Zobacz mapę całego regionu narciarskiego",
   "Sobre estos datos": "O tych danych",
-  "Datos © colaboradores de OpenStreetMap (ODbL), vía OpenSkiMap.": "Dane © współtwórcy OpenStreetMap (ODbL), przez OpenSkiMap."
+  "Datos © colaboradores de OpenStreetMap (ODbL), vía OpenSkiMap.": "Dane © współtwórcy OpenStreetMap (ODbL), przez OpenSkiMap.",
+  "Ver en 3D ›": "Zobacz w 3D ›",
+  "Estaciones populares": "Popularne ośrodki",
+  "Así es cada estación en Ski Info": "Tak wygląda każdy ośrodek w Ski Info",
+  "Mapa 3D con relieve": "Mapa 3D z rzeźbą terenu",
+  "Gíralo, inclínalo y toca cualquier pista.": "Obracaj, pochylaj i dotknij dowolnej trasy.",
+  "La pendiente real, tramo a tramo": "Prawdziwe nachylenie, odcinek po odcinku",
+  "Cada pista coloreada por inclinación para saber qué te espera.": "Każda trasa pokolorowana według nachylenia – wiesz, co cię czeka.",
+  "Nieve a 7 días": "Śnieg na 7 dni",
+  "Nevadas previstas, temperatura arriba y abajo, viento.": "Prognozowane opady śniegu, temperatura na górze i na dole, wiatr.",
+  "Ver los {0} países": "Zobacz wszystkie kraje ({0})",
+  "{0} cm en 7 días": "{0} cm w 7 dni",
+  "{0} en 3D": "{0} w 3D",
+  "Tu estación": "Twój ośrodek",
+  "Ver ficha": "Szczegóły",
+  "nieve 7 días": "śnieg 7 dni",
+  "arriba ahora": "na górze teraz",
+  "espesor": "grubość",
+  "{0} km de pistas": "{0} km tras"
  }
 };

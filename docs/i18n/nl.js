@@ -415,6 +415,24 @@ window.SKI_I18N = {
   "Dominio entero ({0})": "Heel skigebied ({0})",
   "Ver el mapa del dominio entero": "Bekijk de kaart van het hele skigebied",
   "Sobre estos datos": "Over deze gegevens",
-  "Datos © colaboradores de OpenStreetMap (ODbL), vía OpenSkiMap.": "Gegevens © OpenStreetMap-bijdragers (ODbL), via OpenSkiMap."
+  "Datos © colaboradores de OpenStreetMap (ODbL), vía OpenSkiMap.": "Gegevens © OpenStreetMap-bijdragers (ODbL), via OpenSkiMap.",
+  "Ver en 3D ›": "Bekijk in 3D ›",
+  "Estaciones populares": "Populaire skigebieden",
+  "Así es cada estación en Ski Info": "Zo ziet elk skigebied eruit in Ski Info",
+  "Mapa 3D con relieve": "3D-kaart met reliëf",
+  "Gíralo, inclínalo y toca cualquier pista.": "Draai hem, kantel hem en tik op een piste.",
+  "La pendiente real, tramo a tramo": "De echte helling, stuk voor stuk",
+  "Cada pista coloreada por inclinación para saber qué te espera.": "Elke piste gekleurd naar steilheid, zodat je weet wat je te wachten staat.",
+  "Nieve a 7 días": "Sneeuw voor 7 dagen",
+  "Nevadas previstas, temperatura arriba y abajo, viento.": "Verwachte sneeuwval, temperatuur boven en beneden, wind.",
+  "Ver los {0} países": "Bekijk alle {0} landen",
+  "{0} cm en 7 días": "{0} cm in 7 dagen",
+  "{0} en 3D": "{0} in 3D",
+  "Tu estación": "Jouw skigebied",
+  "Ver ficha": "Bekijk details",
+  "nieve 7 días": "sneeuw 7 dagen",
+  "arriba ahora": "boven nu",
+  "espesor": "sneeuwdikte",
+  "{0} km de pistas": "{0} km pistes"
  }
 };

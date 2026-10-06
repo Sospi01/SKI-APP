@@ -27,7 +27,8 @@ if [ $# -gt 0 ]; then IDS=("$@"); else
   mapfile -t IDS < <(node -e '
     const html = require("fs").readFileSync("docs/index.html", "utf8");
     const a = html.indexOf("var POPULAR = {"), b = html.indexOf("};", a);
-    console.log([...new Set(html.slice(a, b).match(/[0-9a-f]{40}/g))].join("\n"));')
+    const no = html.slice(html.indexOf("var NO_HOME_IMG = {"), html.indexOf("};", html.indexOf("var NO_HOME_IMG = {")));
+    console.log([...new Set(html.slice(a, b).match(/[0-9a-f]{40}/g))].filter(id => !no.includes(id)).join("\n"));')
 fi
 echo "${#IDS[@]} stations"
 

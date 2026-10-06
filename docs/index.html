@@ -858,6 +858,56 @@
   .home-section .station-list { padding-top: 0; padding-bottom: 8px; }
   .station-card .name .flag + span { min-width: 0; }
   .home-features { display: grid; gap: 10px; padding: 18px 18px 8px; }
+  /* Home pictures (docs/img/home/: 3D stills made by marketing/make_home_images.sh) */
+  .home-hero-3d { position: relative; display: block; margin-top: 20px; border-radius: 16px; overflow: hidden; aspect-ratio: 16 / 10;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.25); background: #2a3a4a; color: #fff; text-decoration: none; }
+  .home-hero-3d[hidden] { display: none; }
+  .home-hero-3d-img, .home-hero-3d video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+  .home-hero-3d video { opacity: 0; transition: opacity 0.6s ease; }
+  .home-hero-3d video.playing { opacity: 1; }
+  .home-hero-3d-bar { position: absolute; left: 14px; right: 14px; bottom: 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .home-hero-3d-bar .t { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px; text-shadow: 0 2px 8px rgba(0,0,0,0.75); }
+  .home-hero-3d-bar .b { background: #fff; color: #1d4f91; border-radius: 999px; padding: 8px 16px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 15px; white-space: nowrap; }
+  .home-pics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 0 18px 8px; }
+  .home-pic { position: relative; display: block; height: 168px; padding: 0; border: 0; border-radius: 14px; overflow: hidden; cursor: pointer; color: #fff; text-align: left;
+    background: linear-gradient(160deg, var(--hero-1), var(--hero-2) 130%); font: inherit; }
+  .home-pic img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 60%; display: block; transition: transform 0.3s ease; }
+  .home-pic:hover img { transform: scale(1.04); }
+  .home-pic-text { position: absolute; inset: auto 0 0 0; padding: 30px 12px 10px; background: linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0.78)); }
+  .home-pic-text .n { display: block; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 20px; line-height: 1.05; }
+  .home-pic-text .m { display: flex; align-items: center; gap: 5px; font-size: 12px; opacity: 0.92; margin-top: 3px; }
+  .home-pic-text .flag { width: 18px; height: 13px; border-radius: 2px; }
+  .home-pic-snow { position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.92); color: #1a5fb4; font-weight: 700; font-size: 12px; padding: 4px 9px; border-radius: 999px; }
+  .home-pic-snow[hidden] { display: none; }
+  .country-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 0 18px; }
+  .country-grid[hidden], #country-list[hidden], .home-more-btn[hidden] { display: none; }
+  .country-tile { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 10px 4px; border: 1px solid var(--border); border-radius: 12px;
+    background: var(--surface-2); color: var(--text-primary); font: inherit; font-size: 12.5px; font-weight: 600; text-align: center; cursor: pointer; }
+  .country-tile img { width: 30px; height: 22px; border-radius: 3px; box-shadow: 0 0 0 1px rgba(0,0,0,0.08); }
+  .country-tile small { font-weight: 400; color: var(--text-muted); font-size: 11px; }
+  .home-more-btn { display: block; margin: 12px auto 4px; background: none; border: 0; font: inherit; font-weight: 600; font-size: 14px; color: var(--accent); cursor: pointer; }
+  .home-show-grid { display: grid; gap: 14px; padding: 0 18px 8px; }
+  .home-show figure { margin: 0; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; background: var(--bg); }
+  .home-show .pic { height: 190px; overflow: hidden; background: var(--surface-2); }
+  .home-show .pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .home-show .pic img.contain { object-fit: contain; padding: 10px; box-sizing: border-box; }
+  .home-show figcaption { padding: 12px 14px 14px; }
+  .home-show figcaption b { display: block; font-family: 'Barlow Condensed', sans-serif; font-size: 19px; margin-bottom: 3px; }
+  .home-show figcaption span { font-size: 13px; color: var(--text-secondary); line-height: 1.45; }
+  /* "Tu estación" (the app): the saved station on top, with its snow */
+  .home-mine { margin-top: 18px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.3); border-radius: 16px; overflow: hidden; color: #fff; }
+  .home-mine[hidden] { display: none; }
+  .home-mine .pic { position: relative; height: 150px; background: rgba(0,0,0,0.2); }
+  .home-mine .pic img, .home-mine .pic svg { width: 100%; height: 100%; object-fit: cover; object-position: 50% 60%; display: block; }
+  .home-mine .pic.has-imagery .mp-tiles { opacity: 1; }
+  .home-mine .tag { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.5); font-size: 11.5px; padding: 4px 9px; border-radius: 999px; }
+  .home-mine .body { padding: 12px 14px 14px; }
+  .home-mine .n { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 22px; }
+  .home-mine .row { display: flex; gap: 18px; margin: 6px 0 12px; font-size: 12.5px; opacity: 0.95; }
+  .home-mine .row b { display: block; font-family: 'Barlow Condensed', sans-serif; font-size: 19px; }
+  .home-mine .btns { display: flex; gap: 8px; }
+  .home-mine .btns button { flex: 1; border: 0; background: #fff; color: #1d4f91; border-radius: 999px; padding: 10px 0; font: inherit; font-weight: 700; font-size: 14px; cursor: pointer; }
+  .home-mine .btns button.sec { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.6); }
   .home-feature { background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
   .home-feature-icon { width: 38px; height: 38px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
   .home-feature-icon svg { width: 22px; height: 22px; }
@@ -908,6 +958,13 @@
     /* country + station lists: wide, centered, card grid */
     #screen-list, #screen-country-map { max-width: 1232px; margin: 0 auto; padding: 0 16px; }
     .home-hero { padding: 70px 0 64px; }
+    .home-hero-inner.has-3d { display: grid; grid-template-columns: 1fr 1.05fr; gap: 44px; align-items: center; }
+    .home-hero-inner.has-3d .home-hero-3d { margin-top: 0; }
+    .home-pics { grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 0; }
+    .home-pic { height: 230px; }
+    .country-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); padding: 0; }
+    .home-show-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 0; }
+    .home-show .pic { height: 220px; }
     .home-hero-inner, .home-section, .home-features, #screen-country .list-footer { max-width: 1264px; margin-left: auto; margin-right: auto; padding-left: 32px; padding-right: 32px; }
     .home-title { font-size: 60px; max-width: 860px; }
     .home-sub { font-size: 17px; max-width: 700px; margin: 16px 0 26px; }
@@ -975,6 +1032,7 @@
         <polygon points="0,140 0,110 90,60 150,95 210,50 270,100 330,65 400,100 400,140" fill="rgba(255,255,255,0.16)"/>
       </svg>
       <div class="home-hero-inner">
+       <div class="home-hero-text">
         <div class="home-eyebrow">Ski Info</div>
         <h1 class="home-title">Mapas de pistas de <span id="home-station-count">1.200+</span> estaciones de esquí</h1>
         <p class="home-sub">Pistas y remontes sobre imagen de satélite, la pendiente real de cada pista, servicios en pistas y la previsión de nieve de cada estación. Gratis y sin registro.</p>
@@ -991,12 +1049,23 @@
         </div>
         <a class="home-app-link" id="home-app-link" href="/app/"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10.5 18.5h3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>Llévate Ski Info en el móvil ›</a>
         <button type="button" class="home-app-link" id="home-install" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5v11M7.5 10.5l4.5 4.5 4.5-4.5M5 19.5h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Instalar Ski Info como app</button>
+        <div class="home-mine" id="home-mine" hidden></div>
+       </div>
+       <a class="home-hero-3d" id="home-hero-3d" hidden>
+         <img class="home-hero-3d-img" src="/img/home/hero.jpg" alt="" width="1200" height="750">
+         <span class="home-hero-3d-bar"><span class="t" id="home-hero-3d-name"></span><span class="b">Ver en 3D ›</span></span>
+       </a>
       </div>
     </div>
 
     <div class="home-section" id="favs-section" hidden>
       <div class="home-section-head"><h2>Mis estaciones</h2><span class="sub" id="favs-sub">las que has guardado</span></div>
       <div class="station-list snow-rank" id="favs-list"></div>
+    </div>
+
+    <div class="home-section">
+      <div class="home-section-head"><h2>Estaciones populares</h2></div>
+      <div class="home-pics" id="featured-list"></div>
     </div>
 
     <div class="home-section" id="near-section" hidden>
@@ -1018,11 +1087,6 @@
       <div class="station-list snow-rank" id="snow-rank-list"></div>
     </div>
 
-    <div class="home-section">
-      <div class="home-section-head"><h2>Destacadas en España y Andorra</h2><span class="sub">las de más kilómetros de pistas</span></div>
-      <div class="station-list featured-list" id="featured-list"></div>
-    </div>
-
     <div class="home-section" id="guides-section" hidden>
       <div class="home-section-head"><h2>Guías y rankings</h2><a class="sub home-more" href="/guias/">Ver todas las guías ›</a></div>
       <div class="guide-cards" id="guide-cards"></div>
@@ -1030,13 +1094,18 @@
 
     <div class="home-section">
       <div class="home-section-head"><h2>Elige un país</h2><span class="sub">ordenados por kilómetros de pistas</span></div>
-      <div class="station-list" id="country-list"></div>
+      <div class="country-grid" id="country-grid"></div>
+      <div class="station-list" id="country-list" hidden></div>
+      <button type="button" class="home-more-btn" id="country-all"></button>
     </div>
 
-    <div class="home-features">
-      <div class="home-feature"><div class="home-feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6.5l5.5-2.5 6 2.5 5.5-2.5v13.5l-5.5 2.5-6-2.5-5.5 2.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><line x1="9" y1="4" x2="9" y2="17.5" stroke="currentColor" stroke-width="1.6"/><line x1="15" y1="6.5" x2="15" y2="20" stroke="currentColor" stroke-width="1.6"/></svg></div><h3>Mapa sobre satélite</h3><p>Cada pista y remonte con su recorrido real, el sentido de bajada y los servicios en pistas.</p></div>
-      <div class="home-feature"><div class="home-feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5l5 5 4-3 5 6 4 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 20h18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div><h3>Pendiente real</h3><p>El perfil de cada pista coloreado por inclinación, tramo a tramo, para saber qué te espera.</p></div>
-      <div class="home-feature"><div class="home-feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 2.5v1.6M9 13.9v1.6M2.5 9h1.6M3.4 3.4l1.1 1.1M13.5 4.5l1.1-1.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M10 19.5h8a3 3 0 0 0 .3-6 4.5 4.5 0 0 0-8.4 1.6A2.3 2.3 0 0 0 10 19.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div><h3>Nieve y tiempo</h3><p>Nevadas previstas para los próximos 7 días, temperatura en cota alta y en la base, isoterma de 0 °C y viento.</p></div>
+    <div class="home-section home-show" id="home-show">
+      <div class="home-section-head"><h2>Así es cada estación en Ski Info</h2></div>
+      <div class="home-show-grid">
+        <figure><div class="pic"><img data-show="3d" alt="" loading="lazy"></div><figcaption><b>Mapa 3D con relieve</b><span>Gíralo, inclínalo y toca cualquier pista.</span></figcaption></figure>
+        <figure><div class="pic"><img data-show="profile" class="contain" alt="" loading="lazy"></div><figcaption><b>La pendiente real, tramo a tramo</b><span>Cada pista coloreada por inclinación para saber qué te espera.</span></figcaption></figure>
+        <figure><div class="pic"><img data-show="snow" class="contain" alt="" loading="lazy"></div><figcaption><b>Nieve a 7 días</b><span>Nevadas previstas, temperatura arriba y abajo, viento.</span></figcaption></figure>
+      </div>
     </div>
 
     <p class="list-footer">Datos © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">colaboradores de OpenStreetMap</a> (ODbL), vía OpenSkiMap · imágenes Esri, Maxar, Earthstar Geographics<br><a href="/pais/">Todas las estaciones por país</a> · <a href="/guias/">Guías y rankings</a> · <a href="/app/">App para el móvil</a> · <a href="/privacy.html">Privacidad</a><br><span class="lang-links"><a class="lang-link" data-lang="en" href="/en/" hreflang="en" lang="en">English</a> · <a class="lang-link" data-lang="fr" href="/fr/" hreflang="fr" lang="fr">Français</a> · <a class="lang-link" data-lang="de" href="/de/" hreflang="de" lang="de">Deutsch</a> · <a class="lang-link" data-lang="it" href="/it/" hreflang="it" lang="it">Italiano</a> · <a class="lang-link" data-lang="nl" href="/nl/" hreflang="nl" lang="nl">Nederlands</a> · <a class="lang-link" data-lang="pl" href="/pl/" hreflang="pl" lang="pl">Polski</a></span></p>
@@ -1827,7 +1896,27 @@
       card.addEventListener('click', function () { selectCountry(cc); });
       countryListEl.appendChild(card);
     });
+    // The home shows the first 12 as flags; the whole list on demand.
+    var grid = document.getElementById('country-grid'), allBtn = document.getElementById('country-all');
+    grid.innerHTML = '';
+    codes.slice(0, 12).forEach(function (cc) {
+      var tile = document.createElement('button');
+      tile.type = 'button';
+      tile.className = 'country-tile';
+      tile.innerHTML = flagImg(cc) + '<span></span><small></small>';
+      tile.querySelector('span').textContent = (COUNTRY_META[cc] || { name: cc }).name;
+      tile.querySelector('small').textContent = T(byCountry[cc].count === 1 ? '{0} estación' : '{0} estaciones', byCountry[cc].count);
+      tile.addEventListener('click', function () { selectCountry(cc); });
+      grid.appendChild(tile);
+    });
+    allBtn.textContent = T('Ver los {0} países', codes.length) + ' ›';
+    allBtn.hidden = codes.length <= 12;
   }
+  document.getElementById('country-all').addEventListener('click', function () {
+    document.getElementById('country-grid').hidden = true;
+    countryListEl.hidden = false;
+    this.hidden = true;
+  });
 
   var screenCountry = document.getElementById('screen-country');
 
@@ -1879,6 +1968,10 @@
     });
     window.addEventListener('appinstalled', function () { deferred = null; btn.hidden = true; });
   })();
+
+  // Inside the Android app (a WebView): the home shows the saved station on
+  // top instead of the 3D showcase, which is for visitors of the website.
+  var IS_APP = /; wv\)/.test(navigator.userAgent);
 
   var HOME_DATA = (function () {
     try { return JSON.parse(document.getElementById('home-data').textContent); } catch (e) { return null; }
@@ -1943,15 +2036,6 @@
     setText('home-stat-stations', big(nStations));
     setText('home-stat-countries', fmt(Object.keys(countries).length));
     setText('home-stat-km', big(Math.floor(totalKm / 1000) * 1000) + '+');
-
-    var featured = document.getElementById('featured-list');
-    var featuredCountries = { es: ['ES', 'AD'], pl: ['PL'] }[LANG] || ['FR', 'CH', 'AT', 'IT'];
-    STATIONS.filter(function (s) { return featuredCountries.indexOf(s.country) !== -1; })
-      .sort(function (a, b) { return (b.pisteKm || 0) - (a.pisteKm || 0); })
-      .slice(0, 6)
-      .forEach(function (s) {
-        featured.appendChild(homeStationCard(s, fmt(Math.round(s.pisteKm || 0)) + ' km', T('pista')));
-      });
   }
 
   // ---- global search (home hero): every station, any country ----
@@ -2061,7 +2145,7 @@
     }
     function render() {
       var favs = favStations().map(stationById).filter(Boolean);
-      section.hidden = !favs.length;
+      section.hidden = !favs.length || (IS_APP && favs.length < 2);
       listEl.innerHTML = '';
       if (!favs.length) return;
       if (!fullSnow && !loading && favs.some(function (s) { return !snowFor(s.id); })) {
@@ -2174,6 +2258,151 @@
     });
     box.hidden = box.children.length < 2;
   })();
+
+  // ---- home pictures: 3D stills of the popular stations (docs/img/home/<id>.jpg,
+  // made and checked one by one by marketing/make_home_images.sh) ----
+  // Not these: spread far apart (Cortina) or too dark (Kasprowy) to look good.
+  var NO_HOME_IMG = { '02196b1e0dd473176e265318bc9c06e22df53ace': 1, '3e4f2615639f5fbffd8fcb502193a964d4ebbac0': 1 };
+  var HOME_IMG = {};
+  Object.keys(POPULAR).forEach(function (k) { POPULAR[k].forEach(function (id) { if (!NO_HOME_IMG[id]) HOME_IMG[id] = true; }); });
+  var HERO_3D = '0f46917975b8dab5e541edf6469105c3c091ec22';   // Formigal: hero.mp4 / hero.jpg
+  var SHOW_3D = 'b66cd0bd82cf0860c0b65dbe7ba26066f8463554';   // Val Thorens, in "Así es cada estación"
+  function popularIds() {
+    var tzHome = TZ_COORDS[TZ] || null;
+    var inNorthAmerica = /^America\//.test(TZ) && (!tzHome || tzHome[0] > 15);
+    return POPULAR[inNorthAmerica ? 'na' : LANG] || POPULAR.en;
+  }
+  // The 7-day snow of a station from snow.json (the inlined part, or the
+  // whole file, fetched once); cb(cm) only if there is a forecast.
+  var snowDocP = null;
+  function snowWeek(id, cb) {
+    var have = function (doc) {
+      var sf = snowFromToday(doc && doc.stations && doc.stations[id]);
+      return sf ? sf.reduce(function (a, b) { return a + b; }, 0) : null;
+    };
+    var cm = have(HOME_DATA && HOME_DATA.snow);
+    if (cm != null) { cb(cm); return; }
+    if (!snowDocP) snowDocP = fetch('/snow.json').then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+    snowDocP.then(function (doc) { var c = have(doc); if (c != null) cb(c); });
+  }
+  function homePicCard(s) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'home-pic';
+    b.innerHTML = '<img alt="" loading="lazy" width="600" height="500"><span class="home-pic-snow" hidden></span>'
+      + '<span class="home-pic-text"><span class="n"></span><span class="m">' + flagImg(s.country || 'ES') + '<span></span></span></span>';
+    var img = b.querySelector('img');
+    img.addEventListener('error', function () { img.remove(); });   // the card's own gradient instead
+    img.src = '/img/home/' + s.id + '.jpg';
+    b.querySelector('.n').textContent = POPULAR_LABEL[s.id] || s.name;
+    b.querySelector('.m span').textContent = T('{0} km de pistas', fmt(Math.round(s.pisteKm || 0)));
+    snowWeek(s.id, function (cm) {
+      if (cm < 1) return;
+      var tag = b.querySelector('.home-pic-snow');
+      tag.textContent = '❄ ' + T('{0} cm en 7 días', snowFmt(Math.round(cm)));
+      tag.hidden = false;
+    });
+    b.addEventListener('click', function () { goToStation(s.id); });
+    return b;
+  }
+  (function () {
+    var featured = document.getElementById('featured-list');
+    popularIds().filter(function (id) { return HOME_IMG[id]; }).map(stationById).filter(Boolean).slice(0, 4)
+      .forEach(function (s) { featured.appendChild(homePicCard(s)); });
+
+    // The web's hero: the 3D view turning (a video on wide screens, its first
+    // frame elsewhere). Not in the app, where the saved station goes on top.
+    var hero = document.getElementById('home-hero-3d'), show = document.getElementById('home-show');
+    if (IS_APP) { hero.remove(); show.remove(); return; }
+    var hs = stationById(HERO_3D);
+    if (hs) {
+      hero.href = PATHS.home + '?estacion=' + HERO_3D + '&vista=3d';
+      setText('home-hero-3d-name', T('{0} en 3D', hs.name));
+      hero.hidden = false;
+      hero.parentNode.classList.add('has-3d');
+      hero.querySelector('img').addEventListener('error', function () { hero.parentNode.classList.remove('has-3d'); hero.remove(); });
+      var mq = function (q) { return window.matchMedia && window.matchMedia(q).matches; };
+      var saveData = navigator.connection && navigator.connection.saveData;
+      if (mq('(min-width: 1000px)') && !mq('(prefers-reduced-motion: reduce)') && !saveData) {
+        var v = document.createElement('video');
+        v.muted = true; v.loop = true; v.playsInline = true; v.autoplay = true;
+        v.setAttribute('muted', ''); v.setAttribute('playsinline', ''); v.setAttribute('aria-hidden', 'true');
+        v.addEventListener('playing', function () { v.classList.add('playing'); });
+        v.src = '/img/home/hero.mp4';
+        hero.insertBefore(v, hero.querySelector('.home-hero-3d-bar'));
+      }
+    }
+    // "Así es cada estación": a 3D still and screenshots of a station page in this language.
+    show.querySelectorAll('img[data-show]').forEach(function (img) {
+      var k = img.getAttribute('data-show');
+      img.addEventListener('error', function () { var f = img.closest('figure'); if (f) f.remove(); });
+      img.src = k === '3d' ? '/img/home/' + SHOW_3D + '.jpg' : '/img/home/' + k + '-' + LANG + '.jpg';
+    });
+  })();
+
+  // ---- "Tu estación" (the app): the latest saved station on top, with its
+  // picture (or its map over satellite, as on its page) and its snow ----
+  function renderMine() {
+    var box = document.getElementById('home-mine');
+    var s = IS_APP ? favStations().map(stationById).filter(Boolean)[0] : null;
+    box.hidden = !s;
+    if (!s) { box.removeAttribute('data-id'); box.innerHTML = ''; return; }
+    if (box.getAttribute('data-id') === s.id) return;
+    box.setAttribute('data-id', s.id);
+    box.innerHTML = '<div class="pic"><span class="tag"></span></div><div class="body"><div class="n"></div><div class="row" hidden></div>'
+      + '<div class="btns"><button type="button" class="go-map"></button><button type="button" class="sec go-info"></button></div></div>';
+    var pic = box.querySelector('.pic');
+    box.querySelector('.tag').textContent = '★ ' + T('Tu estación');
+    box.querySelector('.n').textContent = s.name;
+    box.querySelector('.go-map').textContent = T('Abrir mapa');
+    box.querySelector('.go-info').textContent = T('Ver ficha');
+    box.querySelector('.go-map').addEventListener('click', function () { goToStation(s.id); showDashPane('map'); });
+    box.querySelector('.go-info').addEventListener('click', function () { goToStation(s.id); });
+    var dataP = loadStationData(s.id);
+    function livePreview() {
+      dataP.then(function (raw) {
+        if (box.getAttribute('data-id') !== s.id) return;
+        var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', '0 0 ' + PREVIEW_W + ' ' + PREVIEW_H);
+        svg.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+        svg.setAttribute('aria-hidden', 'true');
+        pic.insertBefore(svg, pic.firstChild);
+        renderMapPreview(raw, { card: pic, svg: svg });
+      }).catch(function () {});
+    }
+    if (HOME_IMG[s.id]) {
+      var img = document.createElement('img');
+      img.alt = '';
+      img.addEventListener('error', function () { img.remove(); livePreview(); });
+      img.src = '/img/home/' + s.id + '.jpg';
+      pic.insertBefore(img, pic.firstChild);
+    } else livePreview();
+    // Snow: the live forecast (as on the station's page), else snow.json's week.
+    var row = box.querySelector('.row');
+    function fill(items) {
+      row.innerHTML = '';
+      items.forEach(function (it) {
+        if (it[0] == null) return;
+        var d = document.createElement('div');
+        d.innerHTML = '<b></b><span></span>';
+        d.querySelector('b').textContent = it[0];
+        d.querySelector('span').textContent = it[1];
+        row.appendChild(d);
+      });
+      row.hidden = !row.children.length;
+    }
+    snowWeek(s.id, function (cm) { if (row.hidden) fill([[snowFmt(Math.round(cm)) + ' cm', T('nieve 7 días')]]); });
+    dataP.then(function (raw) {
+      if (raw.latitude == null) return null;
+      return fetchSnowForecast(raw.latitude, raw.longitude, raw.max_elevation_m, raw.min_elevation_m);
+    }).then(function (f) {
+      if (!f || box.getAttribute('data-id') !== s.id) return;
+      fill([[snowFmt(Math.round(f.total || 0)) + ' cm', T('nieve 7 días')],
+            [f.now && f.now.temp != null ? fmt(Math.round(f.now.temp)) + '°' : null, T('arriba ahora')],
+            [f.depthCm != null ? snowFmt(Math.round(f.depthCm)) + ' cm' : null, T('espesor')]]);
+    }).catch(function () {});
+  }
+  renderMine();
 
   (function () {
     var section = document.getElementById('near-section');
@@ -2358,6 +2587,7 @@
   function mapSizeKey() {
     return currentRaw.id + (domainRaw ? '+dom' : '') + '|' + mapViewportEl.clientWidth + 'x' + mapViewportEl.clientHeight;
   }
+  var want3d = false;
   function ensureMapBuilt() {
     // Measured rather than checking paneMap.hidden: on desktop the map pane is
     // always shown next to the info pane, whatever the (hidden) tab state says.
@@ -2367,6 +2597,8 @@
     hideMapTapPopup();
     buildMap(mapRaw());
     mapBuiltKey = mapSizeKey();
+    // ?vista=3d (the home's 3D picture): straight into the 3D view, where there is one.
+    if (want3d) { want3d = false; if (!map3dBtn.hidden) open3d(); }
     paintDomainPill();
     reapplyMapSelection();
     if (routeShown) drawRoute2D(routeShown);
@@ -2377,11 +2609,12 @@
   // it in the map's own colours and casings, cropped to fill the card. Long
   // resorts are thinned to a few thousand points; it's a picture, not the map.
   var PREVIEW_W = 320, PREVIEW_H = 184, PREVIEW_CAPTION_H = 50, PREVIEW_TILE_MAX = 16;
-  function renderMapPreview(raw) {
+  // els: { card, svg } to draw somewhere else ("Tu estación" on the home).
+  function renderMapPreview(raw, els) {
     var SVGNS = 'http://www.w3.org/2000/svg';
-    var section = document.getElementById('map-preview-section');
-    var card = document.getElementById('map-preview');
-    var svg = document.getElementById('map-preview-art');
+    var section = els ? null : document.getElementById('map-preview-section');
+    var card = els ? els.card : document.getElementById('map-preview');
+    var svg = els ? els.svg : document.getElementById('map-preview-art');
     var runs = raw.runs.filter(function (r) { return r.geom && r.geom.length; });
     var lifts = (raw.lifts || []).filter(function (l) { return l.geom && l.geom.length; });
     var total = 0, lonMin = Infinity, lonMax = -Infinity, latMin = Infinity, latMax = -Infinity;
@@ -2396,7 +2629,7 @@
     });
     svg.innerHTML = '';
     card.classList.remove('has-imagery');
-    if (!runs.length || !isFinite(lonMin)) { section.hidden = true; return; }
+    if (!runs.length || !isFinite(lonMin)) { if (section) section.hidden = true; return; }
 
     // Same projection as buildMap. The resort is fitted above the caption,
     // with the padding grown on one axis so it fills that space; the imagery
@@ -2488,6 +2721,7 @@
     var named = {};
     raw.runs.forEach(function (r) { if (r.name) named[r.name] = true; });
     var nRuns = Object.keys(named).length || runs.length;
+    if (!section) return;
     setText('map-preview-sub', T('{0} pistas · {1} remontes', nRuns, (raw.lifts || []).length));
     section.hidden = false;
   }
@@ -2633,8 +2867,9 @@
   }
 
   // ---- the whole connected domain on the map ----
-  var domainCache = {};
+  var domainCache = domainCache || {};
   function loadStationData(id) {
+    if (!domainCache) domainCache = {};   // "Tu estación" asks before this part of the script has run
     if (!domainCache[id]) domainCache[id] = fetch('/data/' + id + '.json').then(function (r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
@@ -5202,7 +5437,7 @@
 
   var paintFav = setupFavButton(document.getElementById('h-fav'), function () {
     return currentRaw && { id: currentRaw.id, name: currentRaw.name, country: currentRaw.country_code };
-  }, function () { renderFavs(); });
+  }, function () { renderFavs(); renderMine(); });
 
   // "Compartir": the station's own page (/estacion/<slug>/) is the link to
   // share -- it has the preview image and opens straight into its content.
@@ -5252,7 +5487,8 @@
     if (!id || !stationById(id)) return;
     try { history.replaceState(null, '', location.pathname); } catch (e) {}
     goToStation(id);
-    if (params.get('vista') === 'mapa') showDashPane('map');
+    if (params.get('vista') === 'mapa' || params.get('vista') === '3d') showDashPane('map');
+    if (params.get('vista') === '3d') want3d = true;
   })();
 })();
 </script>

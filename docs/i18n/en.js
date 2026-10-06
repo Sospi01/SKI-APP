@@ -433,6 +433,11 @@ window.SKI_I18N = {
   "nieve 7 días": "snow, 7 days",
   "arriba ahora": "at the top now",
   "espesor": "snow depth",
-  "{0} km de pistas": "{0} km of pistes"
+  "{0} km de pistas": "{0} km of pistes",
+  "Pendiente máxima: el tramo más empinado de al menos 100 m": "Max slope: the steepest stretch of at least 100 m",
+  "Suave (<20%)": "Gentle (<20%)",
+  "Moderada (20-30%)": "Moderate (20-30%)",
+  "Pronunciada (30-45%)": "Steep (30-45%)",
+  "Muy pronunciada (>45%)": "Very steep (>45%)"
  }
 };

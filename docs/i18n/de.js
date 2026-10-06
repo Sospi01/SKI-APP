@@ -433,6 +433,11 @@ window.SKI_I18N = {
   "nieve 7 días": "Schnee 7 Tage",
   "arriba ahora": "oben jetzt",
   "espesor": "Schneehöhe",
-  "{0} km de pistas": "{0} km Pisten"
+  "{0} km de pistas": "{0} km Pisten",
+  "Pendiente máxima: el tramo más empinado de al menos 100 m": "Maximales Gefälle: der steilste Abschnitt von mindestens 100 m",
+  "Suave (<20%)": "Flach (<20 %)",
+  "Moderada (20-30%)": "Mittel (20-30 %)",
+  "Pronunciada (30-45%)": "Steil (30-45 %)",
+  "Muy pronunciada (>45%)": "Sehr steil (>45 %)"
  }
 };

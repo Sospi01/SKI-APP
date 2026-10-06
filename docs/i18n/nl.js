@@ -433,6 +433,11 @@ window.SKI_I18N = {
   "nieve 7 días": "sneeuw 7 dagen",
   "arriba ahora": "boven nu",
   "espesor": "sneeuwdikte",
-  "{0} km de pistas": "{0} km pistes"
+  "{0} km de pistas": "{0} km pistes",
+  "Pendiente máxima: el tramo más empinado de al menos 100 m": "Maximale helling: het steilste stuk van minstens 100 m",
+  "Suave (<20%)": "Flauw (<20%)",
+  "Moderada (20-30%)": "Gemiddeld (20-30%)",
+  "Pronunciada (30-45%)": "Steil (30-45%)",
+  "Muy pronunciada (>45%)": "Zeer steil (>45%)"
  }
 };

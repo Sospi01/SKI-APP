@@ -2802,6 +2802,7 @@
     routeNet = null;
     routePlace = null;
     routePickPt = null;
+    routePickRun = null;
     close3d();
     mapUsedFor = null;
     if (paintFav) paintFav();
@@ -2888,7 +2889,7 @@
     var done = function (merged) {
       if (currentRaw !== raw) return;
       clearRoute();
-      routeNet = null; routePlace = null; routePickPt = null;
+      routeNet = null; routePlace = null; routePickPt = null; routePickRun = null;
       close3d();
       domainRaw = merged;
       mapBuiltKey = null;
@@ -3900,7 +3901,7 @@
     for (var i = 1; i < pts.length; i++) prof.push({ dist: prof[i - 1].dist + haversineM(pts[i - 1], pts[i]), ele: pts[i][2] });
     // A wider window than the profile chart's: on the map a colour change
     // only reads as such over a few dozen metres.
-    var sm = smoothProfile(prof, 60), out = [], cur = null;
+    var sm = smoothProfile(prof, SLOPE_WINDOW_M), out = [], cur = null;
     for (var j = 1; j < pts.length; j++) {
       var dd = sm[j].dist - sm[j - 1].dist;
       var key = dd > 0.5 ? pitchZoneFor((sm[j].ele - sm[j - 1].ele) / dd * 100).key : (cur ? cur.key : 'novice');
@@ -4228,7 +4229,7 @@
       return localStorage.getItem('si_routes') === '1';
     } catch (e) { return false; }
   })();
-  var routeNet = null, routeDest = null, routeShown = null, routePicking = false, routePickPt = null, routeWaitTimer = null;
+  var routeNet = null, routeDest = null, routeShown = null, routePicking = false, routePickPt = null, routePickRun = null, routeWaitTimer = null;
   var routePlace = null, routeOrigin = 'pick', routeLevel = (function () { try { return localStorage.getItem('si_route_level') || 'all'; } catch (e) { return 'all'; } })();
   var routesLoaded = null;
   function loadRoutes() {
@@ -4297,6 +4298,25 @@
     }
     return out;
   }
+  // Is net feature x the run (or lift) g? g as a tapped map feature.
+  function routeFeatIs(x, g) {
+    return !!(x && g && ((x.kind === 'run' && g.geomPart && (g.runName ? x.run.name === g.runName : x.part === g.geomPart))
+      || (x.kind === 'lift' && g.isLift && x.part === g.geo)));
+  }
+  // Where a route can set off from a point: the tapped run itself if there is
+  // one; else what is right there (closeM: on the run or lift you are at);
+  // only failing that, a walk to anything within 300 m. Walking straight to a
+  // run that happens to be near (across a slope, onto another run) made short
+  // routes come out as "Ya estás" instead of the way down (Nevasport, 7 October).
+  function routeStartsAt(net, pt, run, closeM) {
+    var all = SkiRoutes.near(net, pt, 300, 60);
+    if (run) {
+      var own = all.filter(function (st) { return routeFeatIs(net.feats[net.nodes[st.node].f], run); });
+      if (own.length) return own;
+    }
+    var close = all.filter(function (st) { return st.m <= closeM; });
+    return close.length ? close : all.slice(0, 12);
+  }
   function openRoute(f) {
     routeDest = f;
     // From where I am when the map knows it; otherwise from a tap on the map.
@@ -4354,7 +4374,7 @@
           drawRouteNone();
           return;
         }
-        starts = SkiRoutes.near(net, pt, 300);
+        starts = routeStartsAt(net, pt, null, 40);   // GPS: give or take a few metres
         if (!starts.length) { msg(T('Estás lejos de las pistas de esta estación: elige otro punto de partida.')); drawRouteNone(); return; }
       } else if (routeOrigin === 'pick' && routePlace) {
         starts = [{ node: routePlace.node, cost: 0 }];
@@ -4363,17 +4383,17 @@
         drawRouteNone();
         return;
       } else {
-        starts = SkiRoutes.near(net, routePickPt, 300);
+        starts = routeStartsAt(net, routePickPt, routePickRun, 25);
         if (!starts.length) { msg(T('Ese punto está lejos de las pistas: toca más cerca de una pista o un remonte.')); drawRouteNone(); return; }
       }
 
       // Already there: the start is on the run (or at the lift, or the service) you asked for.
-      var destFeat = function (fi) {
-        var x = net.feats[fi];
-        return x && ((x.kind === 'run' && f.geomPart && (f.runName ? x.run.name === f.runName : x.part === f.geomPart)) || (x.kind === 'lift' && f.isLift && x.part === f.geo));
-      };
-      var here = (starts.some(function (st) { return st.m != null && st.m <= 60 && destFeat(net.nodes[st.node].f); })
-        || (f.svc && starts[0] && SkiRoutes.dist(net.nodes[starts[0].node].p, [f.svc.lon, f.svc.lat]) <= 80));
+      var destFeat = function (fi) { return routeFeatIs(net.feats[fi], f); };
+      var hereM = routeOrigin === 'me' ? 40 : 25;
+      var here = (routeOrigin === 'pick' && !routePlace && routePickRun
+          ? routeFeatIs({ kind: 'run', run: { name: routePickRun.runName }, part: routePickRun.geomPart }, f)
+          : starts.some(function (st) { return st.m != null && st.m <= hereM && destFeat(net.nodes[st.node].f); }))
+        || (f.svc && starts[0] && SkiRoutes.dist(net.nodes[starts[0].node].p, [f.svc.lon, f.svc.lat]) <= 80);
       if (here) { msg(T('Ya estás en {0}.', f.label || (f.isLift ? T('Remonte sin nombre') : T('Pista sin nombre')))); drawRouteNone(); drawRouteStart(); return; }
       var targets = routeTargets(net, f);
       var res = targets.length ? SkiRoutes.route(net, starts, targets, routeLevel) : null;
@@ -4502,6 +4522,8 @@
     });
     routePlace = best;
     routePickPt = best ? best.p : pt;
+    // A tapped run: the route starts on that run, not on whatever else is near.
+    routePickRun = f && f.geomPart ? { geomPart: f.geomPart, runName: f.runName } : null;
     // Shown a moment later: on a phone the same tap's click would otherwise
     // land on the panel appearing under the finger (and press a chip).
     setTimeout(renderRoute, 350);

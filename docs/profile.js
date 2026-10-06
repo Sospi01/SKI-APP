@@ -16,13 +16,23 @@ function haversineM(a, b) {
 
 // Pitch-zone thresholds mirror how skiers already read piste colors
 // (green/blue/red/black), applied here to the *local* steepness of a
-// stretch rather than the run's overall difficulty rating.
+// stretch rather than the run's overall difficulty rating. 20/30/45 since
+// 7 October (were 15/25/40): skiers who know their runs (Nevasport) found
+// gentle pitches coloured too hard. Mirrored in build_seo_pages.py.
 var PITCH_ZONES = [
-  { max: 15, key: 'novice', label: T('Suave (<15%)') },
-  { max: 25, key: 'easy', label: T('Moderada (15-25%)') },
-  { max: 40, key: 'intermediate', label: T('Pronunciada (25-40%)') },
-  { max: Infinity, key: 'advanced', label: T('Muy pronunciada (>40%)') }
+  { max: 20, key: 'novice', label: T('Suave (<20%)') },
+  { max: 30, key: 'easy', label: T('Moderada (20-30%)') },
+  { max: 45, key: 'intermediate', label: T('Pronunciada (30-45%)') },
+  { max: Infinity, key: 'advanced', label: T('Muy pronunciada (>45%)') }
 ];
+// The same smoothing everywhere (chart, map, 3D, badges, pages, guides).
+var SLOPE_WINDOW_M = 60;
+// A stretch steeper than this is a mapping or elevation error (the
+// steepest groomed pistes in the world stay under ~80%), not a real pitch.
+var MAX_REAL_PITCH = 90;
+// The "máx." of a run: its steepest stretch of at least this long (was 50 m
+// until 7 October: short pitches made blue runs read as black).
+var STEEPEST_M = 100;
 function pitchZoneFor(pct) {
   var p = Math.abs(pct);
   for (var i = 0; i < PITCH_ZONES.length; i++) if (p < PITCH_ZONES[i].max) return PITCH_ZONES[i];
@@ -92,17 +102,33 @@ function buildElevationProfiles(geomParts) {
   return profiles;
 }
 
-// OSM elevation samples are noisy at the point-to-point scale -- smooth
-// over a ~30m window before computing pitch, so the coloring reflects the
-// terrain's real steepness rather than digitization jitter.
+// OSM elevation samples are noisy at the point-to-point scale (a ~30 m
+// elevation model, points every few metres or every hundred): resample the
+// profile every 10 m, take out single-point spikes (median of 5 samples) and
+// average over windowM, so the colours follow the terrain's real steepness
+// rather than the data's jitter. One smoothed elevation per input point, so
+// callers can still pair them with the geometry. Mirrored by
+// smoothed_elevations() in build_seo_pages.py.
 function smoothProfile(profile, windowM) {
-  return profile.map(function (p, i) {
-    var lo = i, hi = i;
-    while (lo > 0 && p.dist - profile[lo - 1].dist < windowM / 2) lo--;
-    while (hi < profile.length - 1 && profile[hi + 1].dist - p.dist < windowM / 2) hi++;
-    var sum = 0, n = 0;
-    for (var k = lo; k <= hi; k++) { sum += profile[k].ele; n++; }
-    return { dist: p.dist, ele: sum / n };
+  var n = profile.length, total = profile[n - 1].dist;
+  if (n < 2 || total <= 0) return profile.map(function (p) { return { dist: p.dist, ele: p.ele }; });
+  var STEP = 10, grid = [], k = 0;
+  for (var d = 0; d <= total + 1e-6; d += STEP) {
+    while (k < n - 2 && profile[k + 1].dist < d) k++;
+    var a = profile[k], b = profile[k + 1], span = b.dist - a.dist;
+    grid.push(span > 0 ? a.ele + (b.ele - a.ele) * Math.min(1, Math.max(0, (d - a.dist) / span)) : a.ele);
+  }
+  var med = grid.map(function (_, i) {
+    var w = grid.slice(Math.max(0, i - 2), Math.min(grid.length, i + 3)).sort(function (x, y) { return x - y; });
+    return w[Math.floor(w.length / 2)];
+  });
+  var sum = [0];
+  med.forEach(function (v, i) { sum.push(sum[i] + v); });
+  var half = Math.max(1, Math.round(windowM / 2 / STEP));
+  return profile.map(function (p) {
+    var c = Math.min(med.length - 1, Math.round(p.dist / STEP));
+    var lo = Math.max(0, c - half), hi = Math.min(med.length - 1, c + half);
+    return { dist: p.dist, ele: (sum[hi + 1] - sum[lo]) / (hi - lo + 1) };
   });
 }
 
@@ -153,6 +179,7 @@ function findSteepestSection(smoothed, windowM) {
     var d = endP.dist - startP.dist;
     if (d <= 0) continue;
     var pitchPct = ((startP.ele - endP.ele) / d) * 100;
+    if (Math.abs(pitchPct) > MAX_REAL_PITCH) continue;   // a data error, not a pitch
     if (!best || Math.abs(pitchPct) > Math.abs(best.pitchPct)) {
       best = { pitchPct: pitchPct, startDist: startP.dist, endDist: endP.dist };
     }
@@ -160,7 +187,7 @@ function findSteepestSection(smoothed, windowM) {
   return best;
 }
 
-// A run's steepest stretch of at least 50 m, in % (the profile's "Tramo más
+// A run's steepest stretch of at least STEEPEST_M, in % (the profile's "Tramo más
 // pronunciado", over all its segments), or null without elevation data.
 // OpenStreetMap's labels mean different things in different countries; this
 // is the figure skiers compare. Mirrored by run_max_pitch() in
@@ -168,7 +195,7 @@ function findSteepestSection(smoothed, windowM) {
 function runMaxPitch(geomParts) {
   var best = null;
   buildElevationProfiles(geomParts).forEach(function (p) {
-    var st = findSteepestSection(smoothProfile(p, 30), 50);
+    var st = findSteepestSection(smoothProfile(p, SLOPE_WINDOW_M), STEEPEST_M);
     if (st && (best == null || Math.abs(st.pitchPct) > best)) best = Math.abs(st.pitchPct);
   });
   return best;
@@ -178,7 +205,7 @@ function runMaxPitch(geomParts) {
 function maxPitchBadge(pct) {
   var span = document.createElement('span');
   span.className = 'max-pitch';
-  span.title = T('Pendiente máxima: el tramo más empinado de al menos 50 m');
+  span.title = T('Pendiente máxima: el tramo más empinado de al menos 100 m');
   var dot = document.createElement('i');
   dot.style.background = 'var(--diff-' + pitchZoneFor(pct).key + ')';
   span.appendChild(dot);
@@ -187,7 +214,7 @@ function maxPitchBadge(pct) {
 }
 
 function buildProfileChart(raw) {
-  var smoothed = smoothProfile(raw, 30);
+  var smoothed = smoothProfile(raw, SLOPE_WINDOW_M);
   var totalDist = smoothed[smoothed.length - 1].dist;
   var eles = smoothed.map(function (p) { return p.ele; });
   var minEle = Math.min.apply(null, eles), maxEle = Math.max.apply(null, eles);
@@ -259,7 +286,7 @@ function buildProfileChart(raw) {
     svg.appendChild(poly);
   }
 
-  var steepest = findSteepestSection(smoothed, 50);
+  var steepest = findSteepestSection(smoothed, STEEPEST_M);
 
   // outline on top for a crisp silhouette
   var outlinePts = smoothed.map(function (p) { return x(p.dist).toFixed(1) + ',' + y(p.ele).toFixed(1); }).join(' ');

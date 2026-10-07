@@ -370,6 +370,7 @@ window.SKI_I18N = {
   "El mapa de pistas de esta estación tiene huecos, así que no siempre encontramos la ruta.": "Mapa tras tego ośrodka ma luki, więc nie zawsze znajdziemy trasę.",
   "{0} min": "{0} min",
   "Sube en {0}": "Wjedź: {0}",
+  "Baja en {0}": "Zjedź kolejką: {0}",
   "Baja por {0}": "Zjedź: {0}",
   "Camina {0} m": "Przejdź {0} m",
   "Llegas a {0}": "Cel: {0}",

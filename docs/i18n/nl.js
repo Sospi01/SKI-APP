@@ -370,6 +370,7 @@ window.SKI_I18N = {
   "El mapa de pistas de esta estación tiene huecos, así que no siempre encontramos la ruta.": "De pistekaart van dit skigebied heeft gaten, dus we vinden niet altijd de route.",
   "{0} min": "{0} min",
   "Sube en {0}": "Neem {0} omhoog",
+  "Baja en {0}": "Neem {0} omlaag",
   "Baja por {0}": "Daal af via {0}",
   "Camina {0} m": "Loop {0} m",
   "Llegas a {0}": "Aankomst: {0}",

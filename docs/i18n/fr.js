@@ -370,6 +370,7 @@ window.SKI_I18N = {
   "El mapa de pistas de esta estación tiene huecos, así que no siempre encontramos la ruta.": "La carte des pistes de cette station a des trous, nous ne trouvons donc pas toujours l'itinéraire.",
   "{0} min": "{0} min",
   "Sube en {0}": "Montez avec {0}",
+  "Baja en {0}": "Descendez avec {0}",
   "Baja por {0}": "Descendez par {0}",
   "Camina {0} m": "Marchez {0} m",
   "Llegas a {0}": "Arrivée : {0}",

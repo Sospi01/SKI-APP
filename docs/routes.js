@@ -23,6 +23,8 @@
   // across runs lying side by side they added up to half a kilometre on foot
   // up the slope, next to a run or a lift that does it properly.
   var MAX_WALKS = 2;
+  var CHAIR_DOWN_M = 300;     // a chair rides down only if no run comes this close to its bottom
+  var RIDE_DOWN = { gondola: 1, cable_car: 1, funicular: 1, railway: 1, mixed_lift: 1, chair_lift: 1 };
   var EASY = { novice: 1, easy: 1, other: 1 };
   var NO_BLACK = { novice: 1, easy: 1, intermediate: 1, other: 1 };
 
@@ -142,6 +144,28 @@
         });
       }
     });
+
+    // Riding down: a lift whose bottom no run comes down to (a village below
+    // the slopes, like Cesana between Sansicario and Claviere in the Milky
+    // Way) is how skiers get there, so it can also be ridden down -- gondolas,
+    // cable cars and trains, and chairs only when no run at all comes near
+    // their bottom (closer, it's a gap in the map, and chairs rarely take
+    // anyone down); never drags. Arriving at its bottom from another lift's
+    // bottom doesn't count: that's the same village.
+    var skiIn = new Uint8Array(nodes.length);
+    adj.forEach(function (es, i) {
+      var f = feats[nodes[i].f];
+      if (f.kind === 'lift' && f.bottom === i) return;
+      es.forEach(function (e) { skiIn[e.to] = 1; });
+    });
+    feats.forEach(function (f, fi) {
+      if (f.kind !== 'lift' || !RIDE_DOWN[f.lift.lift_type] || skiIn[f.bottom]) return;
+      if (f.lift.lift_type === 'chair_lift' && nodes.some(function (n) {
+        return feats[n.f].kind === 'run' && dist(n.p, nodes[f.bottom].p) < CHAIR_DOWN_M;
+      })) return;
+      edge(f.topNode, f.bottom, f.ride + LIFT_WAIT, fi);
+      f.down = true;
+    });
     return { nodes: nodes, adj: adj, feats: feats };
   }
 
@@ -230,7 +254,7 @@
       else out.push({ key: key, kind: kind, feat: f, m: m, coords: [a.p, b.p], from: res.path[k - 1].node, to: res.path[k].node });
     }
     out.forEach(function (l) {
-      if (l.kind === 'lift') l.secs = l.feat.ride + l.feat.wait;
+      if (l.kind === 'lift') { l.down = l.from === l.feat.topNode; l.secs = l.feat.ride + (l.down ? LIFT_WAIT : l.feat.wait); }
       else if (l.kind === 'run') l.secs = l.m / (RUN_SPEED[l.feat.diff] || RUN_SPEED.other);
       else l.secs = l.m / WALK_SPEED;
     });

@@ -370,6 +370,7 @@ window.SKI_I18N = {
   "El mapa de pistas de esta estación tiene huecos, así que no siempre encontramos la ruta.": "This resort's piste map has gaps, so we can't always find the route.",
   "{0} min": "{0} min",
   "Sube en {0}": "Ride {0}",
+  "Baja en {0}": "Ride {0} down",
   "Baja por {0}": "Ski down {0}",
   "Camina {0} m": "Walk {0} m",
   "Llegas a {0}": "Arrive at {0}",

@@ -4423,7 +4423,7 @@
         var last = steps[steps.length - 1];
         if (l.kind === 'walk' && l.m < 80) return;
         if (l.kind === 'run' && l.m < 80 && !(last && last.kind === 'run')) { carry += l.m; return; }
-        if (l.kind === 'lift' && last && last.kind === 'lift' && last.feat.lift.name && last.feat.lift.name === l.feat.lift.name) {
+        if (l.kind === 'lift' && last && last.kind === 'lift' && last.down === l.down && last.feat.lift.name && last.feat.lift.name === l.feat.lift.name) {
           last.secs += l.feat.ride;
           return;
         }
@@ -4432,7 +4432,7 @@
           last.m += l.m;
           return;
         }
-        steps.push({ kind: l.kind, feat: l.feat, m: l.m + (l.kind === 'run' ? carry : 0), longest: l.m, secs: l.kind === 'lift' ? l.feat.ride : 0 });
+        steps.push({ kind: l.kind, feat: l.feat, m: l.m + (l.kind === 'run' ? carry : 0), longest: l.m, secs: l.kind === 'lift' ? l.feat.ride : 0, down: l.down });
         if (l.kind === 'run') carry = 0;
       });
       var sum = document.createElement('div'); sum.className = 'route-summary';
@@ -4446,7 +4446,7 @@
         dot.className = 'route-dot route-dot-' + l.kind;
         if (l.kind === 'run') dot.style.background = DIFF[l.feat.diff].color;
         if (l.kind === 'lift') {
-          txt.textContent = T('Sube en {0}', l.feat.lift.name || T('Remonte sin nombre'));
+          txt.textContent = T(l.down ? 'Baja en {0}' : 'Sube en {0}', l.feat.lift.name || T('Remonte sin nombre'));
           meta.textContent = [LIFT_TYPE[l.feat.lift.lift_type] || '', l.secs ? T('{0} min', Math.max(1, Math.round(l.secs / 60))) : ''].filter(Boolean).join(' · ');
         } else if (l.kind === 'run') {
           txt.textContent = T('Baja por {0}', l.feat.run.name || T('Pista sin nombre'));

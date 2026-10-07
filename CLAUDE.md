@@ -20,6 +20,7 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
 - **No ejecutes `build_seo_pages.py --inject-home` en local.** Reescribe `docs/index.html`: rellena `<script id="home-data">` con datos, cuyo valor en el repo debe ser `null`. En local ejecútalo **sin** `--inject-home`. Si lo usas, restaura el `null` antes de commitear.
 - **Antes de hacer push:** ejecuta la prueba de humo (sección 4) y, si tocas el pipeline, `pytest`.
 - **Después de un push:** el despliegue tarda de 5 a 10 minutos. GitHub Pages puede servir la versión anterior unos 10 minutos más.
+- **Recordatorios (petición del usuario, 7 de octubre):** todo lo que quedemos en hacer o revisar "en unos días" (mandar estadísticas, revisar un dato, un paso en una consola…) se programa como recordatorio con `send_later` (herramienta `claude-code-remote`) y se apunta en "Recordatorios programados" (sección 6). Además, la Routine "Repaso de tareas pendientes" (lunes y jueves a las 9:47, hora de España) le recuerda las tareas sin hacer. Al cumplir una tarea, quítala de la lista.
 
 ## 2. Limitaciones del entorno (sandbox en la nube)
 
@@ -263,5 +264,10 @@ cd data-pipeline && python3 -m pytest -q                       # si tocas el pip
    - post semanal "Dónde va a nevar esta semana";
    - afiliado de Booking, cuando el tráfico desde Google sea estable;
    - avisos de nevada para las estaciones guardadas, empezando por la app.
+
+**Recordatorios programados** (quitar cuando se cumplan):
+- 8 oct, 9:30: solicitar el acceso a producción en Google Play (fin de la prueba cerrada) y subir el AAB 1.0.6.
+- 11 oct, 9:00: que el usuario mande Search Console (Rendimiento 28 días con Consultas y Páginas; Indexación → Páginas) y `/stats`. Referencia del 4 oct: 15 clics, 3.130 impresiones, CTR 0,5 %, posición 41,3; 2.320 indexadas, 4.323 descubiertas sin indexar, 289 rastreadas sin indexar (sobre todo estaciones pequeñas de EE. UU. en fr/it/de/pl). Si las rastreadas sin indexar pasan de ~1.000, valorar `noindex` en fichas pequeñas en idiomas que no les tocan.
+- Lunes y jueves, 9:47: repaso de tareas pendientes (Routine).
 
 **Previsión que se le dio al usuario** (usuarios al día, sin contar picos; escenario medio): octubre 15–40, noviembre 40–120 y diciembre–febrero 150–400.

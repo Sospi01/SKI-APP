@@ -268,6 +268,7 @@ cd data-pipeline && python3 -m pytest -q                       # si tocas el pip
 
 **Recordatorios programados** (quitar cuando se cumplan):
 - 8 oct, 9:30: solicitar el acceso a producción en Google Play (fin de la prueba cerrada) y subir el AAB 1.0.6.
+- 14 oct, 9:30: ¿aprobado el acceso a producción? (lo solicitó el 7 de octubre). Si sí: versión de producción con el AAB 1.0.6 y enlace de Play en `/app`.
 - 11 oct, 9:00: que el usuario mande Search Console (Rendimiento 28 días con Consultas y Páginas; Indexación → Páginas) y `/stats`. Referencia del 4 oct: 15 clics, 3.130 impresiones, CTR 0,5 %, posición 41,3; 2.320 indexadas, 4.323 descubiertas sin indexar, 289 rastreadas sin indexar (sobre todo estaciones pequeñas de EE. UU. en fr/it/de/pl). Si las rastreadas sin indexar pasan de ~1.000, valorar `noindex` en fichas pequeñas en idiomas que no les tocan.
 - Lunes y jueves, 9:47: repaso de tareas pendientes (Routine).
 

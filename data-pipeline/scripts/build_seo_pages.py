@@ -532,6 +532,9 @@ def page(*, title: str, description: str, url: str, body: str, body_attrs: str =
             if scripts else '<script defer src="/track.js" data-page></script>\n')
     # The "also in your language" bar and remembering a language choice.
     tail += '<script defer src="/lang.js"></script>\n'
+    # "Send feedback" (footer, and "report a data error" on station pages):
+    # its texts in every language come with it.
+    tail += '<script defer src="/feedback.js"></script>\n'
     if scripts:
         # Not needed for the first screen: load it without blocking the paint.
         head_extra = ('<link rel="stylesheet" href="/snow.css" media="print" onload="this.media=\'all\'">\n'
@@ -575,7 +578,7 @@ def page(*, title: str, description: str, url: str, body: str, body_attrs: str =
 <div class="app">
 {body}
 <footer class="credit">
-<a href="{loc['home']}">Ski Info</a> · <a href="{loc['countries']}">{tx['f_countries']}</a> · <a href="{loc['guides']}">{tx['f_guides']}</a> · <a href="{loc['app']}">{tx['f_app']}</a> · <a href="{loc['privacy']}">{tx['f_privacy']}</a><br>
+<a href="{loc['home']}">Ski Info</a> · <a href="{loc['countries']}">{tx['f_countries']}</a> · <a href="{loc['guides']}">{tx['f_guides']}</a> · <a href="{loc['app']}">{tx['f_app']}</a> · <a href="{loc['privacy']}">{tx['f_privacy']}</a> · <a href="#" data-feedback></a><br>
 <span class="lang-links">{lang_links}</span><br>
 {tx['f_data']}
 </footer>
@@ -843,7 +846,10 @@ def station_page(raw: dict, meta: dict, ctx: dict, lang: str = "es") -> tuple[st
     quality_html = (f'<section><details class="about-data"><summary>{tx["about_data"]}</summary>'
                     f'<h3>{tx["quality"]}</h3><div class="quality-list">'
                     + "".join(f'<div class="quality-row"><span class="name">{e(k)}</span><span class="val">{e(v)}</span></div>' for k, v in quality)
-                    + f'</div><p class="quality-note">{tx["quality_note"]}</p></details></section>')
+                    + f'</div><p class="quality-note">{tx["quality_note"]}</p>'
+                    # Filled in and wired by feedback.js; the context is for the email to us.
+                    + f'<p class="quality-note"><a href="#" data-feedback="data" data-feedback-station="{e(short)}" '
+                    f'data-feedback-context="{e("Datos de " + name + " (" + sid + ")")}"></a></p></details></section>')
 
     # ----- sidebar: map card, rankings, nearby stations -----
     map_card = (f'<section class="map-card"><div class="section-head"><h2>{tx["map_h2"]}</h2></div>'

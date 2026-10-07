@@ -368,8 +368,8 @@ function compute(now) {
 
   function windowStats(from) {
     const users = new Set(), sessions = new Set(), viewUsers = new Set(), mapUsers = new Set(), bookUsers = new Set(), favUsers = new Set();
-    const m3dUsers = new Set(), locUsers = new Set();
-    let newUsers = 0, views = 0, maps = 0, bookings = 0, favs = 0, m3d = 0, locs = 0;
+    const m3dUsers = new Set(), locUsers = new Set(), routeUsers = new Set();
+    let newUsers = 0, views = 0, maps = 0, bookings = 0, favs = 0, m3d = 0, locs = 0, routes = 0;
     // Same counts split by where the visit came from: the Android app or a browser.
     const by = { app: plat(), web: plat() };
     for (const e of ev) {
@@ -385,10 +385,11 @@ function compute(now) {
       else if (e.y === 'fav') { favs++; favUsers.add(e.u); }
       else if (e.y === 'map3d') { m3d++; m3dUsers.add(e.u); }
       else if (e.y === 'locate') { locs++; locUsers.add(e.u); }
+      else if (e.y === 'route') { routes++; routeUsers.add(e.u); }
     }
-    return { users: users.size, sessions: sessions.size, newUsers, views, maps, bookings, favs, m3d, locs,
+    return { users: users.size, sessions: sessions.size, newUsers, views, maps, bookings, favs, m3d, locs, routes,
       viewUsers: viewUsers.size, mapUsers: mapUsers.size, bookUsers: bookUsers.size, favUsers: favUsers.size,
-      m3dUsers: m3dUsers.size, locUsers: locUsers.size, by };
+      m3dUsers: m3dUsers.size, locUsers: locUsers.size, routeUsers: routeUsers.size, by };
   }
   function plat() { return { users: new Set(), sessions: new Set(), bookings: 0 }; }
   const w = {};
@@ -440,13 +441,13 @@ function compute(now) {
       if (e.y === 'station') d.views++;
     }
     let u = perUser.get(e.u);
-    if (!u) { u = { uid: e.u, days: new Set(), sessions: new Set(), secs: 0, stations: new Map(), booked: new Map(), saved: new Set(), m3d: new Set(), located: new Set(), bookings: 0, maps: 0, first: firstSeen.get(e.u), last: e.t, platform: lastPlatform.get(e.u), origin: firstOpen.get(e.u), laterSrc: laterSrc.get(e.u), country: userCountry.get(e.u) }; perUser.set(e.u, u); }
+    if (!u) { u = { uid: e.u, days: new Set(), sessions: new Set(), secs: 0, stations: new Map(), booked: new Map(), saved: new Set(), m3d: new Set(), located: new Set(), routed: new Set(), bookings: 0, maps: 0, first: firstSeen.get(e.u), last: e.t, platform: lastPlatform.get(e.u), origin: firstOpen.get(e.u), laterSrc: laterSrc.get(e.u), country: userCountry.get(e.u) }; perUser.set(e.u, u); }
     u.days.add(dayKey(e.t)); u.sessions.add(e.s); u.last = Math.max(u.last, e.t);
     if (e.y !== 'open' && e.y !== 'page' && e.y !== 'time') u.acts = (u.acts || 0) + 1;
     if (e.y === 'time') {
       u.secs += e.sec || 0;
       perSession.set(e.s, (perSession.get(e.s) || 0) + (e.sec || 0));
-    } else if (e.y === 'station' || e.y === 'booking' || e.y === 'map' || e.y === 'fav' || e.y === 'map3d' || e.y === 'locate') {
+    } else if (e.y === 'station' || e.y === 'booking' || e.y === 'map' || e.y === 'fav' || e.y === 'map3d' || e.y === 'locate' || e.y === 'route') {
       const key = e.st || e.n;
       if (!key) continue;
       let s = perStation.get(key);
@@ -456,6 +457,7 @@ function compute(now) {
       else if (e.y === 'fav') { s.favUsers.add(e.u); u.saved.add(s.name); }
       else if (e.y === 'map3d') { s.m3dUsers.add(e.u); u.m3d.add(s.name); }
       else if (e.y === 'locate') { u.located.add(s.name); }
+      else if (e.y === 'route') { u.routed.add(s.name); }
       else { s.bookings++; s.bookUsers.add(e.u); u.bookings++; u.booked.set(s.name, (u.booked.get(s.name) || 0) + 1); }
     }
   }
@@ -620,7 +622,8 @@ function render() {
     ['Usuarios que guardan alguna', fmtN(w.hoy.favUsers), fmtN(w.d7.favUsers), fmtN(w.d30.favUsers)],
     ['Aperturas de la vista 3D', fmtN(w.hoy.m3d), fmtN(w.d7.m3d), fmtN(w.d30.m3d)],
     ['Usuarios que abren el 3D', fmtN(w.hoy.m3dUsers), fmtN(w.d7.m3dUsers), fmtN(w.d30.m3dUsers)],
-    ['Usuarios que activan "Dónde estoy"', fmtN(w.hoy.locUsers), fmtN(w.d7.locUsers), fmtN(w.d30.locUsers)]
+    ['Usuarios que activan "Dónde estoy"', fmtN(w.hoy.locUsers), fmtN(w.d7.locUsers), fmtN(w.d30.locUsers)],
+    ['Usuarios que calculan una ruta', fmtN(w.hoy.routeUsers), fmtN(w.d7.routeUsers), fmtN(w.d30.routeUsers)]
   ]);
 
   barChart($('chart-users'), m.days, [{ valueOf: (d) => d.users.size, color: 'var(--series-1)' }], 'usuarios');
@@ -669,6 +672,7 @@ function render() {
     ['Usuarios que vuelven (2 días o más)', fmtN(m.returning) + ' · ' + fmtPct(m.returning / m.users30Count)],
     ['Guardan alguna estación', fmtN(w.d30.favUsers) + ' · ' + fmtPct(w.d30.favUsers / m.users30Count)],
     ['Abren la vista 3D', fmtN(w.d30.m3dUsers) + ' · ' + fmtPct(w.d30.m3dUsers / m.users30Count)],
+    ['Calculan una ruta', fmtN(w.d30.routeUsers) + ' · ' + fmtPct(w.d30.routeUsers / m.users30Count)],
     ['Días de uso medios por usuario', (Math.round(m.avgDaysPerUser * 10) / 10).toLocaleString('es-ES')],
     ['Usuarios activos / mes', fmtN(m.users30Count)],
     ['Sin actividad antes del filtro de robots (probables robots)', fmtN(m.idleBefore.length) + ' · ' + fmtPct(m.idleBefore.length / m.users30Count)],
@@ -823,7 +827,8 @@ function renderUsers(m) {
       (u.origin && u.origin.src !== 'app' ? '<span class="badge src' + (u.origin.src ? '' : ' none') + '">' + esc(sourceShort(u.origin.src, u.origin.ref)) + '</span>' : '') +
       (u.saved.size ? '<span class="badge saved" title="Estaciones guardadas">⭐ ' + u.saved.size + '</span>' : '') +
       (u.m3d.size ? '<span class="badge m3d" title="Abrió la vista 3D">3D</span>' : '') +
-      (u.located.size ? '<span class="badge loc" title="Activó «Dónde estoy»">📍</span>' : '') + '</span>' +
+      (u.located.size ? '<span class="badge loc" title="Activó «Dónde estoy»">📍</span>' : '') +
+      (u.routed.size ? '<span class="badge loc" title="Calculó una ruta: ' + esc([...u.routed].join(', ')) + '">🧭</span>' : '') + '</span>' +
       '<span class="when">' + ago(u.last, now) + '</span>' +
       '<span class="user-meta">' + u.days.size + (u.days.size === 1 ? ' día' : ' días') + ' · ' + u.sessions.size + (u.sessions.size === 1 ? ' sesión' : ' sesiones') + ' · ' + fmtDur(u.secs) +
       ' · ' + u.stations.size + (u.stations.size === 1 ? ' estación' : ' estaciones') + (u.bookings ? ' · ' + u.bookings + ' Booking' : '') + (u.saved.size ? ' · ' + u.saved.size + (u.saved.size === 1 ? ' guardada' : ' guardadas') : '') + (u.m3d.size ? ' · 3D en ' + u.m3d.size + (u.m3d.size === 1 ? ' estación' : ' estaciones') : '') + '</span>' +
@@ -893,6 +898,7 @@ function demoEvents() {
           out.push({ id: sid + 'v' + v, t, y: 'station', u: uid, s: sid, p: platform, st: st[0], n: st[1], c: st[2] });
           if (rnd() < 0.35) out.push({ id: sid + 'm' + v, t: t + 5000, y: 'map', u: uid, s: sid, p: platform, st: st[0], n: st[1], c: st[2] });
           if (rnd() < 0.15) out.push({ id: sid + 'd' + v, t: t + 6000, y: 'map3d', u: uid, s: sid, p: platform, st: st[0], n: st[1], c: st[2] });
+          if (rnd() < 0.05) out.push({ id: sid + 'r' + v, t: t + 6200, y: 'route', u: uid, s: sid, p: platform, st: st[0], n: st[1], c: st[2] });
           if (rnd() < 0.05) out.push({ id: sid + 'l' + v, t: t + 6500, y: 'locate', u: uid, s: sid, p: platform, st: st[0], n: st[1], c: st[2] });
           if (rnd() < 0.06) out.push({ id: sid + 'f' + v, t: t + 7000, y: 'fav', u: uid, s: sid, p: platform, st: st[0], n: st[1], c: st[2] });
           if (rnd() < 0.07) out.push({ id: sid + 'b' + v, t: t + 9000, y: 'booking', u: uid, s: sid, p: platform, st: st[0], n: st[1], c: st[2] });

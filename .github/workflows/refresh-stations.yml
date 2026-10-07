@@ -45,13 +45,17 @@ jobs:
       - name: Refresh the stations in docs/data
         run: python3 data-pipeline/scripts/refresh_stations.py --db data-pipeline/data/ski_info.db --report "$GITHUB_STEP_SUMMARY" ${{ inputs.dry_run && '--dry-run' || '' }}
 
+      - name: Which resorts the route planner is open for
+        if: ${{ !inputs.dry_run }}
+        run: node data-pipeline/scripts/build_routes_ok.js
+
       - name: Commit and push
         if: ${{ !inputs.dry_run }}
         id: commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/data docs/stations.js
+          git add docs/data docs/stations.js docs/routes-ok.json
           if git diff --cached --quiet; then
             echo "No station changed this week."
             exit 0

@@ -600,6 +600,10 @@
   .map-run-panel-body > .map-route-btn { margin: 0 0 12px; }
   .map-route-btn svg { width: 15px; height: 15px; }
   .map-route-btn + .map-route-btn { margin-left: 0; }
+  .route-beta { font-style: normal; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 2px 6px; border-radius: 999px;
+    background: rgba(255,255,255,.25); margin-left: 2px; vertical-align: middle; }
+  .map-run-panel-title .route-beta { background: var(--accent); color: #fff; margin-left: 8px; position: relative; top: -2px; font-family: 'IBM Plex Sans', sans-serif; }
+  .route-feedback { margin-top: 6px; }
   .map-route-btn-start { background: #2e7d32; }
   .route-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
   .route-row-label { font-size: 11.5px; color: var(--text-secondary); width: 44px; flex-shrink: 0; }
@@ -1108,7 +1112,7 @@
       </div>
     </div>
 
-    <p class="list-footer">Datos © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">colaboradores de OpenStreetMap</a> (ODbL), vía OpenSkiMap · imágenes Esri, Maxar, Earthstar Geographics<br><a href="/pais/">Todas las estaciones por país</a> · <a href="/guias/">Guías y rankings</a> · <a href="/app/">App para el móvil</a> · <a href="/privacy.html">Privacidad</a><br><span class="lang-links"><a class="lang-link" data-lang="en" href="/en/" hreflang="en" lang="en">English</a> · <a class="lang-link" data-lang="fr" href="/fr/" hreflang="fr" lang="fr">Français</a> · <a class="lang-link" data-lang="de" href="/de/" hreflang="de" lang="de">Deutsch</a> · <a class="lang-link" data-lang="it" href="/it/" hreflang="it" lang="it">Italiano</a> · <a class="lang-link" data-lang="nl" href="/nl/" hreflang="nl" lang="nl">Nederlands</a> · <a class="lang-link" data-lang="pl" href="/pl/" hreflang="pl" lang="pl">Polski</a></span></p>
+    <p class="list-footer">Datos © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">colaboradores de OpenStreetMap</a> (ODbL), vía OpenSkiMap · imágenes Esri, Maxar, Earthstar Geographics<br><a href="/pais/">Todas las estaciones por país</a> · <a href="/guias/">Guías y rankings</a> · <a href="/app/">App para el móvil</a> · <a href="/privacy.html">Privacidad</a> · <a href="#" data-feedback></a><br><span class="lang-links"><a class="lang-link" data-lang="en" href="/en/" hreflang="en" lang="en">English</a> · <a class="lang-link" data-lang="fr" href="/fr/" hreflang="fr" lang="fr">Français</a> · <a class="lang-link" data-lang="de" href="/de/" hreflang="de" lang="de">Deutsch</a> · <a class="lang-link" data-lang="it" href="/it/" hreflang="it" lang="it">Italiano</a> · <a class="lang-link" data-lang="nl" href="/nl/" hreflang="nl" lang="nl">Nederlands</a> · <a class="lang-link" data-lang="pl" href="/pl/" hreflang="pl" lang="pl">Polski</a></span></p>
   </div>
 
   <div class="screen" id="screen-list" hidden>
@@ -1270,6 +1274,7 @@
         <h3>Calidad del dato</h3>
         <div class="quality-list" id="quality-list"></div>
         <p class="quality-note" id="quality-note"></p>
+        <p class="quality-note"><a href="#" data-feedback="data" id="data-feedback"></a></p>
       </details>
     </section>
 
@@ -1362,6 +1367,7 @@
 <script src="/station-actions.js"></script>
 <script src="/track.js"></script>
 <script src="/lang.js"></script>
+<script src="/feedback.js" defer></script>
 <script>
 (function () {
   "use strict";
@@ -1583,7 +1589,7 @@
   // ============== anonymous usage stats (docs/track.js) ==============
   // (Guarded: offline, or with the script blocked, the app must still work.)
   var track = {};
-  ['station', 'map', 'booking', 'map3d', 'locate'].forEach(function (kind) {
+  ['station', 'map', 'booking', 'map3d', 'locate', 'route'].forEach(function (kind) {
     track[kind] = function (raw) {
       if (window.SkiTrack && SkiTrack[kind]) SkiTrack[kind](raw.id, raw.name, raw.country_code);
     };
@@ -1707,7 +1713,7 @@
     clearRoute();
     showRunPanel((g.ref ? g.ref + ' · ' : '') + g.name, runGroupMeta(g), DIFF[diffKey(g.difficulty)].color, function (body) {
       var rf = featuresForRun(name)[0];
-      if (rf && ROUTES_ON) body.appendChild(routeButton(rf));
+      if (rf && routesOn()) body.appendChild(routeButton(rf));
       var wrap = document.createElement('div'); wrap.className = 'run-profile';
       body.appendChild(wrap);
       renderRunProfile(wrap, g);
@@ -1723,7 +1729,7 @@
     showRunPanel(f.label || (f.isLift ? T('Remonte sin nombre') : T('Pista sin nombre')), f.valueText,
       f.isLift ? 'var(--map-lift-color)' : f.svc ? 'var(--text-muted)' : DIFF[f.diffKey || 'other'].color,
       function (body) {
-        if (ROUTES_ON && routable(f)) body.appendChild(routeButton(f));
+        if (routesOn() && routable(f)) body.appendChild(routeButton(f));
         if (f.geomPart) body.appendChild(buildMapTapPopupContent(null, null, f.geomPart));
       });
     highlightFeatures([f], opts && opts.pan);
@@ -2589,6 +2595,7 @@
   }
   var want3d = false;
   function ensureMapBuilt() {
+    loadRoutesOk();
     // Measured rather than checking paneMap.hidden: on desktop the map pane is
     // always shown next to the info pane, whatever the (hidden) tab state says.
     if (!currentRaw || !mapViewportEl.clientWidth || !mapViewportEl.clientHeight) return;
@@ -4229,9 +4236,29 @@
       return localStorage.getItem('si_routes') === '1';
     } catch (e) { return false; }
   })();
+  // Open to everyone (as a beta) where the network is well connected:
+  // docs/routes-ok.json, worked out after each data refresh
+  // (data-pipeline/scripts/build_routes_ok.js) -- too slow for a phone on the
+  // big resorts. ROUTES_ON ("rutas=1") still opens it everywhere, for testing.
+  var routesOk = null;
+  function loadRoutesOk() {
+    if (routesOk) return;
+    routesOk = { s: {}, d: {} };
+    fetch('/routes-ok.json').then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+      if (!j) return;
+      (j.s || []).forEach(function (id) { routesOk.s[id] = 1; });
+      (j.d || []).forEach(function (id) { routesOk.d[id] = 1; });
+    }).catch(function () { routesOk = null; });
+  }
+  function routesOn() {
+    if (ROUTES_ON) return true;
+    if (!routesOk || !currentRaw) return false;
+    var k = String(currentRaw.id).slice(0, 12);
+    return !!(domainRaw ? routesOk.d[k] : routesOk.s[k]);
+  }
   var routeNet = null, routeDest = null, routeShown = null, routePicking = false, routePickPt = null, routePickRun = null, routeWaitTimer = null;
   var routePlace = null, routeOrigin = 'pick', routeLevel = (function () { try { return localStorage.getItem('si_route_level') || 'all'; } catch (e) { return 'all'; } })();
-  var routesLoaded = null;
+  var routesLoaded = null, routeUsedFor = null;
   function loadRoutes() {
     if (!routesLoaded) {
       routesLoaded = window.SkiRoutes ? Promise.resolve() : loadAsset('script', { src: '/routes.js' });
@@ -4246,8 +4273,29 @@
     b.className = 'map-route-btn';
     b.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="5" cy="15" r="2.2" fill="currentColor"/><path d="M5 12.5V9a3 3 0 0 1 3-3h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M11 3l3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span></span>';
     b.querySelector('span').textContent = T('Ruta hasta aquí');
+    var beta = document.createElement('em'); beta.className = 'route-beta'; beta.textContent = 'Beta';
+    b.appendChild(beta);
     b.addEventListener('click', function (e) { e.stopPropagation(); hideMapTapPopup(); openRoute(f); });
     return b;
+  }
+  // "Something odd about this route?": the form (docs/feedback.js), with the
+  // route written out for us (in Spanish: it's for the email, not shown).
+  function routeFeedbackLink(f, steps) {
+    var p = document.createElement('p'); p.className = 'route-note route-feedback';
+    if (!window.SkiFeedback) return p;
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'fb-link';
+    b.textContent = SkiFeedback.label('route');
+    b.addEventListener('click', function () {
+      var from = routeOrigin === 'me' ? 'mi ubicación' : routePlace ? routePlace.label
+        : routePickPt ? routePickPt[1].toFixed(5) + ',' + routePickPt[0].toFixed(5) : '?';
+      var name = function (l) { return l.kind === 'lift' ? (l.down ? 'Baja en ' : 'Sube en ') + (l.feat.lift.name || 'remonte sin nombre')
+        : l.kind === 'run' ? 'Baja por ' + (l.feat.run.name || 'pista sin nombre') : 'Camina ' + Math.round(l.m) + ' m'; };
+      SkiFeedback.open({ kind: 'route', station: displayName(currentRaw.name, currentRaw.id),
+        context: displayName(currentRaw.name, currentRaw.id) + ' (' + currentRaw.id + ')\nRuta hasta ' + (f.label || '?') + ' desde ' + from + ' · nivel ' + routeLevel + (domainRaw ? ' · dominio entero' : '')
+          + '\nPasos: ' + steps.map(name).join(' > ') });
+    });
+    p.appendChild(b);
+    return p;
   }
   // The route panel is on screen; with "Otro punto" chosen, a tap on the map
   // is the start, whatever it lands on.
@@ -4263,7 +4311,7 @@
     return b;
   }
   function addRouteButtonToPopup(f, pt) {
-    if (!ROUTES_ON || !routable(f)) return;
+    if (!routesOn() || !routable(f)) return;
     if (routeOpen() && pt && f !== routeDest) mapTapPopup.appendChild(startButton(f, pt));
     mapTapPopup.appendChild(routeButton(f));
     var r = mapTapPopup.getBoundingClientRect();
@@ -4346,6 +4394,8 @@
     var f = routeDest, net = routeNetwork();
     var color = f.isLift ? 'var(--map-lift-color)' : f.svc ? 'var(--text-muted)' : DIFF[f.diffKey || 'other'].color;
     showRunPanel(T('Ruta hasta {0}', f.label || (f.isLift ? T('Remonte sin nombre') : T('Pista sin nombre'))), '', color, function (body) {
+      var title = document.getElementById('map-run-panel-title');
+      if (title && !title.querySelector('.route-beta')) { var beta = document.createElement('em'); beta.className = 'route-beta'; beta.textContent = 'Beta'; title.appendChild(beta); }
       // Where from: my location (where the device gives it) or a tap on the map.
       var origins = locBtn.hidden ? [['pick', T('Punto en el mapa')]] : [['me', T('Mi ubicación')], ['pick', T('Punto en el mapa')]];
       if (locBtn.hidden) routeOrigin = 'pick';
@@ -4474,7 +4524,10 @@
       var note = document.createElement('p'); note.className = 'route-note';
       note.textContent = T('Ruta orientativa, hecha con los datos de OpenStreetMap: comprueba qué remontes están abiertos y sigue la señalización.');
       out.appendChild(note);
+      out.appendChild(routeFeedbackLink(f, steps));
       routeShown = legs;
+      // Once per resort and visit, the first route worked out.
+      if (routeUsedFor !== currentRaw.id) { routeUsedFor = currentRaw.id; track.route(currentRaw); }
       drawRoute2D(legs);
       if (map3d) map3d.showRoute(routeLines(legs));
       fitRoute(legs);
@@ -5385,6 +5438,10 @@
     setText('quality-note', T('Nieve artificial y vigilancia rara vez están etiquetadas en OpenStreetMap — no significa que no existan, es que casi nadie las mapea todavía.'));
 
     setText('dashboard-credit', T('Datos © colaboradores de OpenStreetMap (ODbL), vía OpenSkiMap.'));
+    var fbData = document.getElementById('data-feedback');
+    // For the email to us, not shown: in Spanish.
+    fbData.setAttribute('data-feedback-station', displayName(raw.name, raw.id));
+    fbData.setAttribute('data-feedback-context', 'Datos de ' + displayName(raw.name, raw.id) + ' (' + raw.id + ')');
   }
 
   // Offline support (docs/sw.js): the app shell and the stations you've

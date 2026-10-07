@@ -3,7 +3,7 @@
 // straight away) and falls back to the last copy when offline; the stations
 // you've opened (their data files) stay available. Other sites (weather,
 // satellite tiles, stats) are left alone.
-var VERSION = 'v7';
+var VERSION = 'v8';
 var SHELL = 'skiinfo-shell-' + VERSION;
 var PAGES = 'skiinfo-pages-' + VERSION;
 var DATA = 'skiinfo-data-' + VERSION;
@@ -12,7 +12,7 @@ var LIMITS = {};
 LIMITS[PAGES] = 80;
 LIMITS[DATA] = 40;      // station data files can be large
 LIMITS[ASSETS] = 300;
-var SHELL_FILES = ['/', '/fonts.css', '/stations.js', '/station-names.js', '/i18n.js', '/profile.js', '/snow.js', '/snow.css', '/station-actions.js', '/track.js', '/lang.js',
+var SHELL_FILES = ['/', '/fonts.css', '/stations.js', '/station-names.js', '/i18n.js', '/profile.js', '/snow.js', '/snow.css', '/station-actions.js', '/track.js', '/lang.js', '/feedback.js',
   '/static-pages.css', '/static-pages.js', '/favicon.svg', '/icons/icon-192.png', '/manifest.webmanifest'];
 
 self.addEventListener('install', function (event) {

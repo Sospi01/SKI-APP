@@ -249,7 +249,7 @@ cd data-pipeline && python3 -m pytest -q                       # si tocas el pip
 
 **De desarrollo, por prioridad:**
 0. **Vista 3D** (abierta a todos el 4 de octubre; el usuario ya lo contó en Nevasport): su uso se mide con el evento `map3d` (reglas publicadas el 4 de octubre). Revisar en unos días cuántos lo abren.
-0b. **Planificador de rutas** (Fase 1 hecha, escondida tras `rutas=1`): esperar las pruebas del usuario en Formigal y Baqueira y corregir. Siguientes pasos: beta abierta en el hilo de Nevasport; abrirlo a todos solo en las estaciones con calidad ≥ 80 %; botón "Está cerrado" en remontes y pistas para recalcular; Fase 2, guía en directo siguiendo "Dónde estoy" (recalcular si te sales).
+0b. **Planificador de rutas** (beta abierta a todos el 7 de octubre en las 1.042 estaciones con calidad ≥ 80 %; reglas con `route` pendientes de publicar por el usuario): anunciarlo en el hilo de Nevasport, leer lo que llegue por el formulario y corregir. Siguientes pasos: botón "Está cerrado" en remontes y pistas para recalcular; Fase 2, guía en directo siguiendo "Dónde estoy" (recalcular si te sales).
 1. Comprobar que se ejecutaron los despliegues programados (04:17 y 11:07 UTC) con `mcp__github__actions_list` sobre `deploy-pages.yml`, filtrando por el evento `schedule`.
 2. **Portada para quien llega por primera vez:** el 36 % se va sin abrir ninguna estación. Hay que dar más visibilidad a las estaciones populares o cercanas.
 3. Textos de la ficha de Play: hechos en los 7 idiomas (`STORE_LISTING.md`); falta que el usuario los pegue en Play Console.

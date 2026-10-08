@@ -756,3 +756,165 @@ PAGE["pl"] = {
     "index_title": "Poradniki i rankingi ośrodków narciarskich | Ski Info",
     "index_desc": "Rankingi ośrodków narciarskich: największe, najwyżej położone, najlepsze dla początkujących, najbardziej strome "
                   "i najdłuższe trasy, ośrodki w pobliżu Twojego miasta i gdzie pada śnieg w tym tygodniu."}
+
+# ---- slope guides by each run's steepest 50 m stretch (8 Oct 2026) ----
+# "softblack": official black runs whose steepest stretch is the gentlest;
+# "hardred": red runs with the steepest stretch. Measured as the run profiles
+# (ATUDEM/AFNOR: over 40% is a black-run gradient). {deg} is that slope in degrees.
+for _l, _specs in {
+    "es": {"softblack": [("pistas-negras-mas-suaves-pirineos", "pyrenees", 20), ("pistas-negras-mas-suaves-alpes", "alps", 20)],
+           "hardred": [("pistas-rojas-mas-dificiles-pirineos", "pyrenees", 20), ("pistas-rojas-mas-dificiles-alpes", "alps", 20)]},
+    "en": {"softblack": [("easiest-black-runs-in-the-alps", "alps", 20), ("easiest-black-runs-in-the-pyrenees", "pyrenees", 20)],
+           "hardred": [("hardest-red-runs-in-the-alps", "alps", 20), ("hardest-red-runs-in-the-pyrenees", "pyrenees", 20)]},
+    "fr": {"softblack": [("pistes-noires-les-plus-faciles-des-alpes", "alps", 20),
+                         ("pistes-noires-les-plus-faciles-des-pyrenees", "pyrenees", 20)],
+           "hardred": [("pistes-rouges-les-plus-difficiles-des-alpes", "alps", 20),
+                       ("pistes-rouges-les-plus-difficiles-des-pyrenees", "pyrenees", 20)]},
+    "de": {"softblack": [("leichteste-schwarze-pisten-der-alpen", "alps", 20)],
+           "hardred": [("schwierigste-rote-pisten-der-alpen", "alps", 20)]},
+    "it": {"softblack": [("piste-nere-piu-facili-delle-alpi", "alps", 20)],
+           "hardred": [("piste-rosse-piu-difficili-delle-alpi", "alps", 20)]},
+    "nl": {"softblack": [("makkelijkste-zwarte-pistes-in-de-alpen", "alps", 20)],
+           "hardred": [("moeilijkste-rode-pistes-in-de-alpen", "alps", 20)]},
+    "pl": {"softblack": [("najlatwiejsze-czarne-trasy-w-alpach", "alps", 20)],
+           "hardred": [("najtrudniejsze-czerwone-trasy-w-alpach", "alps", 20)]},
+}.items():
+    SPECS[_l].update(_specs)
+
+_SLOPE_GT = {
+    "es": {
+        "softblack": {
+            "title": "Las pistas negras más suaves {zone}",
+            "intro": "Las {n} pistas negras {zone} cuyo tramo más empinado tiene menos pendiente. Según los criterios de ATUDEM y AFNOR, "
+                     "una pendiente de más del 40 % es de pista negra; {run}, en {station}, no pasa del {p} % ({deg}°) en su tramo "
+                     "más duro de 50 m. La dificultad oficial también tiene en cuenta la anchura, la exposición o la nieve, "
+                     "así que una negra suave puede seguir siendo negra.",
+            "method": "Para cada pista negra oficial de al menos 300 m, el tramo de 50 m con más pendiente, medido con el modelo de "
+                      "elevación (precisión de unos 30 m, suavizado contra picos falsos). Ordenadas de menos a más pendiente. "
+                      "Puede haber resaltes muy cortos que el relieve no recoja.",
+            "rank": "Negras más suaves {zone}", "label": "tramo más duro", "meta": "{len} m · {deg}°"},
+        "hardred": {
+            "title": "Las pistas rojas más difíciles {zone}",
+            "intro": "Las {n} pistas rojas {zone} con el tramo más empinado. Lidera {run}, en {station}, que llega al {p} % ({deg}°) "
+                     "en 50 m. Según los criterios de ATUDEM y AFNOR, más de un 40 % ya es pendiente de pista negra.",
+            "method": "Para cada pista roja oficial de al menos 300 m, el tramo de 50 m con más pendiente, medido con el modelo de "
+                      "elevación (precisión de unos 30 m, suavizado contra picos falsos). Se descartan tramos de más del 60 %, "
+                      "que en una pista suelen ser un cortado junto a ella y no la pista.",
+            "rank": "Rojas más difíciles {zone}", "label": "tramo más duro", "meta": "{len} m · {deg}°"},
+    },
+    "en": {
+        "softblack": {
+            "title": "The easiest black runs {zone}",
+            "intro": "The {n} black runs {zone} whose steepest stretch is the gentlest. By the ATUDEM and AFNOR criteria, a gradient "
+                     "over 40% is black-run terrain; {run} at {station} tops out at {p}% ({deg}°) over its steepest 50 m. "
+                     "Official grades also weigh width, exposure and snow, so a gentle black can still be a black.",
+            "method": "For every official black run of at least 300 m, its steepest 50 m stretch, measured with the elevation model "
+                      "(about 30 m precision, smoothed against false spikes). Sorted from gentlest. Very short steps may not show.",
+            "rank": "the easiest black runs {zone}", "label": "steepest stretch", "meta": "{len} m · {deg}°"},
+        "hardred": {
+            "title": "The hardest red runs {zone}",
+            "intro": "The {n} red runs {zone} with the steepest stretch. Top is {run} at {station}, reaching {p}% ({deg}°) over 50 m. "
+                     "By the ATUDEM and AFNOR criteria, over 40% is already black-run terrain.",
+            "method": "For every official red run of at least 300 m, its steepest 50 m stretch, measured with the elevation model "
+                      "(about 30 m precision, smoothed against false spikes). Stretches over 60% are left out: on a piste they are "
+                      "usually a drop beside it, not the run.",
+            "rank": "the hardest red runs {zone}", "label": "steepest stretch", "meta": "{len} m · {deg}°"},
+    },
+    "fr": {
+        "softblack": {
+            "title": "Les pistes noires les plus faciles {zone}",
+            "intro": "Les {n} pistes noires {zone} dont le tronçon le plus raide est le moins pentu. Selon les critères de l'AFNOR et de "
+                     "l'ATUDEM, une pente de plus de 40 % relève d'une piste noire ; {run}, à {station}, ne dépasse pas {p} % ({deg}°) "
+                     "sur ses 50 m les plus raides. Le classement officiel tient aussi compte de la largeur, de l'exposition ou de la "
+                     "neige : une noire douce peut rester une noire.",
+            "method": "Pour chaque piste noire officielle d'au moins 300 m, son tronçon de 50 m le plus raide, mesuré avec le modèle "
+                      "d'élévation (précision d'environ 30 m, lissé contre les faux pics). Classées de la moins à la plus pentue. "
+                      "Des ressauts très courts peuvent ne pas apparaître.",
+            "rank": "Noires les plus faciles {zone}", "label": "tronçon le plus raide", "meta": "{len} m · {deg}°"},
+        "hardred": {
+            "title": "Les pistes rouges les plus difficiles {zone}",
+            "intro": "Les {n} pistes rouges {zone} au tronçon le plus raide. En tête, {run}, à {station}, qui atteint {p} % ({deg}°) "
+                     "sur 50 m. Selon les critères de l'AFNOR et de l'ATUDEM, au-delà de 40 % c'est déjà une pente de piste noire.",
+            "method": "Pour chaque piste rouge officielle d'au moins 300 m, son tronçon de 50 m le plus raide, mesuré avec le modèle "
+                      "d'élévation (précision d'environ 30 m, lissé contre les faux pics). Les tronçons de plus de 60 % sont écartés : "
+                      "sur une piste, c'est en général une barre rocheuse à côté, pas la piste.",
+            "rank": "Rouges les plus difficiles {zone}", "label": "tronçon le plus raide", "meta": "{len} m · {deg}°"},
+    },
+    "de": {
+        "softblack": {
+            "title": "Die leichtesten schwarzen Pisten {zone}",
+            "intro": "Die {n} schwarzen Pisten {zone}, deren steilster Abschnitt am flachsten ist. Nach den Kriterien von ATUDEM und AFNOR "
+                     "ist ein Gefälle über 40 % Schwarz-Gelände; {run} in {station} kommt auf seinen steilsten 50 m nur auf {p} % ({deg}°). "
+                     "Die offizielle Einstufung berücksichtigt auch Breite, Exposition und Schnee – eine sanfte Schwarze kann trotzdem schwarz sein.",
+            "method": "Für jede offizielle schwarze Piste ab 300 m ihr steilster 50-m-Abschnitt, gemessen mit dem Höhenmodell "
+                      "(Genauigkeit etwa 30 m, gegen falsche Spitzen geglättet). Sortiert vom flachsten. Sehr kurze Stufen sind eventuell nicht erfasst.",
+            "rank": "leichteste schwarze Pisten {zone}", "label": "steilster Abschnitt", "meta": "{len} m · {deg}°"},
+        "hardred": {
+            "title": "Die schwierigsten roten Pisten {zone}",
+            "intro": "Die {n} roten Pisten {zone} mit dem steilsten Abschnitt. Vorne liegt {run} in {station} mit {p} % ({deg}°) auf 50 m. "
+                     "Nach den Kriterien von ATUDEM und AFNOR ist über 40 % schon Schwarz-Gelände.",
+            "method": "Für jede offizielle rote Piste ab 300 m ihr steilster 50-m-Abschnitt, gemessen mit dem Höhenmodell "
+                      "(Genauigkeit etwa 30 m, gegen falsche Spitzen geglättet). Abschnitte über 60 % sind ausgenommen: Auf einer Piste "
+                      "ist das meist ein Abbruch daneben, nicht die Piste.",
+            "rank": "schwierigste rote Pisten {zone}", "label": "steilster Abschnitt", "meta": "{len} m · {deg}°"},
+    },
+    "it": {
+        "softblack": {
+            "title": "Le piste nere più facili {zone}",
+            "intro": "Le {n} piste nere {zone} il cui tratto più ripido è il meno pendente. Secondo i criteri di ATUDEM e AFNOR, una "
+                     "pendenza oltre il 40 % è da pista nera; {run}, a {station}, non supera il {p} % ({deg}°) nei suoi 50 m più ripidi. "
+                     "La classificazione ufficiale considera anche larghezza, esposizione e neve: una nera dolce può restare una nera.",
+            "method": "Per ogni pista nera ufficiale di almeno 300 m, il suo tratto di 50 m più ripido, misurato con il modello di "
+                      "elevazione (precisione di circa 30 m, levigato contro i falsi picchi). Ordinate dalla meno ripida. "
+                      "Gradini molto brevi potrebbero non comparire.",
+            "rank": "Nere più facili {zone}", "label": "tratto più ripido", "meta": "{len} m · {deg}°"},
+        "hardred": {
+            "title": "Le piste rosse più difficili {zone}",
+            "intro": "Le {n} piste rosse {zone} con il tratto più ripido. In testa {run}, a {station}, che arriva al {p} % ({deg}°) "
+                     "in 50 m. Secondo i criteri di ATUDEM e AFNOR, oltre il 40 % è già pendenza da pista nera.",
+            "method": "Per ogni pista rossa ufficiale di almeno 300 m, il suo tratto di 50 m più ripido, misurato con il modello di "
+                      "elevazione (precisione di circa 30 m, levigato contro i falsi picchi). Esclusi i tratti oltre il 60 %: su una "
+                      "pista di solito sono un salto accanto, non la pista.",
+            "rank": "Rosse più difficili {zone}", "label": "tratto più ripido", "meta": "{len} m · {deg}°"},
+    },
+    "nl": {
+        "softblack": {
+            "title": "De makkelijkste zwarte pistes {zone}",
+            "intro": "De {n} zwarte pistes {zone} waarvan het steilste stuk het minst steil is. Volgens de criteria van ATUDEM en AFNOR "
+                     "is een helling van meer dan 40% zwarte-pisteterrein; {run} in {station} komt op zijn steilste 50 m niet boven "
+                     "{p}% ({deg}°). De officiële kleur houdt ook rekening met breedte, ligging en sneeuw: een milde zwarte kan dus zwart blijven.",
+            "method": "Voor elke officiële zwarte piste van minstens 300 m het steilste stuk van 50 m, gemeten met het hoogtemodel "
+                      "(nauwkeurigheid ongeveer 30 m, afgevlakt tegen valse pieken). Gesorteerd van minst steil. Heel korte steile stukjes "
+                      "zijn mogelijk niet zichtbaar.",
+            "rank": "makkelijkste zwarte pistes {zone}", "label": "steilste stuk", "meta": "{len} m · {deg}°"},
+        "hardred": {
+            "title": "De moeilijkste rode pistes {zone}",
+            "intro": "De {n} rode pistes {zone} met het steilste stuk. Bovenaan staat {run} in {station}, met {p}% ({deg}°) over 50 m. "
+                     "Volgens de criteria van ATUDEM en AFNOR is meer dan 40% al zwarte-pisteterrein.",
+            "method": "Voor elke officiële rode piste van minstens 300 m het steilste stuk van 50 m, gemeten met het hoogtemodel "
+                      "(nauwkeurigheid ongeveer 30 m, afgevlakt tegen valse pieken). Stukken van meer dan 60% tellen niet mee: op een "
+                      "piste is dat meestal een rotswand ernaast, niet de piste.",
+            "rank": "moeilijkste rode pistes {zone}", "label": "steilste stuk", "meta": "{len} m · {deg}°"},
+    },
+    "pl": {
+        "softblack": {
+            "title": "Najłatwiejsze czarne trasy {zone}",
+            "intro": "Czarne trasy {zone} (liczba: {n}), których najbardziej stromy odcinek jest najłagodniejszy. Według kryteriów ATUDEM "
+                     "i AFNOR nachylenie powyżej 40% to teren trasy czarnej; {run} ({station}) na najbardziej stromych 50 m nie przekracza "
+                     "{p}% ({deg}°). Oficjalna klasyfikacja uwzględnia też szerokość, ekspozycję i śnieg, więc łagodna czarna wciąż może być czarna.",
+            "method": "Dla każdej oficjalnej czarnej trasy o długości co najmniej 300 m: najbardziej stromy odcinek 50 m, zmierzony na "
+                      "modelu wysokości (dokładność ok. 30 m, wygładzony przeciw fałszywym skokom). Od najłagodniejszej. "
+                      "Bardzo krótkie progi mogą nie być widoczne.",
+            "rank": "najłatwiejsze czarne trasy {zone}", "label": "najbardziej stromy odcinek", "meta": "{len} m · {deg}°"},
+        "hardred": {
+            "title": "Najtrudniejsze czerwone trasy {zone}",
+            "intro": "Czerwone trasy {zone} (liczba: {n}) z najbardziej stromym odcinkiem. Prowadzi {run} ({station}): {p}% ({deg}°) "
+                     "na 50 m. Według kryteriów ATUDEM i AFNOR powyżej 40% to już teren trasy czarnej.",
+            "method": "Dla każdej oficjalnej czerwonej trasy o długości co najmniej 300 m: najbardziej stromy odcinek 50 m, zmierzony na "
+                      "modelu wysokości (dokładność ok. 30 m, wygładzony przeciw fałszywym skokom). Odcinki powyżej 60% są pomijane: "
+                      "na trasie to zwykle uskok obok niej, a nie sama trasa.",
+            "rank": "najtrudniejsze czerwone trasy {zone}", "label": "najbardziej stromy odcinek", "meta": "{len} m · {deg}°"},
+    },
+}
+for _l, _g in _SLOPE_GT.items():
+    GT[_l].update(_g)

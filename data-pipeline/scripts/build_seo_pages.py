@@ -29,6 +29,7 @@ from pathlib import Path
 
 from build_guides import shown_difficulty
 from guide_texts import PATHS as GUIDE_PATHS
+import fatmap_page
 from page_texts import APP_HEAD as MORE_APP_HEAD, APP_TX as MORE_APP_TX, DATE_FMT, MONTHS, TX as MORE_TX
 
 REPO = Path(__file__).resolve().parents[2]
@@ -1400,7 +1401,7 @@ def main() -> None:
     base_stats = []
     for s in stations:
         raw = json.loads((args.docs / "data" / f"{s['id']}.json").read_text(encoding="utf-8"))
-        st = station_stats(raw, is_downhill)
+        st = station_stats(raw, is_downhill, run_max_pitch)
         # Named as the app shows it ("San Isidro (Saliencias)", not three "San Isidro").
         st.update(id=s["id"], name=display_name(s["name"], s["id"]) or short_name(s["name"]) or s["name"],
                   cc=s.get("country") or "ES", region=s.get("region"),
@@ -1422,7 +1423,22 @@ def main() -> None:
     home_alt = {l: f"{base_url}{LOC[l]['home']}" for l in LOC}
     for lang in LOC:
         entries.append((home_alt[lang], home_alt))
-        entries += write_all(args.docs, guides[lang], page, e, base_url, lang, lambda key: guide_alt.get(key, {}))
+        entries += write_all(args.docs, guides[lang], page, e, base_url, lang, lambda key: guide_alt.get(key, {}),
+                             extra=[(f"{LOC[lang]['guides']}{fatmap_page.SLUG[lang]}/", fatmap_page.TX[lang]["h1"])])
+
+    # "FatMap alternative" (one per language, next to the guides).
+    id_of = {v: k for k, v in slug.items()}
+    fm_alt = {l: fatmap_page.url_for(base_url, LOC[l]["guides"], l) for l in LOC}
+    for lang in LOC:
+        n_txt = FMT[lang](len(stations)) if lang != "es" else f"{len(stations):,}".replace(",", ".")
+        featured = [(id_of[x], display_name(by_id[id_of[x]]["name"], id_of[x]) or by_id[id_of[x]]["name"], x)
+                    for x in fatmap_page.FEATURED[lang] if x in id_of and id_of[x] in by_id]
+        out = args.docs / LOC[lang]["guides"].strip("/") / fatmap_page.SLUG[lang] / "index.html"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(fatmap_page.render(lang, page=page, e=e, base_url=base_url, loc=LOC[lang],
+                                          guides_path=LOC[lang]["guides"], n=n_txt, c=str(len(by_country)),
+                                          featured=featured, alternates=fm_alt), encoding="utf-8")
+        entries.append((fm_alt[lang], fm_alt))
 
     for s in stations:
         raw = json.loads((args.docs / "data" / f"{s['id']}.json").read_text(encoding="utf-8"))

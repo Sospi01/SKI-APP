@@ -43,6 +43,9 @@ GRADED = {"novice", "easy", "intermediate", "advanced", "expert", "double"}
 IBERIA = {"ES", "AD"}
 # Unpatrolled ski routes / itineraries sometimes carry a piste grade in OSM.
 NOT_A_PISTE = re.compile(r"^descenso|ski ?route|skiroute|itin[eé]rai|itinerar|freeride|variante", re.IGNORECASE)
+# Tracks and links that OSM sometimes grades like a run ("Route de Tsirouc", "Chemin", "Ziehweg").
+TRACK = re.compile(r"\b(route|chemin|weg|ziehweg|skiweg|camino|cam[ií]|strada|liaison|enlace|retour|r[üu]ckweg|traverse|"
+                   r"berg zu tal|piste de liaison|verbindung|collegamento|raccordo|rientro|bordercross|boardercross|funpark|snowpark)\b", re.IGNORECASE)
 ALPS_CC = {"FR", "CH", "IT", "AT", "DE", "SI", "LI"}
 
 
@@ -77,8 +80,10 @@ def haversine_km(lat1, lon1, lat2, lon2) -> float:
     return 12742 * math.asin(math.sqrt(a))
 
 
-def station_stats(raw: dict, is_downhill) -> dict:
-    """The per-station numbers the rankings need (no geometry kept)."""
+def station_stats(raw: dict, is_downhill, max_pitch=None) -> dict:
+    """The per-station numbers the rankings need (no geometry kept).
+    max_pitch(parts) gives a run's steepest 50 m stretch in % (run_max_pitch
+    of build_seo_pages, as the run profiles), for the slope guides."""
     runs = [r for r in raw.get("runs", []) if is_downhill(r)]
     km = sum(r.get("length_m") or 0 for r in runs) / 1000
     easy_km = sum(r.get("length_m") or 0 for r in runs if r.get("difficulty") in ("novice", "easy")) / 1000
@@ -92,6 +97,10 @@ def station_stats(raw: dict, is_downhill) -> dict:
                                           "diff": shown_difficulty(r.get("difficulty"), convention)})
         g["len"] += r.get("length_m") or 0
         g["vert"] += r.get("vertical_m") or 0
+        g.setdefault("parts", []).extend(r.get("geom") or [])
+    for g in groups.values():
+        parts = g.pop("parts", [])
+        g["maxp"] = max_pitch(parts) if max_pitch and g["len"] >= 300 else None
     return {
         "km": km, "easy_km": easy_km,
         "lo": raw.get("min_elevation_m"), "hi": raw.get("max_elevation_m"),
@@ -239,6 +248,43 @@ def build_guides(stations: list[dict], snow: dict, snow_date: str, fmt, diff_lab
                 items=[Item(s, metric(r, p), t["label"], t["meta"].format(**nums(r, p)), title=r["name"], diff=r["diff"])
                        for s, r, p in rows]))
 
+    # ---- slope: gentlest blacks / hardest reds, by the steepest 50 m ----
+    for kind, diff, gentle in (("softblack", "advanced", True), ("hardred", "intermediate", False)):
+        t = gt[kind]
+        for slug, zone, n in spec.get(kind, []):
+            rows, seen = [], set()
+            for s in real:
+                if not ZONES[zone](s):
+                    continue
+                for r in s["runs"]:
+                    # Over 60% on a piste is more often the ~30 m relief catching a drop beside it.
+                    if r["diff"] != diff or r.get("maxp") is None or r["maxp"] > 60 or r["len"] <= 0:
+                        continue
+                    # A "black" under 20% or named as a track is a cat track / link mis-graded in OSM.
+                    if gentle and (r["maxp"] < 20 or TRACK.search(r["name"])):
+                        continue
+                    key_ = (r["name"].lower(), round(r["len"] / 250))
+                    if key_ in seen:
+                        continue
+                    seen.add(key_)
+                    rows.append((s, r))
+            rows.sort(key=lambda x: x[1]["maxp"] if gentle else -x[1]["maxp"])
+            rows = rows[:n]
+            if not rows:
+                continue
+            z = zones(zone)
+            deg = lambda p: round(math.degrees(math.atan(p / 100)))
+            nums = lambda r: {"len": fmt(round(r["len"])), "p": fmt(round(r["maxp"])), "deg": deg(r["maxp"]),
+                              "avg": fmt(round(100 * r["vert"] / r["len"]))}
+            s0, r0 = rows[0]
+            title = t["title"].format(**z)
+            guides.append(Guide(
+                slug=slug, key=f"{kind}:{zone}", group=groups["runs"], kind="run", title=title, h1=title,
+                intro=t["intro"].format(n=len(rows), run=r0["name"], station=s0["name"], **nums(r0), **z),
+                method=t["method"], rank_label=t["rank"].format(**z),
+                items=[Item(s, pct(fmt(round(r["maxp"]))), t["label"], t["meta"].format(**nums(r)), title=r["name"], diff=r["diff"])
+                       for s, r in rows]))
+
     # ---- near a city ----
     t = gt["near"]
     in_pool = CITY_POOL.get(lang, lambda s: True)
@@ -367,7 +413,8 @@ def guide_page(g: Guide, guides: list[Guide], page, e, base_url: str, lang: str,
                 lang=lang, alternates=alternates)
 
 
-def index_page(guides: list[Guide], page, e, base_url: str, lang: str, alternates: dict) -> str:
+def index_page(guides: list[Guide], page, e, base_url: str, lang: str, alternates: dict,
+               extra: list[tuple[str, str]] | None = None) -> str:
     tx = PAGE[lang]
     gpath = PATHS[lang]["guides"]
     groups: dict[str, list[Guide]] = {}
@@ -383,6 +430,10 @@ def index_page(guides: list[Guide], page, e, base_url: str, lang: str, alternate
             + (f'<span class="guide-card-sub">{e(tx["no1"].format(g.items[0].title or g.items[0].station["name"]))}</span>' if g.items else "")
             + '</span></a>' for g in groups[name])
         sections += f'<section class="guide-group"><h2>{e(name)}</h2><div class="guide-cards">{cards}</div></section>'
+    # Pages that aren't rankings (the FatMap alternative): [(href, title)].
+    if extra:
+        cards = "".join(f'<a class="guide-card" href="{h}"><span><span class="guide-card-title">{e(t)}</span></span></a>' for h, t in extra)
+        sections += f'<section class="guide-group"><h2>Ski Info</h2><div class="guide-cards">{cards}</div></section>'
     body = f"""<div class="topbar"><a class="back-btn" href="{PATHS[lang]['home']}" onclick="{BACK_JS}"><span class="chev">‹</span> Ski Info</a></div>
 <div class="guide-head">
 <div class="eyebrow"><a href="{PATHS[lang]['home']}">Ski Info</a> · {tx['guides']}</div>
@@ -416,13 +467,13 @@ def station_ranks(guides: list[Guide], lang: str = "es", top: int = 10) -> dict[
 
 
 def write_all(docs: Path, guides: list[Guide], page, e, base_url: str, lang: str = "es",
-              alternates_for=lambda key: {}) -> list[tuple[str, dict]]:
+              alternates_for=lambda key: {}, extra: list[tuple[str, str]] | None = None) -> list[tuple[str, dict]]:
     """Writes the index and every guide; returns [(url, alternates)] for the sitemap.
     alternates_for(key) gives {lang: url} of a guide's translations ("index" for the index)."""
     root = docs / PATHS[lang]["guides"].strip("/")
     root.mkdir(parents=True, exist_ok=True)
     idx_alt = alternates_for("index")
-    (root / "index.html").write_text(index_page(guides, page, e, base_url, lang, idx_alt), encoding="utf-8")
+    (root / "index.html").write_text(index_page(guides, page, e, base_url, lang, idx_alt, extra), encoding="utf-8")
     out = [(guide_url(base_url, lang), idx_alt)]
     for g in guides:
         alt = alternates_for(g.key)

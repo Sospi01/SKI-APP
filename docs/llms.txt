@@ -26,4 +26,6 @@ URL patterns: `/estacion/<slug>/` (es), `/en/resort/<slug>/`, `/fr/station/<slug
 Rankings built from the same data: steepest runs, biggest resorts, ski resorts near a city, where it will snow this week.
 
 - [Guides (English)](https://skiinfoapp.com/en/guides/)
+- [The hardest red runs in the Alps](https://skiinfoapp.com/en/guides/hardest-red-runs-in-the-alps/) and [the easiest black runs](https://skiinfoapp.com/en/guides/easiest-black-runs-in-the-alps/), by each run's steepest 50 m
+- [A FatMap alternative](https://skiinfoapp.com/en/guides/fatmap-alternative/): FatMap shut down on 1 October 2024; Ski Info offers free 3D ski maps with run slopes
 - [Guías (Spanish)](https://skiinfoapp.com/guias/)

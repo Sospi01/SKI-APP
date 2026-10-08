@@ -248,14 +248,11 @@ cd data-pipeline && python3 -m pytest -q                       # si tocas el pip
 5. Acceso a producción en Google Play: solicitado el 7 de octubre; esperar la aprobación (el usuario avisa).
 
 **De desarrollo, por prioridad:**
+(Comprobado el 8 de octubre: los despliegues programados y la actualización semanal del lunes 5 se ejecutan bien; GitHub los lanza con retraso, de 1 a 7 horas.)
 0. **Vista 3D** (abierta a todos el 4 de octubre; el usuario ya lo contó en Nevasport): su uso se mide con el evento `map3d` (reglas publicadas el 4 de octubre). Revisar en unos días cuántos lo abren.
 0b. **Planificador de rutas** (beta abierta a todos el 7 de octubre en las 1.042 estaciones con calidad ≥ 80 %; reglas con `route` pendientes de publicar por el usuario): anunciarlo en el hilo de Nevasport, leer lo que llegue por el formulario y corregir. Siguientes pasos: botón "Está cerrado" en remontes y pistas para recalcular; Fase 2, guía en directo siguiendo "Dónde estoy" (recalcular si te sales).
-1. Comprobar que se ejecutaron los despliegues programados (04:17 y 11:07 UTC) con `mcp__github__actions_list` sobre `deploy-pages.yml`, filtrando por el evento `schedule`.
-2. **Portada para quien llega por primera vez:** el 36 % se va sin abrir ninguna estación. Hay que dar más visibilidad a las estaciones populares o cercanas.
 3. Textos de la ficha de Play: hechos en los 7 idiomas (`STORE_LISTING.md`); falta que el usuario los pegue en Play Console.
-4. **App 1.0.6:** abrir la versión del idioma del móvil entre los 5 disponibles. Cuando la app esté en producción, cambiar el botón "Muy pronto" de `/app` por el enlace de Google Play (en `build_seo_pages.py`, en `app_page`).
-5. **Política de privacidad** en inglés, francés, alemán e italiano.
-6. Lunes 5 de octubre: comprobar la ejecución de `refresh-stations.yml`.
+4. **App en producción:** cuando Google apruebe el acceso, versión de producción con el AAB 1.0.6 y cambiar el botón "Muy pronto" de `/app` por el enlace de Google Play (en `build_seo_pages.py`, en `app_page`).
 7. Evaluar en unos días el uso del mapa con la tarjeta nueva y la fidelización a 7 días del post de Reddit.
 8. Octubre:
    - modo de mapa que **colorea las pistas por su pendiente real**;

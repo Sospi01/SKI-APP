@@ -1361,7 +1361,9 @@ def main() -> None:
     for s in stations:
         raw = json.loads((args.docs / "data" / f"{s['id']}.json").read_text(encoding="utf-8"))
         st = station_stats(raw, is_downhill)
-        st.update(id=s["id"], name=short_name(s["name"]) or s["name"], cc=s.get("country") or "ES", region=s.get("region"),
+        # Named as the app shows it ("San Isidro (Saliencias)", not three "San Isidro").
+        st.update(id=s["id"], name=display_name(s["name"], s["id"]) or short_name(s["name"]) or s["name"],
+                  cc=s.get("country") or "ES", region=s.get("region"),
                   slug=slug[s["id"]], lat=s.get("lat") or raw.get("latitude") or 0, lon=s.get("lon") or raw.get("longitude") or 0)
         base_stats.append(st)
     guides, ctx["ranks"] = {}, {}

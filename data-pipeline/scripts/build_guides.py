@@ -250,11 +250,14 @@ def build_guides(stations: list[dict], snow: dict, snow_date: str, fmt, diff_lab
             continue
         d0, s0 = rows[0]
         within = sum(1 for d, _ in rows if d <= 250)
-        title = t["title"].format(city=cname)
+        # French elides "de" before a vowel: "près d'Annecy", not "près de Annecy".
+        el = (lambda x: x.replace(f"de {cname}", f"d'{cname}").replace(f"de-{cslug}", f"d-{cslug}")) \
+            if lang == "fr" and cname[:1].lower() in "aeiouyéèêh" else (lambda x: x)
+        title = el(t["title"].format(city=cname))
         guides.append(Guide(
-            slug=t["slug"].format(city=cslug), key=f"near:{cslug}", group=groups["near"], kind="station",
-            title=title, h1=title, intro=t["intro"].format(city=cname, top=s0["name"], d=fmt(round(d0)), within=within),
-            method=t["method"], rank_label=t["rank"].format(city=cname),
+            slug=el(t["slug"].format(city=cslug)), key=f"near:{cslug}", group=groups["near"], kind="station",
+            title=title, h1=title, intro=el(t["intro"].format(city=cname, top=s0["name"], d=fmt(round(d0)), within=within)),
+            method=t["method"], rank_label=el(t["rank"].format(city=cname)),
             items=[Item(s, f"{fmt(round(d))} km", t["label"], t["meta"].format(km=fmt(round(s["km"])), meta=station_meta(s)))
                    for d, s in rows]))
 

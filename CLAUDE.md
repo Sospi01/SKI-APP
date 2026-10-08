@@ -133,6 +133,7 @@ El propietario es **Francisco Sospedra** (GitHub `Sospi01`), usuario no técnico
 - `scripts/`:
   - `build_seo_pages.py`: fichas, países, página `/app`, sitemap, copias por idioma de la app y datos de la portada. Opciones: `--inject-home` (solo en el despliegue), `--write-slugs` para estaciones nuevas y `--base-url`.
   - `build_guides.py`: guías generadas con los datos; los textos están en `guide_texts.py`. Arriba llevan la misma barra que las fichas (6 de octubre, la app no tiene barra del navegador): "‹ Guías" (en el índice, "‹ Ski Info"), que vuelve a la página anterior si era de la web (`BACK_JS`) y si no va al enlace, y "Ski Info" a la portada.
+  - Guías "cerca de [ciudad]" (`CITIES` de `guide_texts.py`): el 8 de octubre se añadieron 40 ciudades (es: Valladolid, Logroño, Oviedo, Huesca, Lleida, Granada, León, Burgos, San Sebastián; en: Boston, Nueva York, Seattle, Calgary, Toronto, Portland, Reno, Montreal, Sapporo; fr: Annecy, Chambéry, Clermont-Ferrand, Strasbourg, Perpignan, Pau, Montpellier; de: Graz, Linz, Bern, Luzern, Basel, Nürnberg, Köln, Dresden, Hamburg; it: Trento, Bergamo, Brescia, Cuneo, Padova, Udine), porque son las guías que más clics traen. En francés, "de" se elide ante vocal ("près d'Annecy", slug `pres-d-annecy`). Las guías usan `display_name()` como el resto de la web (antes salían tres "San Isidro" iguales).
   - `page_texts.py`: textos de las páginas en fr, de, it, nl y pl.
   - `fetch_snow_forecast.py`: previsión de todas las estaciones, que se guarda en `docs/snow.json`.
   - `build_share_images.py`: imágenes OG. Necesita Pillow y tarda unos 3 minutos.
@@ -259,6 +260,7 @@ cd data-pipeline && python3 -m pytest -q                       # si tocas el pip
    - modo de mapa que **colorea las pistas por su pendiente real**;
    - guía "Apertura de estaciones 2026/27" de España y Andorra (las fechas hay que meterlas a mano);
    - pedir que nos incluyan en la wiki de OpenStreetMap.
+   - **A discutir con el usuario: pendiente de los muros cortos** (crítica de un geógrafo en Nevasport, 8 de octubre). Simulado: un muro de 50 m al 60 % (31°) sobre una pista del 15 % sale en el perfil al 47–54 % (aún negro) pero el "máx." de 100 m dice 39–41 % (antes 56–60 %); uno de 30 m baja a 30–41 %. Propuestas: mostrar grados junto al % ("60 % · 31°"); volver a un "máx." de ~50 m ("Tramo más fuerte: 31° en ~50 m") manteniendo los colores suaves; avisar en el perfil del límite del relieve (~30 m: puede haber resaltes cortos que no salgan); a largo plazo, relieve de 2–5 m (IGN, Austria, Suiza) en las estaciones principales. Tramos de 5–10 m no: con un modelo de 30 m solo darían ruido (lo que motivó la queja del esquiador de Baqueira).
 9. Temporada (desde finales de noviembre):
    - post semanal "Dónde va a nevar esta semana";
    - afiliado de Booking, cuando el tráfico desde Google sea estable;

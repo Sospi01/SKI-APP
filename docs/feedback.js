@@ -8,7 +8,7 @@
 // The access key isn't secret: Web3Forms keys are made to sit in web pages,
 // and the address the messages go to stays on their side.
 (function () {
-  var KEY = '5957814d-089e-4ea6-b74f-971c1554d229';
+  var KEY = 'd3b9863e-4a47-4477-8ea9-c32902231d0d';
   var ENDPOINT = 'https://api.web3forms.com/submit';
   var MAX = 2000;
   var TX = {

@@ -264,6 +264,7 @@ cd data-pipeline && python3 -m pytest -q                       # si tocas el pip
    - modo de mapa que **colorea las pistas por su pendiente real**;
    - guía "Apertura de estaciones 2026/27" de España y Andorra (las fechas hay que meterlas a mano);
    - pedir que nos incluyan en la wiki de OpenStreetMap.
+   - **Descenso virtual en el 3D** (8 de octubre, aprobado por el usuario): botón en la pista elegida que baja la cámara por ella, con el punto del perfil avanzando a la vez. Es lo que ChatGPT más destaca de Bonvo, que nos pone por delante (nos cita 3.º por la pendiente tramo a tramo). Se aprovecha `map3d.js`, el perfil y `onProfilePoint`.
    - Idea de Nevasport (Jairo): el color "real" de una pista depende también de anchura, exposición y nieve; a largo plazo, relieve de 2–5 m (IGN, Austria, Suiza) en las estaciones principales.
 9. Temporada (desde finales de noviembre):
    - post semanal "Dónde va a nevar esta semana";

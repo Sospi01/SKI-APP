@@ -409,8 +409,10 @@ el formulario no coincide con lo que hace, así que revisa que esté así:
   **No comparte** (Firebase actúa como proveedor de servicio, lo que para
   Google no cuenta como "compartir").
 - ¿Los datos se cifran en tránsito? **Sí** (HTTPS).
-- ¿Los usuarios pueden pedir que se borren? **No.** Los datos no están
-  ligados a ninguna identidad y se borran solos a los 13 meses.
+- ¿Los usuarios pueden pedir que se borren? **Sí**, escribiendo al correo de
+  contacto (sirve para los mensajes del formulario de sugerencias; las
+  estadísticas no están ligadas a ninguna identidad y se borran solas a los
+  13 meses).
 - Tipos de datos que hay que marcar:
   - **Actividad en la app → Interacciones con la app:** recogida, no
     compartida, no efímera, obligatoria, finalidad **Analíticas**.
@@ -418,7 +420,14 @@ el formulario no coincide con lo que hace, así que revisa que esté así:
     no compartido, obligatorio, finalidad **Analíticas** (es el
     identificador aleatorio de las estadísticas y el ID de instancia de
     Firebase; el identificador publicitario está desactivado).
-  - Nada más: ni datos personales ni contactos. La **ubicación no se
+  - **Información personal → Dirección de correo electrónico** (desde el 7 de
+    octubre, formulario de sugerencias): recogida, no compartida (Web3Forms
+    es un proveedor), **opcional**, finalidad **Comunicaciones del
+    desarrollador**.
+  - **Mensajes → Otros mensajes de la aplicación** (el texto del formulario
+    de sugerencias): recogido, no compartido, **opcional**, finalidad
+    **Funciones de la aplicación** (leer la sugerencia y contestar).
+  - Nada más: ni nombre ni contactos. La **ubicación no se
     declara**: desde la 1.0.6 la app la pide (solo al pulsar "Dónde estoy"
     o "Usar mi ubicación"), pero se usa solo dentro del móvil y nunca se
     envía, y Google no cuenta como "recogido" lo que no sale del aparato.

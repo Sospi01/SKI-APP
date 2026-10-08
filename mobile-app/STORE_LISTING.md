@@ -413,6 +413,8 @@ el formulario no coincide con lo que hace, así que revisa que esté así:
   contacto (sirve para los mensajes del formulario de sugerencias; las
   estadísticas no están ligadas a ninguna identidad y se borran solas a los
   13 meses).
+  **URL de eliminación de datos:** `https://skiinfoapp.com/privacy.html#borrar-datos`
+  (en inglés: `privacy-en.html#delete-data`; la sección está en los 7 idiomas).
 - Tipos de datos que hay que marcar:
   - **Actividad en la app → Interacciones con la app:** recogida, no
     compartida, no efímera, obligatoria, finalidad **Analíticas**.

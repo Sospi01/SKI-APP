@@ -439,6 +439,9 @@ window.SKI_I18N = {
   "Suave (<20%)": "Flach (<20 %)",
   "Moderada (20-30%)": "Mittel (20-30 %)",
   "Pronunciada (30-45%)": "Steil (30-45 %)",
-  "Muy pronunciada (>45%)": "Sehr steil (>45 %)"
+  "Muy pronunciada (>45%)": "Sehr steil (>45 %)",
+  "Tramo más pronunciado: {0}% ({1}°) de pendiente, entre {2} y {3}.": "Steilster Abschnitt: {0} % ({1}°) Gefälle, zwischen {2} und {3}.",
+  "Colores según los criterios de ATUDEM (España) y AFNOR (Francia).": "Farben nach den offiziellen Kriterien von ATUDEM (Spanien) und AFNOR (Frankreich).",
+  "Las alturas tienen una precisión de unos 30 m: puede haber resaltes cortos que no aparezcan.": "Die Höhen sind auf etwa 30 m genau: kurze Steilstufen werden eventuell nicht angezeigt."
  }
 };

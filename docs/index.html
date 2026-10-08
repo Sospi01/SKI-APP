@@ -1702,7 +1702,7 @@
     if (g.vertical_m) bits.push(T('desnivel {0} m', fmt(Math.round(g.vertical_m))));
     if (g.length_m) bits.push(T('pend. media {0}%', fmt(100 * g.vertical_m / g.length_m, 1)));
     if (g.maxPitch === undefined) g.maxPitch = runMaxPitch(g.geomParts);
-    if (g.maxPitch != null) bits.push(T('máx. {0}%', Math.round(g.maxPitch)));
+    if (g.maxPitch != null) bits.push(T('máx. {0}%', Math.round(g.maxPitch)) + ' (' + pitchDeg(g.maxPitch) + '°)');
     if (g.minElev != null && g.maxElev != null) bits.push(T('{0} m alt.', fmt(Math.round(g.minElev)) + '–' + fmt(Math.round(g.maxElev))));
     return bits.join(' · ');
   }
@@ -3755,7 +3755,7 @@
         if (r.length_m) bits.push(fmt(Math.round(r.length_m)) + ' m');
         if (r.avg_pitch_percent != null) bits.push(T('{0}% pend. media', fmt(r.avg_pitch_percent, 0)));
         var partMax = runMaxPitch([part]);
-        if (partMax != null) bits.push(T('máx. {0}%', Math.round(partMax)));
+        if (partMax != null) bits.push(T('máx. {0}%', Math.round(partMax)) + ' (' + pitchDeg(partMax) + '°)');
         var valueText = bits.join(' · ');
         wireFocusTooltip(hit, label, valueText);
         var projPts = part.map(project);

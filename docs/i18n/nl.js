@@ -439,6 +439,9 @@ window.SKI_I18N = {
   "Suave (<20%)": "Flauw (<20%)",
   "Moderada (20-30%)": "Gemiddeld (20-30%)",
   "Pronunciada (30-45%)": "Steil (30-45%)",
-  "Muy pronunciada (>45%)": "Zeer steil (>45%)"
+  "Muy pronunciada (>45%)": "Zeer steil (>45%)",
+  "Tramo más pronunciado: {0}% ({1}°) de pendiente, entre {2} y {3}.": "Steilste stuk: {0}% ({1}°) helling, tussen {2} en {3}.",
+  "Colores según los criterios de ATUDEM (España) y AFNOR (Francia).": "Kleuren volgens de officiële criteria van ATUDEM (Spanje) en AFNOR (Frankrijk).",
+  "Las alturas tienen una precisión de unos 30 m: puede haber resaltes cortos que no aparezcan.": "Hoogtes zijn nauwkeurig tot ongeveer 30 m: korte steile stukken zijn mogelijk niet zichtbaar."
  }
 };

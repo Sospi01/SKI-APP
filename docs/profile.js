@@ -16,23 +16,28 @@ function haversineM(a, b) {
 
 // Pitch-zone thresholds mirror how skiers already read piste colors
 // (green/blue/red/black), applied here to the *local* steepness of a
-// stretch rather than the run's overall difficulty rating. 20/30/45 since
-// 7 October (were 15/25/40): skiers who know their runs (Nevasport) found
-// gentle pitches coloured too hard. Mirrored in build_seo_pages.py.
+// stretch rather than the run's overall difficulty rating. The official
+// criteria (ATUDEM in Spain, AFNOR in France): 15/25/40. For a day (7-8
+// October) they were 20/30/45; Nevasport, the skier who'd asked for it
+// included, preferred the official ones. Mirrored in build_seo_pages.py.
 var PITCH_ZONES = [
-  { max: 20, key: 'novice', label: T('Suave (<20%)') },
-  { max: 30, key: 'easy', label: T('Moderada (20-30%)') },
-  { max: 45, key: 'intermediate', label: T('Pronunciada (30-45%)') },
-  { max: Infinity, key: 'advanced', label: T('Muy pronunciada (>45%)') }
+  { max: 15, key: 'novice', label: T('Suave (<15%)') },
+  { max: 25, key: 'easy', label: T('Moderada (15-25%)') },
+  { max: 40, key: 'intermediate', label: T('Pronunciada (25-40%)') },
+  { max: Infinity, key: 'advanced', label: T('Muy pronunciada (>40%)') }
 ];
-// The same smoothing everywhere (chart, map, 3D, badges, pages, guides).
-var SLOPE_WINDOW_M = 60;
+// The same smoothing everywhere (chart, map, 3D, badges, pages, guides):
+// short, so a short wall still shows (the elevation model is ~30 m anyway),
+// after the median has taken out single-point spikes.
+var SLOPE_WINDOW_M = 30;
 // A stretch steeper than this is a mapping or elevation error (the
 // steepest groomed pistes in the world stay under ~80%), not a real pitch.
 var MAX_REAL_PITCH = 90;
-// The "máx." of a run: its steepest stretch of at least this long (was 50 m
-// until 7 October: short pitches made blue runs read as black).
-var STEEPEST_M = 100;
+// The "máx." of a run: its steepest stretch of at least this long (100 m for a
+// day: it hid short walls a beginner most needs to know about).
+var STEEPEST_M = 50;
+// Degrees picture better than %: "60%" means nothing to most, "31°" does.
+function pitchDeg(pct) { return Math.round(Math.atan(Math.abs(pct) / 100) * 180 / Math.PI); }
 function pitchZoneFor(pct) {
   var p = Math.abs(pct);
   for (var i = 0; i < PITCH_ZONES.length; i++) if (p < PITCH_ZONES[i].max) return PITCH_ZONES[i];
@@ -164,24 +169,26 @@ function pickDistanceStep(totalDist) {
 // steepest pair of adjacent smoothed points) keeps the reported stretch
 // long enough to describe meaningfully instead of a near-zero-length spike.
 function findSteepestSection(smoothed, windowM) {
-  var best = null;
-  for (var i = 0; i < smoothed.length; i++) {
+  var best = null, n = smoothed.length;
+  if (n < 2) return null;
+  // A run shorter than the window: the whole run is the stretch.
+  var win = Math.min(windowM, smoothed[n - 1].dist - smoothed[0].dist);
+  if (win <= 0) return null;
+  for (var i = 0, j = 0; i < n; i++) {
     var startP = smoothed[i];
-    var j = i;
-    while (j < smoothed.length - 1 && smoothed[j + 1].dist - startP.dist < windowM) j++;
-    // Sparse points (few samples over a segment) can mean the very next
-    // point already exceeds windowM -- fall back to it rather than
-    // skipping this starting point entirely, since that's the finest
-    // resolution the data actually offers here.
-    if (j === i) j = Math.min(i + 1, smoothed.length - 1);
-    if (j === i) continue;
-    var endP = smoothed[j];
-    var d = endP.dist - startP.dist;
-    if (d <= 0) continue;
-    var pitchPct = ((startP.ele - endP.ele) / d) * 100;
+    // Always measured over exactly win metres (the end interpolated between
+    // the points around it): two nodes a couple of metres apart would
+    // otherwise make a 1 m step read as a 60% wall.
+    if (j < i) j = i;
+    while (j < n && smoothed[j].dist - startP.dist < win - 1e-6) j++;
+    if (j >= n) break;
+    var a = smoothed[j - 1], b = smoothed[j], endD = startP.dist + win;
+    var t = b.dist > a.dist ? (endD - a.dist) / (b.dist - a.dist) : 1;
+    var endEle = a.ele + (b.ele - a.ele) * Math.min(1, Math.max(0, t));
+    var pitchPct = ((startP.ele - endEle) / win) * 100;
     if (Math.abs(pitchPct) > MAX_REAL_PITCH) continue;   // a data error, not a pitch
     if (!best || Math.abs(pitchPct) > Math.abs(best.pitchPct)) {
-      best = { pitchPct: pitchPct, startDist: startP.dist, endDist: endP.dist };
+      best = { pitchPct: pitchPct, startDist: startP.dist, endDist: endD };
     }
   }
   return best;
@@ -205,11 +212,11 @@ function runMaxPitch(geomParts) {
 function maxPitchBadge(pct) {
   var span = document.createElement('span');
   span.className = 'max-pitch';
-  span.title = T('Pendiente máxima: el tramo más empinado de al menos 100 m');
+  span.title = T('Pendiente máxima: el tramo más empinado de al menos 50 m');
   var dot = document.createElement('i');
   dot.style.background = 'var(--diff-' + pitchZoneFor(pct).key + ')';
   span.appendChild(dot);
-  span.appendChild(document.createTextNode(T('máx. {0}%', Math.round(pct))));
+  span.appendChild(document.createTextNode(T('máx. {0}%', Math.round(pct)) + ' · ' + pitchDeg(pct) + '°'));
   return span;
 }
 
@@ -329,7 +336,7 @@ function buildProfileChart(raw) {
   var ariaLabel = T('Perfil de altitud de la pista, de {0} a {1} metros a lo largo de {2} metros.', Math.round(smoothed[0].ele), Math.round(smoothed[smoothed.length - 1].ele), Math.round(totalDist));
   if (steepest) {
     var ariaRange = fmtDistRange(steepest.startDist, steepest.endDist);
-    ariaLabel += ' ' + T('Tramo más pronunciado: {0}% de pendiente, entre {1} y {2}.', Math.round(Math.abs(steepest.pitchPct)), ariaRange.start, ariaRange.end);
+    ariaLabel += ' ' + T('Tramo más pronunciado: {0}% ({1}°) de pendiente, entre {2} y {3}.', Math.round(Math.abs(steepest.pitchPct)), pitchDeg(steepest.pitchPct), ariaRange.start, ariaRange.end);
   }
   svg.setAttribute('aria-label', ariaLabel);
 
@@ -375,7 +382,7 @@ function addProfileScrubber(svg, raw, smoothed, totalDist, W, padL, padR, padT, 
     line.setAttribute('x1', px); line.setAttribute('x2', px);
     dot.setAttribute('cx', px); dot.setAttribute('cy', py); dot.setAttribute('fill', color);
     tDist.textContent = fmtDist(d) + ' · ' + Math.round(ele) + ' m · ';
-    tPct.textContent = Math.round(pct) + '%';
+    tPct.textContent = Math.round(pct) + '% · ' + pitchDeg(pct) + '°';
     tPct.setAttribute('fill', color);
     g.setAttribute('display', '');
     var w = text.getComputedTextLength ? text.getComputedTextLength() + 12 : 110;
@@ -420,7 +427,7 @@ function renderRunProfile(container, group) {
       var steepestNote = document.createElement('div');
       steepestNote.className = 'run-profile-steepest';
       var noteRange = fmtDistRange(chart.steepest.startDist, chart.steepest.endDist);
-      steepestNote.textContent = T('Tramo más pronunciado: {0}% de pendiente, entre {1} y {2}.', Math.round(Math.abs(chart.steepest.pitchPct)), noteRange.start, noteRange.end);
+      steepestNote.textContent = T('Tramo más pronunciado: {0}% ({1}°) de pendiente, entre {2} y {3}.', Math.round(Math.abs(chart.steepest.pitchPct)), pitchDeg(chart.steepest.pitchPct), noteRange.start, noteRange.end);
       container.appendChild(steepestNote);
     }
   });
@@ -434,8 +441,13 @@ function renderRunProfile(container, group) {
   });
   var note = document.createElement('div');
   note.style.marginTop = '4px';
-  note.textContent = T('El color indica la inclinación real en cada punto del perfil, no la dificultad oficial de la pista.');
+  note.textContent = T('El color indica la inclinación real en cada punto del perfil, no la dificultad oficial de la pista.') + ' '
+    + T('Colores según los criterios de ATUDEM (España) y AFNOR (Francia).');
   caption.appendChild(note);
+  var precision = document.createElement('div');
+  precision.style.marginTop = '2px';
+  precision.textContent = T('Las alturas tienen una precisión de unos 30 m: puede haber resaltes cortos que no aparezcan.');
+  caption.appendChild(precision);
   var tip = document.createElement('div');
   tip.style.marginTop = '2px';
   tip.textContent = T('Desliza por el perfil para ver la distancia desde la salida, la altitud y la pendiente de cada punto.');

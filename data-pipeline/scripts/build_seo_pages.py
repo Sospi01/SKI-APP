@@ -214,9 +214,9 @@ def haversine_km(a: tuple, b: tuple) -> float:
     return 2 * 6371 * math.asin(math.sqrt(h))
 
 
-SLOPE_WINDOW_M = 60     # as profile.js
+SLOPE_WINDOW_M = 30     # as profile.js
 MAX_REAL_PITCH = 90     # a stretch steeper than this is a data error
-STEEPEST_M = 100        # the "máx.": steepest stretch at least this long (as profile.js)
+STEEPEST_M = 50         # the "máx.": steepest stretch at least this long (as profile.js)
 
 
 def smoothed_elevations(prof: list) -> list:
@@ -287,18 +287,21 @@ def run_max_pitch(parts) -> float | None:
             continue
         n = len(prof)
         sm = list(zip((d for d, _ in prof), smoothed_elevations(prof)))
+        win = min(STEEPEST_M, sm[-1][0] - sm[0][0])
+        if win <= 0:
+            continue
+        j = 0
         for i in range(n):
-            j = i
-            while j < n - 1 and sm[j + 1][0] - sm[i][0] < STEEPEST_M:
+            # Exactly win metres, the end interpolated (as findSteepestSection).
+            j = max(j, i)
+            while j < n and sm[j][0] - sm[i][0] < win - 1e-6:
                 j += 1
-            if j == i:
-                j = min(i + 1, n - 1)
-            if j == i:
-                continue
-            dd = sm[j][0] - sm[i][0]
-            if dd <= 0:
-                continue
-            pct = abs(sm[i][1] - sm[j][1]) / dd * 100
+            if j >= n:
+                break
+            (da, ea), (db, eb) = sm[j - 1], sm[j]
+            t = (sm[i][0] + win - da) / (db - da) if db > da else 1
+            end_ele = ea + (eb - ea) * min(1, max(0, t))
+            pct = abs(sm[i][1] - end_ele) / win * 100
             if pct > MAX_REAL_PITCH:
                 continue
             if best is None or pct > best:
@@ -308,9 +311,11 @@ def run_max_pitch(parts) -> float | None:
 
 def max_pitch_badge(pct: float, tx: dict, f) -> str:
     """"máx. 38%" with a dot in that slope's colour (profile.js's pitch zones)."""
-    zone = "novice" if pct < 20 else "easy" if pct < 30 else "intermediate" if pct < 45 else "advanced"   # as PITCH_ZONES
+    # ATUDEM / AFNOR, as PITCH_ZONES; with the angle, which pictures better than % ("31°").
+    zone = "novice" if pct < 15 else "easy" if pct < 25 else "intermediate" if pct < 40 else "advanced"
+    deg = round(math.degrees(math.atan(abs(pct) / 100)))
     return (f'<span class="max-pitch" title="{html.escape(tx["max_grad_title"])}">'
-            f'<i style="background:var(--diff-{zone})"></i>{html.escape(tx["max_grad"].format(f(round(pct))))}</span>')
+            f'<i style="background:var(--diff-{zone})"></i>{html.escape(tx["max_grad"].format(f(round(pct))))} · {deg}°</span>')
 
 
 def base_location(raw: dict):
@@ -382,7 +387,7 @@ TX = {
                    "en el mapa interactivo las verás sobre imagen de satélite.",
         "intro_h2": "{0}: mapa de pistas y datos", "terrain": "Terreno por dificultad", "lifts_by_type": "Remontes por tipo",
         "other": "Otro", "vert_m": "desnivel {0} m", "avg_grad": "pend. media {0}%", "alt_range": "{0}–{1} m alt.",
-        "max_grad": "máx. {0}%", "max_grad_title": "Pendiente máxima: el tramo más empinado de al menos 100 m",
+        "max_grad": "máx. {0}%", "max_grad_title": "Pendiente máxima: el tramo más empinado de al menos 50 m",
         "sections": "{0} tramos", "floodlit": "Nocturna", "glades": "Arbolada", "all_f": "Todas", "unclassified": "Sin clasif.",
         "pph": "{0} p/h", "seats": "{0} plazas", "ride": "{0} de trayecto", "unnamed": "Sin nombre",
         "detachable": "Desembragable", "bubble": "Burbuja", "heated": "Calefactado", "private": "Privado", "all_m": "Todos",
@@ -436,7 +441,7 @@ TX = {
                    "the interactive map shows them on satellite imagery.",
         "intro_h2": "{0}: piste map and stats", "terrain": "Terrain by difficulty", "lifts_by_type": "Lifts by type",
         "other": "Other", "vert_m": "{0} m vertical", "avg_grad": "avg. gradient {0}%", "alt_range": "{0}–{1} m altitude",
-        "max_grad": "max {0}%", "max_grad_title": "Max slope: the steepest stretch of at least 100 m",
+        "max_grad": "max {0}%", "max_grad_title": "Max slope: the steepest stretch of at least 50 m",
         "sections": "{0} sections", "floodlit": "Floodlit", "glades": "Tree skiing", "all_f": "All", "unclassified": "Unclassified",
         "pph": "{0} p/h", "seats": "{0} seats", "ride": "{0} ride", "unnamed": "Unnamed",
         "detachable": "Detachable", "bubble": "Bubble", "heated": "Heated seats", "private": "Private", "all_m": "All",

@@ -439,6 +439,9 @@ window.SKI_I18N = {
   "Suave (<20%)": "Douce (<20 %)",
   "Moderada (20-30%)": "Modérée (20-30 %)",
   "Pronunciada (30-45%)": "Raide (30-45 %)",
-  "Muy pronunciada (>45%)": "Très raide (>45 %)"
+  "Muy pronunciada (>45%)": "Très raide (>45 %)",
+  "Tramo más pronunciado: {0}% ({1}°) de pendiente, entre {2} y {3}.": "Tronçon le plus raide : {0} % ({1}°) de pente, entre {2} et {3}.",
+  "Colores según los criterios de ATUDEM (España) y AFNOR (Francia).": "Couleurs selon les critères officiels de l'ATUDEM (Espagne) et de l'AFNOR (France).",
+  "Las alturas tienen una precisión de unos 30 m: puede haber resaltes cortos que no aparezcan.": "Les altitudes ont une précision d'environ 30 m : de courts ressauts peuvent ne pas apparaître."
  }
 };

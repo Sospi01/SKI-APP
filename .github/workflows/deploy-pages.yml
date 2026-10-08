@@ -14,6 +14,7 @@ on:
       - data-pipeline/scripts/page_texts.py
       - data-pipeline/fonts/**
       - data-pipeline/station_slugs.json
+      - data-pipeline/scripts/indexnow.py
       - .github/workflows/deploy-pages.yml
   # Daily rebuild so the snow forecast (home ranking + station pages) stays fresh.
   schedule:
@@ -73,3 +74,15 @@ jobs:
 
       - id: deployment
         uses: actions/deploy-pages@v4
+
+      # Tell Bing & co. (IndexNow) which pages changed. The page hashes of the
+      # last deploy come back from the cache (a new cache entry each run, the
+      # latest restored by prefix). Never fails the deploy.
+      - uses: actions/cache@v4
+        with:
+          path: .indexnow
+          key: indexnow-${{ github.run_id }}
+          restore-keys: indexnow-
+      - name: Notify search engines of changed pages (IndexNow)
+        continue-on-error: true
+        run: python3 data-pipeline/scripts/indexnow.py

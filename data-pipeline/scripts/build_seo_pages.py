@@ -482,6 +482,25 @@ TX = {
     },
 }
 TX.update(MORE_TX)
+# Plain sentences an answer engine can quote ("the steepest run of X is..."),
+# with the same figures as the badges: (several, one, longest, "and", item).
+for _l, (_many, _one, _long, _and) in {
+    "es": ("Sus pistas más empinadas (tramo de 50 m con más pendiente) son {0}.",
+           "Su pista más empinada (tramo de 50 m con más pendiente) es {0}.", "La pista más larga es {0} ({1} km).", "y"),
+    "en": ("Its steepest runs (steepest 50 m stretch) are {0}.",
+           "Its steepest run (steepest 50 m stretch) is {0}.", "The longest run is {0} ({1} km).", "and"),
+    "fr": ("Ses pistes les plus raides (tronçon de 50 m le plus pentu) sont {0}.",
+           "Sa piste la plus raide (tronçon de 50 m le plus pentu) est {0}.", "La piste la plus longue est {0} ({1} km).", "et"),
+    "de": ("Die steilsten Pisten (steilster 50-m-Abschnitt) sind {0}.",
+           "Die steilste Piste (steilster 50-m-Abschnitt) ist {0}.", "Die längste Piste ist {0} ({1} km).", "und"),
+    "it": ("Le piste più ripide (tratto di 50 m più ripido) sono {0}.",
+           "La pista più ripida (tratto di 50 m più ripido) è {0}.", "La pista più lunga è {0} ({1} km).", "e"),
+    "nl": ("De steilste pistes (steilste stuk van 50 m) zijn {0}.",
+           "De steilste piste (steilste stuk van 50 m) is {0}.", "De langste piste is {0} ({1} km).", "en"),
+    "pl": ("Najbardziej strome trasy (najbardziej stromy odcinek 50 m): {0}.",
+           "Najbardziej stroma trasa (najbardziej stromy odcinek 50 m): {0}.", "Najdłuższa trasa: {0} ({1} km).", "i"),
+}.items():
+    TX[_l].update(intro_steep=_many, intro_steep_one=_one, intro_long=_long, and_word=_and)
 
 
 def load_i18n(docs: Path, lang: str = "en") -> dict:
@@ -716,6 +735,22 @@ def station_page(raw: dict, meta: dict, ctx: dict, lang: str = "es") -> tuple[st
                                           tx["intro_2_lifts"].format(len(lifts)) if lifts else ""))
     if lo is not None and hi is not None:
         intro.append(tx["intro_3"].format(f(round(lo)), f(round(hi)), f(round(hi - lo))))
+    for g in run_groups:
+        g["max_pitch"] = run_max_pitch(g["parts"])
+    # Pisted runs only, and nothing above 60%: steeper than that on a piste is
+    # more often the ~30 m relief catching a cliff beside it than the run, and
+    # a sentence gets quoted as fact (the badges still show every figure).
+    steep = sorted((g for g in run_groups if g["max_pitch"] is not None and g["max_pitch"] <= 60
+                    and diff_key(g["difficulty"]) not in ("freeride", "extreme")),
+                   key=lambda g: -g["max_pitch"])[:3]
+    if steep:
+        items = [f'{e(g["name"])} ({f(round(g["max_pitch"]))}%, {round(math.degrees(math.atan(g["max_pitch"] / 100)))}°)'
+                 for g in steep]
+        joined = items[0] if len(items) == 1 else ", ".join(items[:-1]) + f' {tx["and_word"]} ' + items[-1]
+        intro.append((tx["intro_steep"] if len(items) > 1 else tx["intro_steep_one"]).format(joined))
+    longest = max(run_groups, key=lambda g: g["length_m"], default=None)
+    if longest and longest["length_m"] >= 300:
+        intro.append(tx["intro_long"].format(e(longest["name"]), f(longest["length_m"] / 1000, 1)))
     intro.append(e(tx["intro_4"]))
     intro_html = (f'<section><div class="section-head"><h2>{e(tx["intro_h2"].format(short))}</h2></div>'
                   f'<p class="intro">{" ".join(intro)}</p></section>')

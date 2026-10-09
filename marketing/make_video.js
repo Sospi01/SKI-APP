@@ -46,10 +46,12 @@ const OVERLAY_CSS = `
   #o .title { white-space: pre-line; font-size: 50px; font-weight: 700; line-height: 1.0; text-transform: uppercase; letter-spacing: 0.5px; text-shadow: 0 3px 14px rgba(0,0,0,0.7); }
   #o .hint { display: inline-block; margin-top: 16px; font-size: 27px; font-weight: 700; padding: 6px 16px; border-radius: 999px;
     background: rgba(255,255,255,0.18); border: 1.5px solid rgba(255,255,255,0.55); text-shadow: 0 2px 8px rgba(0,0,0,0.6); }
-  #o .bottom { position: absolute; left: 0; right: 0; bottom: 0; padding: 70px 28px 150px; text-align: center;
-    background: linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0.6)); }
+  /* Well above TikTok's caption, username and comment bar, which cover
+     about the bottom quarter (the user saw the call to comment hidden). */
+  #o .bottom { position: absolute; left: 0; right: 0; bottom: 0; padding: 70px 28px 300px; text-align: center;
+    background: linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0.45) 60%, rgba(0,0,0,0)); }
   #o .cta { font-size: 34px; font-weight: 700; text-shadow: 0 3px 12px rgba(0,0,0,0.7); }
-  #o .credit { position: absolute; left: 0; right: 0; bottom: 118px; text-align: center; font-family: 'IBM Plex Sans', sans-serif;
+  #o .credit { position: absolute; left: 0; right: 0; bottom: 268px; text-align: center; font-family: 'IBM Plex Sans', sans-serif;
     font-size: 10.5px; opacity: 0.75; }`;
 const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
 

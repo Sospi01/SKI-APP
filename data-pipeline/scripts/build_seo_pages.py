@@ -411,7 +411,7 @@ TX = {
         "snow_sum": "Previsión de nieve para los próximos 7 días{0}: {1}{2}", "snow_cm": "{0} cm",
         "snow_none": "sin nevadas significativas", "snow_when": " (actualizada el {0}).",
         "snow_generic": "Previsión de nieve y tiempo para los próximos 7 días en {0}{1}.",
-        "title": "{0}: mapa de pistas, previsión de nieve y remontes | Ski Info",
+        "title": "{0}: mapa de pistas y remontes, pendientes y nieve | Ski Info",
         "d_km": "{0} km de pistas", "d_runs": "{0} pistas", "d_lifts": "{0} remontes", "d_alt": "Altitud {0}–{1} m. ",
         "d_tail": "Previsión de nieve a 7 días, mapa de pistas interactivo sobre satélite y pendiente real de cada pista.",
         # country pages
@@ -465,7 +465,9 @@ TX = {
         "snow_sum": "Snow forecast for the next 7 days{0}: {1}{2}", "snow_cm": "{0} cm",
         "snow_none": "no significant snowfall", "snow_when": " (updated {0}).",
         "snow_generic": "Snow and weather forecast for the next 7 days at {0}{1}.",
-        "title": "{0} piste map, snow forecast and lifts | Ski Info",
+        "title": "{0} piste & lift map, slopes and snow forecast | Ski Info",
+        # In the US and Canada a piste map is a "trail map".
+        "title_na": "{0} trail & lift map, slopes and snow forecast | Ski Info",
         "d_km": "{0} km of pistes", "d_runs": "{0} runs", "d_lifts": "{0} lifts", "d_alt": "Altitude {0}–{1} m. ",
         "d_tail": "7-day snow forecast, interactive trail map on satellite imagery and the real gradient of every run.",
         "c_eyebrow": "Countries", "c_h1": "Ski resorts in {0}",
@@ -950,7 +952,8 @@ def station_page(raw: dict, meta: dict, ctx: dict, lang: str = "es") -> tuple[st
 </aside>
 </div>"""
 
-    title = tx["title"].format(short)
+    # The words people search with ("lift map", "trail map", "Liftplan"); North America says "trail".
+    title = tx.get("title_na" if convention == "north_america" else "title", tx["title"]).format(short)
     desc_bits = []
     if total_m:
         desc_bits.append(tx["d_km"].format(f(round(total_m / 1000))))

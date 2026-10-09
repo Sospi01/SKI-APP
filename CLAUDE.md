@@ -254,7 +254,7 @@ cd data-pipeline && python3 -m pytest -q                       # si tocas el pip
 2. Post en r/SideProject hacia el 1–2 de octubre, enlazando **directamente al mapa de una estación** con `?ref=reddit-sideproject`. Después, Nevasport, con 2–3 días entre publicaciones.
 3. Search Console: seguir con las indexaciones y comprobar que el sitemap se ha leído con ~6.700 URLs.
 4. Play Console, si no lo ha hecho: ficha en inglés, ficha en español actualizada (aún decía 280 estaciones) y formulario de **Seguridad de los datos** (la app recoge estadísticas anónimas).
-5. Acceso a producción en Google Play: solicitado el 7 de octubre; esperar la aprobación (el usuario avisa).
+5. Acceso a producción en Google Play: **rechazado el 9 de octubre** ("More testing required": testers poco activos y sin actualizaciones por sus opiniones). Otros 14 días de prueba cerrada (hasta el 23): subir la 1.0.6 a la prueba cerrada, que los 12+ testers la usen varias veces por semana y dejen opiniones, sacar la 1.0.7 a mitad de prueba y volver a solicitarlo el 24 con el formulario bien contestado.
 
 **De desarrollo, por prioridad:**
 (Comprobado el 8 de octubre: los despliegues programados y la actualización semanal del lunes 5 se ejecutan bien; GitHub los lanza con retraso, de 1 a 7 horas.)
@@ -275,7 +275,8 @@ cd data-pipeline && python3 -m pytest -q                       # si tocas el pip
    - avisos de nevada para las estaciones guardadas, empezando por la app.
 
 **Recordatorios programados** (quitar cuando se cumplan):
-- 14 oct, 9:30: ¿aprobado el acceso a producción? (lo solicitó el 7 de octubre). Si sí: versión de producción con el AAB 1.0.6 y enlace de Play en `/app`.
+- 16 oct, 9:30: Play: ¿subió la 1.0.6 a la prueba cerrada?, preparar la 1.0.7 (mejoras contables como respuesta a testers) y animar a los testers.
+- 24 oct, 9:30: Play: volver a solicitar el acceso a producción y contestar bien el formulario.
 - 11 oct, 9:00: que el usuario mande Search Console (Rendimiento 28 días con Consultas y Páginas; Indexación → Páginas) y `/stats`. Referencia del 4 oct: 15 clics, 3.130 impresiones, CTR 0,5 %, posición 41,3; 2.320 indexadas, 4.323 descubiertas sin indexar, 289 rastreadas sin indexar (sobre todo estaciones pequeñas de EE. UU. en fr/it/de/pl). Si las rastreadas sin indexar pasan de ~1.000, valorar `noindex` en fichas pequeñas en idiomas que no les tocan.
 - 11 oct, 10:30: cómo van los vídeos de TikTok (Formigal, jueves 8: el viernes seguía con 4 visitas sin entrar en "Para ti"; Baqueira, viernes 9, ya con la plantilla nueva). Si no arrancan: promoción de 5 € (el mínimo) en el que mejor vaya o cambiar el gancho. Siguiente: Sierra Nevada el martes 13.
 - Lunes y jueves, 9:47: repaso de tareas pendientes (Routine).

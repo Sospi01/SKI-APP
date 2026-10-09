@@ -48,6 +48,7 @@ const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 (async () => {
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium' });
   const page = await (await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 2 })).newPage();
+  if (process.env.DEBUG) { page.on('request', r => console.log('req', r.url())); page.on('requestfailed', r => console.log('FAIL', r.url(), r.failure().errorText)); page.on('requestfinished', r => console.log('ok', r.url())); }
   const fonts = fs.readFileSync(path.join(__dirname, '..', 'docs', 'index.html'), 'utf8').match(/@font-face[^}]*}/g).join('\n')
     .replace(/font-display: optional/g, 'font-display: block');
   async function png(file, inner) {

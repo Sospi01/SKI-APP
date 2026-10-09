@@ -61,7 +61,7 @@ const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
     await page.route(BASE + '/__variant', r => r.fulfill({ body: html, contentType: 'text/html' }));
     await page.goto(BASE + '/__variant');
     await page.unroute(BASE + '/__variant');
-    await page.evaluate(() => document.fonts.ready);
+    await page.evaluate(() => Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 5000))]));
     await page.waitForTimeout(150);
     await page.screenshot({ path: path.join(work, file), omitBackground: true });
   }

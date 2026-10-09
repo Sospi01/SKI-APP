@@ -56,7 +56,7 @@ const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
     await page.route(BASE + '/__quiz', r => r.fulfill({ body: html, contentType: 'text/html' }));
     await page.goto(BASE + '/__quiz');
     await page.unroute(BASE + '/__quiz');
-    await page.evaluate(() => document.fonts.ready);
+    await page.evaluate(() => Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 5000))]));
     await page.screenshot({ path: path.join(work, file), omitBackground: true });
   }
   const bottom = `<div class="bottom"><div class="cta">${esc(CTA)}</div>${SITE ? `<div class="site">${esc(SITE)}</div>` : ''}</div>

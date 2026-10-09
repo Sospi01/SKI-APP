@@ -276,7 +276,7 @@ cd data-pipeline && python3 -m pytest -q                       # si tocas el pip
 **Recordatorios programados** (quitar cuando se cumplan):
 - 14 oct, 9:30: ¿aprobado el acceso a producción? (lo solicitó el 7 de octubre). Si sí: versión de producción con el AAB 1.0.6 y enlace de Play en `/app`.
 - 11 oct, 9:00: que el usuario mande Search Console (Rendimiento 28 días con Consultas y Páginas; Indexación → Páginas) y `/stats`. Referencia del 4 oct: 15 clics, 3.130 impresiones, CTR 0,5 %, posición 41,3; 2.320 indexadas, 4.323 descubiertas sin indexar, 289 rastreadas sin indexar (sobre todo estaciones pequeñas de EE. UU. en fr/it/de/pl). Si las rastreadas sin indexar pasan de ~1.000, valorar `noindex` en fichas pequeñas en idiomas que no les tocan.
-- 11 oct, 10:30: segundo vídeo de TikTok (Sierra Nevada); preguntar cómo fue el de Formigal.
+- 11 oct, 10:30: cómo van los vídeos de TikTok (Formigal, jueves 8: el viernes seguía con 4 visitas sin entrar en "Para ti"; Sierra Nevada, publicado el viernes 9 en vez del domingo). Si no arrancan: promoción de 5 € (el mínimo) en el que mejor vaya o cambiar el gancho. Próximo, Baqueira el martes 13.
 - Lunes y jueves, 9:47: repaso de tareas pendientes (Routine).
 
 **Previsión que se le dio al usuario** (usuarios al día, sin contar picos; escenario medio): octubre 15–40, noviembre 40–120 y diciembre–febrero 150–400.

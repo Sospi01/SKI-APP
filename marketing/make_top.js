@@ -60,10 +60,18 @@ function runGeom(r) {
   const rad = Math.PI / 180;
   const y = Math.sin((hi[0] - lo[0]) * rad) * Math.cos(hi[1] * rad);
   const x = Math.cos(lo[1] * rad) * Math.sin(hi[1] * rad) - Math.sin(lo[1] * rad) * Math.cos(hi[1] * rad) * Math.cos((hi[0] - lo[0]) * rad);
+  // The run's main direction (principal axis, in metres) and the bearing that
+  // sees it from the side, on the side closer to looking uphill.
+  const mx = pts.reduce((t, p) => t + p[0], 0) / pts.length, my = pts.reduce((t, p) => t + p[1], 0) / pts.length, kx = Math.cos(my * rad);
+  let sxx = 0, syy = 0, sxy = 0;
+  pts.forEach(p => { const dx = (p[0] - mx) * kx, dy = p[1] - my; sxx += dx * dx; syy += dy * dy; sxy += dx * dy; });
+  const axis = (90 - Math.atan2(2 * sxy, sxx - syy) / 2 / rad + 360) % 360;   // compass bearing of the axis
+  const up = (Math.atan2(y, x) / rad + 360) % 360, diff = b => Math.abs(((b - up) % 360 + 540) % 360 - 180);
+  const side = [axis + 90, axis - 90].map(b => (b + 360) % 360).sort((a, b) => diff(a) - diff(b))[0];
   let len = 0, vert = 0;
   raw.runs.forEach(x => { if (x.name === r.run && (!x.uses || x.uses.split(',').includes('downhill'))) { len += x.length_m || 0; vert += x.vertical_m || 0; } });
   return {
-    avg: len ? vert / len * 100 : null, len, vert, parts, bearing: (Math.atan2(y, x) / rad + 360) % 360,
+    avg: len ? vert / len * 100 : null, len, vert, side, parts, bearing: (Math.atan2(y, x) / rad + 360) % 360,
     bbox: [[Math.min(...pts.map(p => p[0])), Math.min(...pts.map(p => p[1]))], [Math.max(...pts.map(p => p[0])), Math.max(...pts.map(p => p[1]))]],
   };
 }
@@ -108,6 +116,7 @@ async function draw3d(browser) {
     await page.waitForTimeout(1500);
     await page.click('#map-3d-btn');
     await page.waitForFunction(() => window.__m3d && window.__m3d.map && window.__m3d.map.isStyleLoaded() && window.__m3d.map.getSource('runs'), null, { timeout: 120000 });
+    await page.evaluate(p => { window.__pitch = p; }, PITCH);
     await page.addStyleTag({ content: `
       body * { visibility: hidden !important; }
       #map-3d, #map-3d * { visibility: visible !important; }
@@ -135,7 +144,7 @@ async function draw3d(browser) {
         paint: { 'line-color': ['get', 'color'], 'line-width': 6.5 } }, 'labels');
       ['slope', 'run-halo', 'lift', 'lift-casing'].forEach(id => m.setPaintProperty(id, 'line-opacity', 0.45));
       m.setPaintProperty('labels', 'icon-opacity', 0.6);
-      m.fitBounds(bbox, { padding: { top: 270, bottom: 330, left: 50, right: 50 }, bearing, pitch: PITCH, maxZoom: 16.2, duration: 0 });
+      m.fitBounds(bbox, { padding: { top: 270, bottom: 330, left: 50, right: 50 }, bearing, pitch: window.__pitch, maxZoom: 16.2, duration: 0 });
       const c = m.getCenter();
       return { fis: fis.length, center: [c.lng, c.lat], zoom: m.getZoom() };
     }, { coords: g.parts.flat().map(p => p[0].toFixed(6) + ',' + p[1].toFixed(6)), bbox: g.bbox, bearing: g.bearing });
@@ -149,23 +158,55 @@ async function draw3d(browser) {
     // small and off to one side): fit the run's own points, on the relief,
     // into the free part of the screen between the texts and the card.
     await idle(15000); await idle(4000);
-    Object.assign(cam, await page.evaluate(({ pts, bearing, box }) => {
-      const m = window.__m3d.map, cw = m.getCanvas().clientWidth, ch = m.getCanvas().clientHeight;
-      let c = m.getCenter(), z = m.getZoom();
-      for (let k = 0; k < 10; k++) {
-        m.jumpTo({ center: c, zoom: z, bearing, pitch: PITCH });
+    // Long runs are seen from the side (g.side): looking up them, a 6 km run
+    // came out tiny, end-on.
+    Object.assign(cam, await page.evaluate(({ pts, bearings, box }) => {
+      // Start from the run's middle, at the zoom where its length spans the box
+      // (fitBounds' start, from the whole bounds tilted, left long runs over the horizon).
+      const m = window.__m3d.map, R = 6371000, rad = Math.PI / 180;
+      const lon = pts.reduce((t, p) => t + p[0], 0) / pts.length, lat = pts.reduce((t, p) => t + p[1], 0) / pts.length;
+      const ext = Math.max(...pts.map(p => Math.hypot((p[0] - lon) * rad * R * Math.cos(lat * rad), (p[1] - lat) * rad * R))) * 2;
+      const c0 = { lng: lon, lat }, z0 = Math.min(16.2, Math.log2(40075016 * Math.cos(lat * rad) / 512 / (ext / (box[2] - box[0]))));
+      const onScreen = () => {
         const ps = pts.map(p => m.project([p[0], p[1]]));
-        const x0 = Math.min(...ps.map(p => p.x)), x1 = Math.max(...ps.map(p => p.x)), y0 = Math.min(...ps.map(p => p.y)), y1 = Math.max(...ps.map(p => p.y));
-        const sc = Math.min((box[2] - box[0]) / Math.max(1, x1 - x0), (box[3] - box[1]) / Math.max(1, y1 - y0));
-        const nc = m.unproject([cw / 2 + (x0 + x1) / 2 - (box[0] + box[2]) / 2, ch / 2 + (y0 + y1) / 2 - (box[1] + box[3]) / 2]);
-        c = nc; z = Math.min(16.2, z + Math.max(-1, Math.min(1, Math.log2(sc) * 0.8)));
+        return [Math.min(...ps.map(p => p.x)), Math.min(...ps.map(p => p.y)), Math.max(...ps.map(p => p.x)), Math.max(...ps.map(p => p.y))];
+      };
+      const miss = b => Math.abs((b[0] + b[2]) / 2 - (box[0] + box[2]) / 2) + Math.abs((b[1] + b[3]) / 2 - (box[1] + box[3]) / 2)
+        + Math.max(0, box[0] - b[0]) + Math.max(0, b[2] - box[2]) + Math.max(0, box[1] - b[1]) + Math.max(0, b[3] - box[3]);
+      let best = null;
+      // Damped steps, gentler on each try: a full step sometimes overshot (the
+      // relief under the new centre isn't known until it's drawn).
+      for (const bearing of bearings) for (const gain of [1, 0.6, 0.35]) {
+        let c = c0, z = z0;
+        for (let k = 0; k < 16; k++) {
+          m.jumpTo({ center: c, zoom: z, bearing, pitch: window.__pitch });
+          m.redraw();   // the camera's height over the relief is only updated on a draw
+          const [x0, y0, x1, y1] = onScreen();
+          if (y0 < -2000) { z -= 0.5; continue; }   // part of it beyond the horizon: back off
+          const sc = Math.min((box[2] - box[0]) / Math.max(1, x1 - x0), (box[3] - box[1]) / Math.max(1, y1 - y0));
+          // Move the centre so the run's middle lands on the box's: how far a small
+          // step east and north moves the screen (unproject() reads the last
+          // frame's relief, which threw long runs off to one side).
+          const dx = gain * ((x0 + x1) / 2 - (box[0] + box[2]) / 2), dy = gain * ((y0 + y1) / 2 - (box[1] + box[3]) / 2);
+          const o = m.project(c), e = m.project([c.lng + 0.001, c.lat]), n = m.project([c.lng, c.lat + 0.001]);
+          const a11 = e.x - o.x, a12 = n.x - o.x, a21 = e.y - o.y, a22 = n.y - o.y, det = a11 * a22 - a12 * a21;
+          if (det) c = { lng: c.lng + 0.001 * (a22 * dx - a12 * dy) / det, lat: c.lat + 0.001 * (a11 * dy - a21 * dx) / det };
+          z = Math.max(z0 - 1.5, Math.min(16.2, z0 + 1.5, z + gain * Math.max(-1, Math.min(1, Math.log2(sc) * 0.8))));
+        }
+        m.jumpTo({ center: c, zoom: z, bearing, pitch: window.__pitch });
+        m.redraw();
+        const b = onScreen(), err = miss(b);
+        if (!best || err < best.err) best = { center: [c.lng, c.lat], zoom: z, bearing, err, box: b.map(Math.round) };
+        if (err < 40) break;
       }
-      m.jumpTo({ center: c, zoom: z, bearing, pitch: PITCH });
-      return { center: [c.lng, c.lat], zoom: z };
-    }, { pts: g.parts.flat().filter((_, i, a) => i % Math.ceil(a.length / 300) === 0).concat(g.parts.map(p => p[p.length - 1])), bearing: g.bearing, box: [60, 265, 480, 495] }));
-    console.log(`  fitted: zoom ${cam.zoom.toFixed(2)}`);
+      m.jumpTo({ center: best.center, zoom: best.zoom, bearing: best.bearing, pitch: window.__pitch });
+      return best;
+    }, { pts: g.parts.flat().filter((_, i, a) => i % Math.ceil(a.length / 300) === 0).concat(g.parts.map(p => p[p.length - 1])),
+         bearings: [SPEC.metric === 'len' ? g.side : g.bearing],
+         box: [60, 265, 480, 495] }));
+    console.log(`  fitted: zoom ${cam.zoom.toFixed(2)}, bearing ${Math.round(cam.bearing - g.bearing)}° from uphill, on screen ${cam.box}`);
     // A slow orbit (28°) while closing in a little, eased at both ends.
-    const view = t => { const e = (1 - Math.cos(Math.PI * t)) / 2; return { center: cam.center, zoom: cam.zoom - 0.2 + 0.2 * e, bearing: g.bearing - 14 + 28 * e, pitch: PITCH }; };
+    const view = t => { const e = (1 - Math.cos(Math.PI * t)) / 2; return { center: cam.center, zoom: cam.zoom - 0.2 + 0.2 * e, bearing: cam.bearing - 14 + 28 * e, pitch: PITCH }; };
     const total = Math.round(secondsOf(r) * FPS);
     for (let k = 0; k <= 4; k++) { await page.evaluate(v => window.__m3d.map.jumpTo(v), view(k / 4)); await idle(15000); await idle(4000); }
     if (PHASE === 'list' || PHASE === 'check') {   // a still to check the framing and the lit run

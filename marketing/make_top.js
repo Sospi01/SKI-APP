@@ -266,7 +266,7 @@ function cardScript() {
     document.getElementById('chart').innerHTML = `<svg viewBox="0 0 ${VW} ${VH}">${s}</svg>`;
     const pct = Math.round(Math.abs(st.pitchPct));
     document.getElementById('big').innerHTML = label ? `${label.big} <small>${label.small}</small>` : avg != null
-      ? `${Math.round(avg)}&#8202;% de media <small>${pitchDeg(avg)}° · máx. ${pct}&#8202;%</small>`
+      ? `${Math.round(avg)}&#8202;% de media <small>máx. ${pct}&#8202;%</small>`
       : `${pitchDeg(st.pitchPct)}° <small>máx. ${pct}&#8202;% de pendiente</small>`;
     return { pct, deg: pitchDeg(st.pitchPct), avg: avg != null ? `${Math.round(avg)} % (${pitchDeg(avg)}°) de media, ` : '' };
   };

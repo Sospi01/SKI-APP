@@ -1,0 +1,21 @@
+{
+  "name": "top-es-media",
+  "hook": "Las 5 pistas más\nempinadas de España 😳",
+  "title": "Las 5 pistas más empinadas de España",
+  "cta": "¿Cuál has bajado? Comenta 👇",
+  "metric": "avg",
+  "voice": "edge-es-ES-AlvaroNeural",
+  "intro": "Las cinco pistas más empinadas de España.",
+  "runs": [
+    { "station": "52c9c35a9f63939f43b957b39196aa77ec0013c7", "resort": "Boí Taüll", "run": "Vista Cerví",
+      "say": "Número cinco: Vista Cerví, en Boí Taüll." },
+    { "station": "b1929238d8b7cb7633b24fa6629b5bbf8ef48911", "resort": "Valdezcaray", "run": "Pala Fuerte",
+      "say": "Cuatro: Pala Fuerte, en Valdezcaray. Sí, en La Rioja." },
+    { "station": "03fcc0299c9030bf81bf077f9a94ee0b327040d9", "resort": "Masella", "run": "La Canal",
+      "say": "Tres: La Canal, en Masella." },
+    { "station": "acec7f838b66cfa338b12c9583387745cca11d86", "resort": "Vall de Núria", "run": "Pala Boja",
+      "say": "Dos: Pala Boja, en Vall de Núria." },
+    { "station": "125d02338620dc079d5d635595a099370161bf83", "resort": "Baqueira Beret", "run": "Pasarells",
+      "say": "Y la número uno: Pasarells, en Baqueira. Un cincuenta y uno por ciento de media. ¿Cuál has bajado tú?" }
+  ]
+}

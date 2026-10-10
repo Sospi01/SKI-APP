@@ -1,0 +1,71 @@
+name: Refresh station data (weekly)
+
+# Re-downloads OpenSkiMap every week and refreshes the runs, lifts and stats of
+# the stations already in the app (data-pipeline/scripts/refresh_stations.py),
+# so fixes made in OpenStreetMap reach Ski Info. It never adds or removes
+# stations, keeps a station as it was if its new data looks broken, and writes
+# nothing if too many do. Changes are committed to this branch and the site is
+# redeployed right away.
+
+on:
+  schedule:
+    - cron: '37 2 * * 1'   # Mondays, before the daily 04:17 rebuild
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Solo informe: calcula los cambios y no guarda nada"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write   # commit the refreshed data
+  actions: write    # start the deploy (a push made with GITHUB_TOKEN doesn't trigger workflows)
+
+concurrency:
+  group: refresh-stations
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install -r data-pipeline/requirements.txt
+
+      - name: Download OpenSkiMap data and build the database
+        working-directory: data-pipeline
+        run: python -m ski_pipeline.cli --db data/ski_info.db -v
+
+      - name: Refresh the stations in docs/data
+        run: python3 data-pipeline/scripts/refresh_stations.py --db data-pipeline/data/ski_info.db --report "$GITHUB_STEP_SUMMARY" ${{ inputs.dry_run && '--dry-run' || '' }}
+
+      - name: Which resorts the route planner is open for
+        if: ${{ !inputs.dry_run }}
+        run: node data-pipeline/scripts/build_routes_ok.js
+
+      - name: Commit and push
+        if: ${{ !inputs.dry_run }}
+        id: commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/data docs/stations.js docs/routes-ok.json
+          if git diff --cached --quiet; then
+            echo "No station changed this week."
+            exit 0
+          fi
+          git commit -m "Weekly station data refresh from OpenSkiMap"
+          git push
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy the site
+        if: steps.commit.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy-pages.yml --ref "$GITHUB_REF_NAME"

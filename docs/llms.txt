@@ -1,0 +1,31 @@
+# Ski Info
+
+> Free piste maps and run-by-run slope data for 1,400+ ski resorts in 45 countries (Alps, Pyrenees, North America, Scandinavia, Japan, Andes…), in 7 languages. Every run has its gradient profile (slope % and degrees stretch by stretch, and its steepest 50 m stretch), on an interactive satellite map with a 3D terrain view, plus lifts, on-mountain services and a 7-day snow forecast. Run and lift data come from OpenStreetMap (via OpenSkiMap, ODbL).
+
+What makes it different from official piste maps: the slope is measured from the terrain, so you can compare how steep runs really are, whatever their official colour. Slope colours follow the ATUDEM (Spain) / AFNOR (France) thresholds: under 15% gentle, 15–25% moderate, 25–40% steep, over 40% very steep. Elevations come from a ~30 m terrain model, so very short steps may not show.
+
+## Resort pages
+
+One page per resort and language with every named run (length, vertical, average and maximum slope), lifts, services and the snow forecast:
+
+- [Baqueira Beret (Spanish)](https://skiinfoapp.com/estacion/baqueira-beret/)
+- [Tignes - Val d'Isère (English)](https://skiinfoapp.com/en/resort/tignes-val-d-isere/)
+- [Val Thorens (French)](https://skiinfoapp.com/fr/station/val-thorens/)
+- [Zermatt - Breuil-Cervinia (German)](https://skiinfoapp.com/de/skigebiet/zermatt-breuil-cervinia/)
+- [All countries (English)](https://skiinfoapp.com/en/country/)
+- [Sitemap with every page](https://skiinfoapp.com/sitemap.xml)
+
+URL patterns: `/estacion/<slug>/` (es), `/en/resort/<slug>/`, `/fr/station/<slug>/`, `/de/skigebiet/<slug>/`, `/it/stazione/<slug>/`, `/nl/skigebied/<slug>/`, `/pl/osrodek/<slug>/`.
+
+## Interactive map
+
+- [Web app](https://skiinfoapp.com/en/): search a resort, open its map (2D satellite or 3D terrain), colour runs by difficulty or by real slope, tap a run for its profile, "Where am I" on the slopes, and a beta route planner ("route to here", with a level filter such as no black runs).
+
+## Guides
+
+Rankings built from the same data: steepest runs, biggest resorts, ski resorts near a city, where it will snow this week.
+
+- [Guides (English)](https://skiinfoapp.com/en/guides/)
+- [The hardest red runs in the Alps](https://skiinfoapp.com/en/guides/hardest-red-runs-in-the-alps/) and [the easiest black runs](https://skiinfoapp.com/en/guides/easiest-black-runs-in-the-alps/), by each run's steepest 50 m
+- [A FatMap alternative](https://skiinfoapp.com/en/guides/fatmap-alternative/): FatMap shut down on 1 October 2024; Ski Info offers free 3D ski maps with run slopes
+- [Guías (Spanish)](https://skiinfoapp.com/guias/)

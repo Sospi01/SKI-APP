@@ -1,0 +1,88 @@
+name: Deploy web app to GitHub Pages
+
+on:
+  push:
+    branches:
+      - claude/ski-stations-database-rhvohj
+    paths:
+      - docs/**
+      - data-pipeline/scripts/build_seo_pages.py
+      - data-pipeline/scripts/fetch_snow_forecast.py
+      - data-pipeline/scripts/build_share_images.py
+      - data-pipeline/scripts/build_guides.py
+      - data-pipeline/scripts/guide_texts.py
+      - data-pipeline/scripts/page_texts.py
+      - data-pipeline/fonts/**
+      - data-pipeline/station_slugs.json
+      - data-pipeline/scripts/indexnow.py
+      - .github/workflows/deploy-pages.yml
+  # Daily rebuild so the snow forecast (home ranking + station pages) stays fresh.
+  schedule:
+    - cron: '17 4 * * *'
+    # GitHub's schedules are best effort and a run can be skipped: a second
+    # daily rebuild keeps the forecast at most half a day old.
+    - cron: '7 11 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch 7-day snow forecast (Open-Meteo)
+        run: python3 data-pipeline/scripts/fetch_snow_forecast.py
+
+      - name: Generate per-station and per-country pages + sitemap
+        run: python3 data-pipeline/scripts/build_seo_pages.py --inject-home
+
+      # The share images only change when station data, slugs, fonts or the
+      # script do (~3 min to regenerate all), so reuse them across deploys.
+      - id: og-cache
+        uses: actions/cache@v4
+        with:
+          path: docs/og
+          key: og-v2-${{ hashFiles('docs/data/**', 'data-pipeline/station_slugs.json', 'data-pipeline/scripts/build_share_images.py', 'data-pipeline/fonts/**', 'docs/icons/icon-512.png', 'docs/i18n/en.js') }}
+
+      - uses: actions/setup-python@v5
+        if: steps.og-cache.outputs.cache-hit != 'true'
+        with:
+          python-version: '3.12'
+
+      - name: Social share preview images (Open Graph)
+        if: steps.og-cache.outputs.cache-hit != 'true'
+        run: |
+          python -m pip install --quiet pillow
+          python data-pipeline/scripts/build_share_images.py
+
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+      # Tell Bing & co. (IndexNow) which pages changed. The page hashes of the
+      # last deploy come back from the cache (a new cache entry each run, the
+      # latest restored by prefix). Never fails the deploy.
+      - uses: actions/cache@v4
+        with:
+          path: .indexnow
+          key: indexnow-${{ github.run_id }}
+          restore-keys: indexnow-
+      - name: Notify search engines of changed pages (IndexNow)
+        continue-on-error: true
+        run: python3 data-pipeline/scripts/indexnow.py

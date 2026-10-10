@@ -1,0 +1,250 @@
+name: Pipeline smoke test
+
+on:
+  push:
+    branches:
+      - claude/ski-stations-database-rhvohj
+    paths:
+      - .github/workflows/pipeline-smoke-test.yml
+  workflow_dispatch:
+    inputs:
+      ski_area_query:
+        description: "Ski area name to look up (SQL LIKE match) in the resulting database"
+        required: false
+        default: "Formigal"
+
+jobs:
+  build-and-query:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: data-pipeline
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install -r requirements.txt
+
+      - name: Download OpenSkiMap data and build the database
+        run: python -m ski_pipeline.cli --db data/ski_info.db -v
+
+      - name: Query ski area
+        env:
+          SKI_AREA_QUERY: ${{ inputs.ski_area_query || 'Formigal' }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import sqlite3
+
+          query = os.environ["SKI_AREA_QUERY"]
+          conn = sqlite3.connect("data/ski_info.db")
+          conn.row_factory = sqlite3.Row
+
+          def rows(sql, params=()):
+              return [dict(r) for r in conn.execute(sql, params).fetchall()]
+
+          def simplify_geometry(geometry_json):
+              """[[lon,lat], ...] per part, elevation dropped, 5 decimals (~1m)."""
+              if not geometry_json:
+                  return None
+              geom = json.loads(geometry_json)
+              gtype = geom.get("type")
+              coords = geom.get("coordinates")
+              if gtype == "LineString":
+                  parts = [coords]
+              elif gtype == "MultiLineString":
+                  parts = coords
+              elif gtype == "Polygon":
+                  parts = coords[:1]
+              else:
+                  return None
+              return [[[round(c[0], 5), round(c[1], 5)] for c in part] for part in parts]
+
+          areas = conn.execute(
+              "SELECT * FROM ski_areas WHERE name LIKE ?", (f"%{query}%",)
+          ).fetchall()
+
+          result = []
+          for area in areas:
+              area_dict = dict(area)
+              area_dict["run_stats"] = rows(
+                  "SELECT * FROM ski_area_run_stats WHERE ski_area_id = ? ORDER BY activity, difficulty",
+                  (area["id"],),
+              )
+              area_dict["lift_stats"] = rows(
+                  "SELECT * FROM ski_area_lift_stats WHERE ski_area_id = ? ORDER BY lift_type",
+                  (area["id"],),
+              )
+              area_dict["runs"] = rows(
+                  """
+                  SELECT r.id, r.name, r.ref, r.difficulty, r.grooming, r.uses, r.lit, r.gladed,
+                         r.patrolled, r.snowmaking, r.snowfarming, r.oneway, r.tunnel,
+                         r.geometry_type, r.geometry_json, r.length_m, r.ascent_m, r.descent_m,
+                         r.vertical_m, r.min_elevation_m, r.max_elevation_m, r.avg_pitch_percent,
+                         r.max_pitch_percent
+                  FROM runs r
+                  JOIN run_ski_areas rsa ON rsa.run_id = r.id
+                  WHERE rsa.ski_area_id = ?
+                  ORDER BY r.difficulty, r.length_m DESC
+                  """,
+                  (area["id"],),
+              )
+              for r in area_dict["runs"]:
+                  r["geom"] = simplify_geometry(r.pop("geometry_json"))
+
+              area_dict["lifts"] = rows(
+                  """
+                  SELECT l.id, l.name, l.ref, l.lift_type, l.status, l.access, l.occupancy,
+                         l.capacity, l.duration_s, l.detachable, l.bubble, l.heating, l.oneway,
+                         l.tunnel, l.geometry_json, l.length_m, l.vertical_m
+                  FROM lifts l
+                  JOIN lift_ski_areas lsa ON lsa.lift_id = l.id
+                  WHERE lsa.ski_area_id = ?
+                  ORDER BY l.length_m DESC
+                  """,
+                  (area["id"],),
+              )
+              for l in area_dict["lifts"]:
+                  l["geom"] = simplify_geometry(l.pop("geometry_json"))
+
+              result.append(area_dict)
+
+          print("===STATION_JSON_START===")
+          print(json.dumps(result))
+          print("===STATION_JSON_END===")
+          PY
+
+      - run: pip install pillow
+
+      - name: Fetch terrain basemap
+        env:
+          SKI_AREA_QUERY: ${{ inputs.ski_area_query || 'Formigal' }}
+        run: |
+          python - <<'PY'
+          import base64
+          import io
+          import json
+          import math
+          import os
+          import sqlite3
+          import time
+
+          import requests
+          from PIL import Image
+
+          query = os.environ["SKI_AREA_QUERY"]
+          conn = sqlite3.connect("data/ski_info.db")
+          conn.row_factory = sqlite3.Row
+
+          area = conn.execute(
+              "SELECT id FROM ski_areas WHERE name LIKE ?", (f"%{query}%",)
+          ).fetchone()
+          if not area:
+              print("No ski area matched, skipping basemap")
+              raise SystemExit(0)
+
+          def all_points(table, link_table, link_col):
+              pts = []
+              for (geometry_json,) in conn.execute(
+                  f"""
+                  SELECT t.geometry_json FROM {table} t
+                  JOIN {link_table} lk ON lk.{link_col} = t.id
+                  WHERE lk.ski_area_id = ? AND t.geometry_json IS NOT NULL
+                  """,
+                  (area["id"],),
+              ):
+                  geom = json.loads(geometry_json)
+                  coords = geom.get("coordinates") or []
+                  gtype = geom.get("type")
+                  if gtype == "LineString":
+                      pts.extend(coords)
+                  elif gtype == "MultiLineString":
+                      for part in coords:
+                          pts.extend(part)
+                  elif gtype == "Polygon" and coords:
+                      pts.extend(coords[0])
+              return pts
+
+          pts = all_points("runs", "run_ski_areas", "run_id") + all_points("lifts", "lift_ski_areas", "lift_id")
+          if not pts:
+              print("No geometry found, skipping basemap")
+              raise SystemExit(0)
+
+          lons = [p[0] for p in pts]
+          lats = [p[1] for p in pts]
+          lon_min, lon_max = min(lons), max(lons)
+          lat_min, lat_max = min(lats), max(lats)
+          lat_mid = (lat_min + lat_max) / 2
+          cos = math.cos(math.radians(lat_mid))
+          proj_w = (lon_max - lon_min) * cos
+          proj_h = lat_max - lat_min
+          pad = max(proj_w, proj_h) * 0.08
+          lon_min_p, lon_max_p = lon_min - pad / cos, lon_max + pad / cos
+          lat_min_p, lat_max_p = lat_min - pad, lat_max + pad
+
+          ZOOM = 15
+          TILE = 256
+
+          def deg2num(lat_deg, lon_deg, zoom):
+              lat_rad = math.radians(lat_deg)
+              n = 2.0 ** zoom
+              x = (lon_deg + 180.0) / 360.0 * n
+              y = (1.0 - math.log(math.tan(lat_rad) + 1.0 / math.cos(lat_rad)) / math.pi) / 2.0 * n
+              return x, y
+
+          def num2deg(xtile, ytile, zoom):
+              n = 2.0 ** zoom
+              lon_deg = xtile / n * 360.0 - 180.0
+              lat_rad = math.atan(math.sinh(math.pi * (1 - 2 * ytile / n)))
+              return math.degrees(lat_rad), lon_deg
+
+          x1, y1 = deg2num(lat_max_p, lon_min_p, ZOOM)
+          x2, y2 = deg2num(lat_min_p, lon_max_p, ZOOM)
+          xt0, xt1 = math.floor(x1), math.floor(x2)
+          yt0, yt1 = math.floor(y1), math.floor(y2)
+
+          cols = xt1 - xt0 + 1
+          rows_ = yt1 - yt0 + 1
+          print(f"Fetching {cols}x{rows_} = {cols * rows_} tiles at zoom {ZOOM}")
+
+          canvas = Image.new("RGB", (cols * TILE, rows_ * TILE))
+          headers = {"User-Agent": "SkiInfoApp-Prototype/0.1 (one-off basemap fetch for a personal project)"}
+          session = requests.Session()
+          for row_i, ty in enumerate(range(yt0, yt1 + 1)):
+              for col_i, tx in enumerate(range(xt0, xt1 + 1)):
+                  url = f"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{ZOOM}/{ty}/{tx}"
+                  resp = session.get(url, headers=headers, timeout=30)
+                  resp.raise_for_status()
+                  tile_img = Image.open(io.BytesIO(resp.content)).convert("RGB")
+                  canvas.paste(tile_img, (col_i * TILE, row_i * TILE))
+                  time.sleep(0.05)
+
+          north, west = num2deg(xt0, yt0, ZOOM)
+          south, east = num2deg(xt1 + 1, yt1 + 1, ZOOM)
+
+          # keep the base64 payload modest
+          canvas.thumbnail((1400, 1400), Image.LANCZOS)
+          buf = io.BytesIO()
+          canvas.save(buf, format="JPEG", quality=82)
+          b64 = base64.b64encode(buf.getvalue()).decode("ascii")
+
+          print("===BASEMAP_JSON_START===")
+          print(json.dumps({
+              "west": west, "south": south, "east": east, "north": north,
+              "width": canvas.width, "height": canvas.height,
+              "attribution": "Esri, Maxar, Earthstar Geographics",
+              "b64": b64,
+          }))
+          print("===BASEMAP_JSON_END===")
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ski_info-db
+          path: data-pipeline/data/ski_info.db
+          retention-days: 5

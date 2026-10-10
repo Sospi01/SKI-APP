@@ -1,0 +1,44 @@
+/* Snow + weather forecast widget (snow.js), shared by the app and the
+   generated station pages. Uses the design tokens both define on :root. */
+.snow { --snow-blue: #3d8fe0; }
+.snow-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.snow-head-icon { width: 46px; height: 46px; border-radius: 12px; background: var(--accent-soft); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.snow-head-icon .wx { width: 30px; height: 30px; }
+.snow-head-title { font-family: 'Barlow Condensed', sans-serif; font-size: 21px; font-weight: 700; line-height: 1.1; }
+.snow-head-sub { font-size: 12px; color: var(--text-secondary); line-height: 1.4; margin-top: 2px; }
+
+.snow-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+.snow-tile { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; }
+.snow-tile .v { font-family: 'Barlow Condensed', sans-serif; font-size: 25px; font-weight: 700; line-height: 1.05; }
+.snow-tile .k { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.snow-tile.hot { background: var(--accent-soft); border-color: transparent; }
+.snow-tile.hot .v { color: var(--accent); }
+
+.snow-days { display: grid; grid-template-columns: repeat(7, minmax(44px, 1fr)); gap: 4px; overflow-x: auto; padding-bottom: 2px; }
+.snow-day { text-align: center; border-radius: 10px; padding: 8px 2px 7px; background: var(--surface-2); min-width: 0; }
+.snow-day:first-child { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.snow-day-name { font-size: 11px; font-weight: 600; white-space: nowrap; }
+.snow-day-icon { height: 26px; display: flex; align-items: center; justify-content: center; margin: 4px 0 2px; }
+.snow-day-icon .wx { width: 24px; height: 24px; }
+.snow-bar-wrap { height: 44px; display: flex; align-items: flex-end; justify-content: center; margin: 2px 0 3px; }
+.snow-bar { width: 14px; border-radius: 4px 4px 2px 2px; background: linear-gradient(180deg, #8cc4ff, var(--snow-blue)); }
+.snow-day-cm { font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+.snow-day-cm.zero { color: var(--text-muted); font-weight: 600; }
+.snow-day-t { font-size: 11.5px; margin-top: 4px; white-space: nowrap; }
+.snow-day-t b { font-weight: 700; }
+.snow-day-tb { font-size: 10.5px; color: var(--text-muted); white-space: nowrap; }
+.snow-day-w { font-size: 10px; color: var(--text-muted); margin-top: 3px; white-space: nowrap; }
+.snow-note { font-size: 11px; color: var(--text-muted); line-height: 1.5; margin: 10px 0 0; }
+.snow-note + .snow-note { margin-top: 4px; }
+.snow-note a { color: inherit; }
+
+/* Weather icons: sun amber, clouds soft grey, precipitation blue. */
+.wx { color: var(--snow-blue, #3d8fe0); }
+.wx-sun, .wx .wx-sun { color: #f0a431; }
+.wx .wx-cloud { fill: #c5ced8; }
+.wx-partly .wx-cloud { fill: #d5dce4; stroke: var(--surface-2); stroke-width: 1.2; }
+.wx-fog { color: #9aa6b2; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .wx .wx-cloud { fill: #6f7c8a; }
+}
+:root[data-theme="dark"] .wx .wx-cloud { fill: #6f7c8a; }

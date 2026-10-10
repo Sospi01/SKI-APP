@@ -1,0 +1,42 @@
+{
+  "name": "top-es-largas",
+  "hook": "Hay una pista de 6 km en España\ny casi nadie la conoce 👀",
+  "title": "Las 5 pistas más largas de España",
+  "cta": "¿Cuál has bajado? Comenta 👇",
+  "metric": "len",
+  "voice": "edge-es-ES-AlvaroNeural",
+  "intro": "Hay una pista de seis kilómetros en España y casi nadie la conoce. Estas son las cinco más largas.",
+  "runs": [
+    {
+      "station": "52c9c35a9f63939f43b957b39196aa77ec0013c7",
+      "resort": "Boí Taüll",
+      "run": "Vista Aran - Collbirrós",
+      "say": "Número cinco: Vista Arán, en Boí Taüll."
+    },
+    {
+      "station": "0f46917975b8dab5e541edf6469105c3c091ec22",
+      "resort": "Formigal",
+      "run": "El Bosque",
+      "say": "Cuatro: El Bosque, en Formigal."
+    },
+    {
+      "station": "6eebeff16c8b480fc1335c8bed596286706cb776",
+      "resort": "La Molina",
+      "run": "Comabella",
+      "say": "Tres: Comabella, en La Molina."
+    },
+    {
+      "station": "125d02338620dc079d5d635595a099370161bf83",
+      "resort": "Baqueira Beret",
+      "run": "Colhet de Marimanha",
+      "say": "Dos: Coyet de Marimaña, en Baqueira."
+    },
+    {
+      "station": "5ee4bbf3ab3be8e91b05b56e05180dd4ee735335",
+      "resort": "Sierra Nevada",
+      "run": "Águila",
+      "say": "Y la número uno: Águila, en Sierra Nevada. Más de seis kilómetros. ¿La has bajado entera?"
+    }
+  ],
+  "pitch": 50
+}

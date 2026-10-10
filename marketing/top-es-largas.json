@@ -1,11 +1,11 @@
 {
   "name": "top-es-largas",
-  "hook": "Las 5 pistas más\nlargas de España 😳",
+  "hook": "Hay una pista de 6 km en España\ny casi nadie la conoce 👀",
   "title": "Las 5 pistas más largas de España",
   "cta": "¿Cuál has bajado? Comenta 👇",
   "metric": "len",
   "voice": "edge-es-ES-AlvaroNeural",
-  "intro": "Las cinco pistas más largas de España.",
+  "intro": "Hay una pista de seis kilómetros en España y casi nadie la conoce. Estas son las cinco más largas.",
   "runs": [
     {
       "station": "52c9c35a9f63939f43b957b39196aa77ec0013c7",

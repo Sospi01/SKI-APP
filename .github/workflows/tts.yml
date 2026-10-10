@@ -1,10 +1,13 @@
 name: Voice-over for a video
 
-# Text to speech for the TikTok videos (marketing/make_top.js): the voices
-# (Piper, open source, run offline) are downloaded from Hugging Face, which
-# Claude's sandbox can't reach. Reads marketing/<spec>.json (its "intro" and
-# each run's "say"), writes marketing/voice/<name>/<voice>/{intro,5,4,...}.wav
-# and commits them (small files).
+# Text to speech for the TikTok videos (marketing/make_top.js), in GitHub Actions
+# because the voices are downloaded from services Claude's sandbox can't reach.
+# Reads marketing/<spec>.json (its "intro" and each run's "say") and writes
+# marketing/voice/<name>/<voice>/{intro,5,4,...}.wav, then commits them (small).
+# Voices, by prefix:
+#   es_ES-davefx-medium      Piper (open source, offline)
+#   edge-es-ES-AlvaroNeural  Microsoft Edge's read-aloud voices (edge-tts, free, unofficial)
+#   kokoro-em_alex           Kokoro (open source, Apache 2.0)
 
 on:
   workflow_dispatch:
@@ -13,10 +16,10 @@ on:
         description: "Spec file (marketing/<spec>.json)"
         required: true
       voices:
-        description: "Piper voices, space-separated"
-        default: "es_ES-davefx-medium es_ES-sharvard-medium"
+        description: "Voices, space-separated"
+        default: "es_ES-davefx-medium"
       length_scale:
-        description: "Speed (lower = faster)"
+        description: "Piper speed (lower = faster)"
         default: "0.9"
 
 permissions:
@@ -25,10 +28,13 @@ permissions:
 jobs:
   tts:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - run: pip install -q piper-tts
+      - name: Install
+        run: |
+          sudo apt-get install -y -qq espeak-ng ffmpeg >/dev/null
+          pip install -q piper-tts edge-tts kokoro soundfile
       - name: Speak the lines
         env:
           SPEC: marketing/${{ inputs.spec }}.json
@@ -40,18 +46,31 @@ jobs:
           spec = json.load(open(os.environ["SPEC"]))
           lines = ([("intro", spec["intro"])] if spec.get("intro") else []) + \
                   [(str(len(spec["runs"]) - i), r["say"]) for i, r in enumerate(spec["runs"]) if r.get("say")]
+          kokoro = {}
           for voice in os.environ["VOICES"].split():
-              lang, rest = voice.split("-", 1)
-              who, quality = rest.rsplit("-", 1)
-              url = f"https://huggingface.co/rhasspy/piper-voices/resolve/main/{lang.split('_')[0]}/{lang}/{who}/{quality}/{voice}.onnx"
-              for ext in ("", ".json"):
-                  urllib.request.urlretrieve(url + ext, f"/tmp/{voice}.onnx{ext}")
               out = f"marketing/voice/{spec['name']}/{voice}"
               os.makedirs(out, exist_ok=True)
-              for key, text in lines:
-                  subprocess.run(["python3", "-m", "piper", "-m", f"/tmp/{voice}.onnx", "--length-scale", os.environ["LS"],
-                                  "-f", f"{out}/{key}.wav"], input=text.encode(), check=True)
-                  print(voice, key, text)
+              if voice.startswith("edge-"):
+                  for key, text in lines:
+                      subprocess.run(["edge-tts", "--voice", voice[5:], "--rate=+8%", "--text", text, "--write-media", "/tmp/e.mp3"], check=True)
+                      subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", "/tmp/e.mp3", "-ar", "44100", "-ac", "1", f"{out}/{key}.wav"], check=True)
+              elif voice.startswith("kokoro-"):
+                  import numpy as np, soundfile as sf
+                  from kokoro import KPipeline
+                  pipe = kokoro.setdefault("e", KPipeline(lang_code="e"))
+                  for key, text in lines:
+                      audio = np.concatenate([a for _, _, a in pipe(text, voice=voice[7:], speed=1.05)])
+                      sf.write(f"{out}/{key}.wav", audio, 24000)
+              else:
+                  lang, rest = voice.split("-", 1)
+                  who, quality = rest.rsplit("-", 1)
+                  url = f"https://huggingface.co/rhasspy/piper-voices/resolve/main/{lang.split('_')[0]}/{lang}/{who}/{quality}/{voice}.onnx"
+                  for ext in ("", ".json"):
+                      urllib.request.urlretrieve(url + ext, f"/tmp/{voice}.onnx{ext}")
+                  for key, text in lines:
+                      subprocess.run(["python3", "-m", "piper", "-m", f"/tmp/{voice}.onnx", "--length-scale", os.environ["LS"],
+                                      "-f", f"{out}/{key}.wav"], input=text.encode(), check=True)
+              print("done", voice)
           PY
       - name: Commit them
         run: |

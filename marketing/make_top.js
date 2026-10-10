@@ -18,6 +18,7 @@ const fs = require('fs'), path = require('path'), { execFile, execFileSync } = r
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
 const SPEC = JSON.parse(fs.readFileSync(arg('spec'), 'utf8'));
 const PHASE = arg('phase', 'frames'), OUT = arg('out', `marketing/videos/${SPEC.name}.mp4`);
+const PITCH = SPEC.pitch || 60;   // the camera's tilt (lower for long runs, seen from further off)
 const SEG = +arg('seconds', 4), LAST = +arg('last', 5), FPS = 12, HOOK_T = 1.6;
 const WORK = arg('work', `/tmp/top-${SPEC.name}`), ONLY = arg('only', '');
 const ROOT = path.join(__dirname, '..'), BASE = 'http://localhost:8903';
@@ -134,7 +135,7 @@ async function draw3d(browser) {
         paint: { 'line-color': ['get', 'color'], 'line-width': 6.5 } }, 'labels');
       ['slope', 'run-halo', 'lift', 'lift-casing'].forEach(id => m.setPaintProperty(id, 'line-opacity', 0.45));
       m.setPaintProperty('labels', 'icon-opacity', 0.6);
-      m.fitBounds(bbox, { padding: { top: 270, bottom: 330, left: 50, right: 50 }, bearing, pitch: 60, maxZoom: 16.2, duration: 0 });
+      m.fitBounds(bbox, { padding: { top: 270, bottom: 330, left: 50, right: 50 }, bearing, pitch: PITCH, maxZoom: 16.2, duration: 0 });
       const c = m.getCenter();
       return { fis: fis.length, center: [c.lng, c.lat], zoom: m.getZoom() };
     }, { coords: g.parts.flat().map(p => p[0].toFixed(6) + ',' + p[1].toFixed(6)), bbox: g.bbox, bearing: g.bearing });
@@ -152,19 +153,19 @@ async function draw3d(browser) {
       const m = window.__m3d.map, cw = m.getCanvas().clientWidth, ch = m.getCanvas().clientHeight;
       let c = m.getCenter(), z = m.getZoom();
       for (let k = 0; k < 10; k++) {
-        m.jumpTo({ center: c, zoom: z, bearing, pitch: 60 });
+        m.jumpTo({ center: c, zoom: z, bearing, pitch: PITCH });
         const ps = pts.map(p => m.project([p[0], p[1]]));
         const x0 = Math.min(...ps.map(p => p.x)), x1 = Math.max(...ps.map(p => p.x)), y0 = Math.min(...ps.map(p => p.y)), y1 = Math.max(...ps.map(p => p.y));
         const sc = Math.min((box[2] - box[0]) / Math.max(1, x1 - x0), (box[3] - box[1]) / Math.max(1, y1 - y0));
         const nc = m.unproject([cw / 2 + (x0 + x1) / 2 - (box[0] + box[2]) / 2, ch / 2 + (y0 + y1) / 2 - (box[1] + box[3]) / 2]);
         c = nc; z = Math.min(16.2, z + Math.max(-1, Math.min(1, Math.log2(sc) * 0.8)));
       }
-      m.jumpTo({ center: c, zoom: z, bearing, pitch: 60 });
+      m.jumpTo({ center: c, zoom: z, bearing, pitch: PITCH });
       return { center: [c.lng, c.lat], zoom: z };
     }, { pts: g.parts.flat().filter((_, i, a) => i % Math.ceil(a.length / 300) === 0).concat(g.parts.map(p => p[p.length - 1])), bearing: g.bearing, box: [60, 265, 480, 495] }));
     console.log(`  fitted: zoom ${cam.zoom.toFixed(2)}`);
     // A slow orbit (28°) while closing in a little, eased at both ends.
-    const view = t => { const e = (1 - Math.cos(Math.PI * t)) / 2; return { center: cam.center, zoom: cam.zoom - 0.2 + 0.2 * e, bearing: g.bearing - 14 + 28 * e, pitch: 60 }; };
+    const view = t => { const e = (1 - Math.cos(Math.PI * t)) / 2; return { center: cam.center, zoom: cam.zoom - 0.2 + 0.2 * e, bearing: g.bearing - 14 + 28 * e, pitch: PITCH }; };
     const total = Math.round(secondsOf(r) * FPS);
     for (let k = 0; k <= 4; k++) { await page.evaluate(v => window.__m3d.map.jumpTo(v), view(k / 4)); await idle(15000); await idle(4000); }
     if (PHASE === 'list' || PHASE === 'check') {   // a still to check the framing and the lit run

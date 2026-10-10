@@ -1,0 +1,13 @@
+{
+  "name": "top-es",
+  "hook": "Las 5 pistas más\nempinadas de España 😳",
+  "title": "Las 5 pistas más empinadas de España",
+  "cta": "¿Cuál has bajado? Comenta 👇",
+  "runs": [
+    { "station": "7e2b2e2ae39a8764945229ed9d6314ee6d0aae47", "resort": "Astún", "run": "Parapente" },
+    { "station": "52c9c35a9f63939f43b957b39196aa77ec0013c7", "resort": "Boí Taüll", "run": "Raspa Roies" },
+    { "station": "0f46917975b8dab5e541edf6469105c3c091ec22", "resort": "Formigal", "run": "Tubo Inferior" },
+    { "station": "304d72fa57c50cd759b4ebeff3e48dbee4789b17", "resort": "Candanchú", "run": "La Zapatilla" },
+    { "station": "125d02338620dc079d5d635595a099370161bf83", "resort": "Baqueira Beret", "run": "Pasarells" }
+  ]
+}

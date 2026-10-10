@@ -22,6 +22,7 @@ const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ?
 const NAME = arg('name'), OUT = arg('out');
 const FRAMES = arg('frames', `/tmp/video-${NAME}/frames`);
 const SECONDS = +arg('seconds', 12), COUNT = +arg('countdown', 0), REVEAL = arg('reveal', '0') === '1';
+const HOOK_STYLE = arg('hook-style', 'top');
 const HOOK = arg('hook', ''), HINT = arg('hint', ''), TITLE = arg('title', '¿Qué estación\nde esquí es?');
 const CTA = arg('cta', 'Respuesta en los comentarios 👇'), SITE = arg('site', 'skiinfoapp.com');
 const W = 540, H = 960, BASE = 'http://localhost:8903';   // the site served from docs/ (make_video.sh starts it)   // CSS px; x2 = 1080x1920
@@ -45,6 +46,7 @@ const CSS = `
   .cta { font-size: 34px; font-weight: 700; text-shadow: 0 3px 12px rgba(0,0,0,0.7); }
   .site { margin-top: 6px; font-size: 22px; font-weight: 600; opacity: 0.9; text-shadow: 0 2px 8px rgba(0,0,0,0.7); }
   .credit { position: absolute; left: 0; right: 0; bottom: 248px; text-align: center; font-family: 'IBM Plex Sans', sans-serif; font-size: 10.5px; opacity: 0.75; }
+  .title.hooktop { color: #ffd257; }
   .hook { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 0 34px; text-align: center;
     background: rgba(0,0,0,0.55); font-size: 62px; font-weight: 700; line-height: 1.02; text-transform: uppercase; text-shadow: 0 4px 18px rgba(0,0,0,0.8); }
 `;
@@ -69,7 +71,11 @@ const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
   const bottom = `<div class="bottom"><div class="cta">${esc(CTA)}</div>${SITE ? `<div class="site">${esc(SITE)}</div>` : ''}</div>
     <div class="credit">© OpenStreetMap (ODbL) · OpenSkiMap · Esri, Maxar, Earthstar Geographics · Terrain Tiles</div>`;
   await png('base.png', top + bottom);
-  if (HOOK) await png('hook.png', `<div class="hook">${esc(HOOK)}</div>`);
+  // The hook in the title's place, over the bright map: a dark full-screen card
+  // lost most viewers in the first second (quiz-1: 951 views, 4.0 s average).
+  // --hook-style card brings the old darkened card back.
+  if (HOOK && HOOK_STYLE === 'card') await png('hook.png', `<div class="hook">${esc(HOOK)}</div>`);
+  if (HOOK && HOOK_STYLE !== 'card') await png('basehook.png', `<div class="top"><div class="title hooktop">${esc(HOOK)}</div>${HINT ? `<div class="hint">${esc(HINT)}</div>` : ''}</div>` + bottom);
   for (let n = COUNT; n >= 0 && COUNT; n--) await png(`c${n}.png`, `<div class="count${n <= 3 ? ' last' : ''}">${n === 0 ? '⏱' : n}</div>`);
   await browser.close();
 
@@ -93,14 +99,15 @@ const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
     chain.push(`${v}[${k}]overlay${enable ? `=enable='${enable}'` : ''}[o${k}]`);
     v = `[o${k}]`; k++;
   };
-  over('base.png');
+  if (HOOK && HOOK_STYLE !== 'card') { over('basehook.png', 'lt(t,1.6)'); over('base.png', 'gte(t,1.6)'); }
+  else over('base.png');
   if (COUNT) {
     // N .. 1 one second each, ending exactly at SECONDS; "⏱" for the last half second.
     const start = SECONDS - COUNT - 0.5;
     for (let n = COUNT; n >= 1; n--) { const a = start + (COUNT - n); over(`c${n}.png`, `between(t,${a.toFixed(2)},${(a + 1).toFixed(2)})`); }
     over('c0.png', `gte(t,${(SECONDS - 0.5).toFixed(2)})`);
   }
-  if (HOOK) over('hook.png', 'lt(t,1.6)');
+  if (HOOK && HOOK_STYLE === 'card') over('hook.png', 'lt(t,1.6)');
   execFileSync(ff, ['-y', '-loglevel', 'error', ...inputs, '-filter_complex', chain.join(';'), '-map', v,
     '-t', String(SECONDS), '-r', '30', '-c:v', 'libx264', '-crf', '21', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', OUT], { stdio: 'inherit' });
   // Preview stills: just after the hook, and mid-countdown.

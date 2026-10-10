@@ -24,7 +24,28 @@ const ROOT = path.join(__dirname, '..'), BASE = 'http://localhost:8903';
 const W = 540, H = 960;
 const TILES = path.join(ROOT, 'marketing', 'tiles', SPEC.name);
 const runs = SPEC.runs.map((r, i) => Object.assign({ rank: SPEC.runs.length - i, i }, r));
-const secondsOf = r => (r.rank === 1 ? LAST : SEG);
+// With a voice-over (tts.yml: marketing/voice/<name>/<voice>/{intro,5…1}.wav),
+// each run lasts as long as its line (the intro too, on the first) plus a pause.
+const VOICE = SPEC.voice && path.join(ROOT, 'marketing', 'voice', SPEC.name, SPEC.voice);
+const wav = key => VOICE && fs.existsSync(path.join(VOICE, key + '.wav')) ? path.join(VOICE, key + '.wav') : null;
+function wavDur(file) {
+  const b = fs.readFileSync(file);
+  let o = 12, rate = 0, bytes = 0;
+  while (o < b.length - 8) {
+    const id = b.toString('ascii', o, o + 4), size = b.readUInt32LE(o + 4);
+    if (id === 'fmt ') rate = b.readUInt32LE(o + 16);   // byte rate
+    if (id === 'data') { bytes = Math.min(size, b.length - o - 8); break; }
+    o += 8 + size + (size & 1);
+  }
+  return bytes / rate;
+}
+const LEAD = 0.1, PAUSE = 0.6;
+const introDur = () => (wav('intro') ? wavDur(wav('intro')) : 0);
+const secondsOf = r => {
+  if (!wav(String(r.rank))) return r.rank === 1 ? LAST : SEG;
+  const first = r.rank === SPEC.runs.length;
+  return Math.max(3.5, LEAD + (first ? introDur() : 0) + wavDur(wav(String(r.rank))) + PAUSE);
+};
 
 // The run's geometry from the station's data, and the camera: looking up it
 // (from its lowest point to its highest), framed on it.
@@ -38,8 +59,10 @@ function runGeom(r) {
   const rad = Math.PI / 180;
   const y = Math.sin((hi[0] - lo[0]) * rad) * Math.cos(hi[1] * rad);
   const x = Math.cos(lo[1] * rad) * Math.sin(hi[1] * rad) - Math.sin(lo[1] * rad) * Math.cos(hi[1] * rad) * Math.cos((hi[0] - lo[0]) * rad);
+  let len = 0, vert = 0;
+  raw.runs.forEach(x => { if (x.name === r.run && (!x.uses || x.uses.split(',').includes('downhill'))) { len += x.length_m || 0; vert += x.vertical_m || 0; } });
   return {
-    parts, bearing: (Math.atan2(y, x) / rad + 360) % 360,
+    avg: len ? vert / len * 100 : null, parts, bearing: (Math.atan2(y, x) / rad + 360) % 360,
     bbox: [[Math.min(...pts.map(p => p[0])), Math.min(...pts.map(p => p[1]))], [Math.max(...pts.map(p => p[0])), Math.max(...pts.map(p => p[1]))]],
   };
 }
@@ -180,7 +203,7 @@ const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 // one quad per stretch in its slope colour, and the steepest 50 m marked).
 function cardScript() {
   window.T = s => s;
-  window.drawCard = function (parts) {
+  window.drawCard = function (parts, avg) {
     let best = null;
     buildElevationProfiles(parts).forEach(p => {
       const sm = smoothProfile(p, SLOPE_WINDOW_M), st = findSteepestSection(sm, STEEPEST_M);
@@ -211,8 +234,10 @@ function cardScript() {
     s += `<text class="lbl" x="${VW - pr}" y="${VH - 3}" text-anchor="end">${Math.round(sm[sm.length - 1].ele)} m · ${total >= 1000 ? (total / 1000).toFixed(1).replace('.', ',') + ' km' : Math.round(total / 10) * 10 + ' m'}</text>`;
     document.getElementById('chart').innerHTML = `<svg viewBox="0 0 ${VW} ${VH}">${s}</svg>`;
     const pct = Math.round(Math.abs(st.pitchPct));
-    document.getElementById('big').innerHTML = `${pitchDeg(st.pitchPct)}° <small>máx. ${pct}&#8202;% de pendiente</small>`;
-    return { pct, deg: pitchDeg(st.pitchPct) };
+    document.getElementById('big').innerHTML = avg != null
+      ? `${pitchDeg(avg)}° de media <small>${Math.round(avg)}&#8202;% · máx. ${pitchDeg(st.pitchPct)}°</small>`
+      : `${pitchDeg(st.pitchPct)}° <small>máx. ${pct}&#8202;% de pendiente</small>`;
+    return { pct, deg: pitchDeg(st.pitchPct), avg: avg != null ? `${Math.round(avg)} % (${pitchDeg(avg)}°) de media, ` : '' };
   };
 }
 
@@ -232,12 +257,12 @@ async function overlays(browser) {
       await page.route(BASE + '/__top', rt => rt.fulfill({ body: html, contentType: 'text/html' }));
       await page.goto(BASE + '/__top');
       await page.unroute(BASE + '/__top');
-      const v = await page.evaluate(parts => window.drawCard(parts), g.parts);
+      const v = await page.evaluate(([parts, avg]) => window.drawCard(parts, avg), [g.parts, SPEC.metric === 'avg' ? g.avg : null]);
       await page.evaluate(() => Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 5000))]));
       await page.waitForTimeout(150);
       const file = path.join(WORK, `ov${r.rank}${hook ? 'h' : ''}.png`);
       await page.screenshot({ path: file, omitBackground: true });
-      if (!hook) { out.push(`#${r.rank} ${r.run} (${r.resort}): ${v.pct} % · ${v.deg}°`); }
+      if (!hook) { out.push(`#${r.rank} ${r.run} (${r.resort}): ${v.avg}máx. ${v.pct} % · ${v.deg}°, ${secondsOf(r).toFixed(1)} s`); }
     }
   }
   console.log(out.join('\n'));
@@ -261,10 +286,24 @@ async function overlays(browser) {
     const chain = ['[0]minterpolate=fps=30:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1,scale=1080:1920:flags=lanczos[m]'];
     let v = '[m]', k = 1;
     const over = (file, enable) => { inputs.push('-loop', '1', '-i', path.join(WORK, file)); chain.push(`${v}[${k}]overlay${enable ? `=enable='${enable}'` : ''}[o${k}]`); v = `[o${k}]`; k++; };
-    if (r.rank === runs.length && SPEC.hook) { over(`ov${r.rank}h.png`, `lt(t,${HOOK_T})`); over(`ov${r.rank}.png`, `gte(t,${HOOK_T})`); }
+    const first = r.rank === runs.length, hookT = wav('intro') ? LEAD + introDur() : HOOK_T;
+    if (first && SPEC.hook) { over(`ov${r.rank}h.png`, `lt(t,${hookT.toFixed(2)})`); over(`ov${r.rank}.png`, `gte(t,${hookT.toFixed(2)})`); }
     else over(`ov${r.rank}.png`);
+    // The voice: the intro then the run's line on the first, padded with silence.
+    const lines = [first && wav('intro'), wav(String(r.rank))].filter(Boolean);
+    const audio = ['-map', v];
+    if (lines.length) {
+      const a0 = k;
+      lines.forEach(f => inputs.push('-i', f));
+      const ins = lines.map((_, j) => `[${a0 + j}:a]`).join('');
+      chain.push(`${ins}concat=n=${lines.length}:v=0:a=1,aresample=44100,adelay=${LEAD * 1000}:all=1,apad[aud]`);
+    } else {
+      inputs.push('-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=mono');
+      chain.push(`[${k}:a]anull[aud]`);
+    }
+    audio.push('-map', '[aud]', '-c:a', 'aac', '-b:a', '128k', '-ac', '1', '-ar', '44100');
     const seg = path.join(WORK, `seg${r.rank}.mp4`);
-    execFileSync(ff, ['-y', '-loglevel', 'error', ...inputs, '-filter_complex', chain.join(';'), '-map', v, '-t', String(T), '-r', '30',
+    execFileSync(ff, ['-y', '-loglevel', 'error', ...inputs, '-filter_complex', chain.join(';'), ...audio, '-t', String(T), '-r', '30',
       '-c:v', 'libx264', '-crf', '21', '-pix_fmt', 'yuv420p', seg], { stdio: 'inherit' });
     segs.push(seg);
   }

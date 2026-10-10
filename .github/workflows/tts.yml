@@ -1,0 +1,62 @@
+name: Voice-over for a video
+
+# Text to speech for the TikTok videos (marketing/make_top.js): the voices
+# (Piper, open source, run offline) are downloaded from Hugging Face, which
+# Claude's sandbox can't reach. Reads marketing/<spec>.json (its "intro" and
+# each run's "say"), writes marketing/voice/<name>/<voice>/{intro,5,4,...}.wav
+# and commits them (small files).
+
+on:
+  workflow_dispatch:
+    inputs:
+      spec:
+        description: "Spec file (marketing/<spec>.json)"
+        required: true
+      voices:
+        description: "Piper voices, space-separated"
+        default: "es_ES-davefx-medium es_ES-sharvard-medium"
+      length_scale:
+        description: "Speed (lower = faster)"
+        default: "0.9"
+
+permissions:
+  contents: write
+
+jobs:
+  tts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -q piper-tts
+      - name: Speak the lines
+        env:
+          SPEC: marketing/${{ inputs.spec }}.json
+          VOICES: ${{ inputs.voices }}
+          LS: ${{ inputs.length_scale }}
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess, urllib.request
+          spec = json.load(open(os.environ["SPEC"]))
+          lines = ([("intro", spec["intro"])] if spec.get("intro") else []) + \
+                  [(str(len(spec["runs"]) - i), r["say"]) for i, r in enumerate(spec["runs"]) if r.get("say")]
+          for voice in os.environ["VOICES"].split():
+              lang, rest = voice.split("-", 1)
+              who, quality = rest.rsplit("-", 1)
+              url = f"https://huggingface.co/rhasspy/piper-voices/resolve/main/{lang.split('_')[0]}/{lang}/{who}/{quality}/{voice}.onnx"
+              for ext in ("", ".json"):
+                  urllib.request.urlretrieve(url + ext, f"/tmp/{voice}.onnx{ext}")
+              out = f"marketing/voice/{spec['name']}/{voice}"
+              os.makedirs(out, exist_ok=True)
+              for key, text in lines:
+                  subprocess.run(["python3", "-m", "piper", "-m", f"/tmp/{voice}.onnx", "--length-scale", os.environ["LS"],
+                                  "-f", f"{out}/{key}.wav"], input=text.encode(), check=True)
+                  print(voice, key, text)
+          PY
+      - name: Commit them
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add marketing/voice
+          git commit -m "Voice-over for video: ${{ inputs.spec }}"
+          for i in 1 2 3; do git pull --rebase -q && git push -q && break; sleep 5; done

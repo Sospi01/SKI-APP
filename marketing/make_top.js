@@ -260,13 +260,13 @@ function cardScript() {
     s += `<line x1="${x1}" y1="${y(eleAt(st.startDist))}" x2="${x2}" y2="${y(eleAt(st.endDist))}" stroke="#ffd257" stroke-width="6" stroke-linecap="round"/>`;
     s += `<line x1="${x1}" y1="${y(eleAt(st.startDist))}" x2="${x2}" y2="${y(eleAt(st.endDist))}" stroke="#111" stroke-width="2" stroke-dasharray="3 2"/>`;
     const tx = Math.min(VW - 60, Math.max(60, (x1 + x2) / 2));
-    s += `<text class="steep" x="${tx}" y="${Math.max(16, yt - 4)}" text-anchor="middle">▼ ${pitchDeg(st.pitchPct)}° · 50 m</text>`;
+    s += `<text class="steep" x="${tx}" y="${Math.max(16, yt - 4)}" text-anchor="middle">▼ ${Math.round(Math.abs(st.pitchPct))}&#8202;% · 50 m</text>`;
     s += `<text class="lbl" x="${pl}" y="${VH - 3}">${Math.round(sm[0].ele)} m</text>`;
     s += `<text class="lbl" x="${VW - pr}" y="${VH - 3}" text-anchor="end">${Math.round(sm[sm.length - 1].ele)} m · ${total >= 1000 ? (total / 1000).toFixed(1).replace('.', ',') + ' km' : Math.round(total / 10) * 10 + ' m'}</text>`;
     document.getElementById('chart').innerHTML = `<svg viewBox="0 0 ${VW} ${VH}">${s}</svg>`;
     const pct = Math.round(Math.abs(st.pitchPct));
     document.getElementById('big').innerHTML = label ? `${label.big} <small>${label.small}</small>` : avg != null
-      ? `${pitchDeg(avg)}° de media <small>${Math.round(avg)}&#8202;% · máx. ${pitchDeg(st.pitchPct)}°</small>`
+      ? `${Math.round(avg)}&#8202;% de media <small>${pitchDeg(avg)}° · máx. ${pct}&#8202;%</small>`
       : `${pitchDeg(st.pitchPct)}° <small>máx. ${pct}&#8202;% de pendiente</small>`;
     return { pct, deg: pitchDeg(st.pitchPct), avg: avg != null ? `${Math.round(avg)} % (${pitchDeg(avg)}°) de media, ` : '' };
   };

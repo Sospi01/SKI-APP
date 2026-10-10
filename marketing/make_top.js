@@ -121,7 +121,12 @@ async function draw3d(browser) {
       const src = m.getSource('runs');
       const data = src.getData ? await src.getData() : src._data;
       const want = new Set(coords);
-      const fis = data.features.filter(f => f.geometry.coordinates.some(c => want.has(c[0].toFixed(6) + ',' + c[1].toFixed(6)))).map(f => f.properties.fi);
+      // A feature is the run when (nearly) all its points are the run's: neighbours
+      // share a junction point or two with it.
+      const fis = data.features.filter(f => {
+        const cs = f.geometry.coordinates, hit = cs.filter(c => want.has(c[0].toFixed(6) + ',' + c[1].toFixed(6))).length;
+        return hit >= Math.max(2, cs.length * 0.8);
+      }).map(f => f.properties.fi);
       const filter = ['in', ['get', 'fi'], ['literal', fis]];
       m.addLayer({ id: 'top-glow', type: 'line', source: 'slope', filter, layout: { 'line-join': 'round', 'line-cap': 'round' },
         paint: { 'line-color': '#ffffff', 'line-width': 13, 'line-blur': 3, 'line-opacity': 0.95 } }, 'labels');
@@ -139,10 +144,34 @@ async function draw3d(browser) {
       const finish = () => { if (!done) { done = true; res(); } };
       m.once('idle', finish); m.triggerRepaint(); setTimeout(finish, max);
     }), max);
+    // fitBounds doesn't allow for the relief and the tilt (long runs came out
+    // small and off to one side): fit the run's own points, on the relief,
+    // into the free part of the screen between the texts and the card.
+    await idle(15000); await idle(4000);
+    Object.assign(cam, await page.evaluate(({ pts, bearing, box }) => {
+      const m = window.__m3d.map, cw = m.getCanvas().clientWidth, ch = m.getCanvas().clientHeight;
+      let c = m.getCenter(), z = m.getZoom();
+      for (let k = 0; k < 10; k++) {
+        m.jumpTo({ center: c, zoom: z, bearing, pitch: 60 });
+        const ps = pts.map(p => m.project([p[0], p[1]]));
+        const x0 = Math.min(...ps.map(p => p.x)), x1 = Math.max(...ps.map(p => p.x)), y0 = Math.min(...ps.map(p => p.y)), y1 = Math.max(...ps.map(p => p.y));
+        const sc = Math.min((box[2] - box[0]) / Math.max(1, x1 - x0), (box[3] - box[1]) / Math.max(1, y1 - y0));
+        const nc = m.unproject([cw / 2 + (x0 + x1) / 2 - (box[0] + box[2]) / 2, ch / 2 + (y0 + y1) / 2 - (box[1] + box[3]) / 2]);
+        c = nc; z = Math.min(16.2, z + Math.max(-1, Math.min(1, Math.log2(sc) * 0.8)));
+      }
+      m.jumpTo({ center: c, zoom: z, bearing, pitch: 60 });
+      return { center: [c.lng, c.lat], zoom: z };
+    }, { pts: g.parts.flat().filter((_, i, a) => i % Math.ceil(a.length / 300) === 0).concat(g.parts.map(p => p[p.length - 1])), bearing: g.bearing, box: [60, 265, 480, 495] }));
+    console.log(`  fitted: zoom ${cam.zoom.toFixed(2)}`);
     // A slow orbit (28°) while closing in a little, eased at both ends.
-    const view = t => { const e = (1 - Math.cos(Math.PI * t)) / 2; return { center: cam.center, zoom: cam.zoom - 0.15 + 0.3 * e, bearing: g.bearing - 14 + 28 * e, pitch: 60 }; };
+    const view = t => { const e = (1 - Math.cos(Math.PI * t)) / 2; return { center: cam.center, zoom: cam.zoom - 0.2 + 0.2 * e, bearing: g.bearing - 14 + 28 * e, pitch: 60 }; };
     const total = Math.round(secondsOf(r) * FPS);
     for (let k = 0; k <= 4; k++) { await page.evaluate(v => window.__m3d.map.jumpTo(v), view(k / 4)); await idle(15000); await idle(4000); }
+    if (PHASE === 'list' || PHASE === 'check') {   // a still to check the framing and the lit run
+      await page.evaluate(v => window.__m3d.map.jumpTo(v), view(0.5)); await idle(8000);
+      const jpg = await page.evaluate(() => { const m = window.__m3d.map; m.redraw(); return m.getCanvas().toDataURL('image/jpeg', 0.8); });
+      fs.writeFileSync(path.join(WORK, `check-${r.rank}.jpg`), Buffer.from(jpg.split(',')[1], 'base64'));
+    }
     if (PHASE === 'frames') {
       const dir = path.join(WORK, String(r.rank));
       fs.rmSync(dir, { recursive: true, force: true }); fs.mkdirSync(dir, { recursive: true });
@@ -163,11 +192,11 @@ async function draw3d(browser) {
     }
     await ctx.close();
   }
-  if (PHASE === 'list') {
+  if (PHASE === 'list' && !ONLY) {
     fs.mkdirSync(path.dirname(TILES), { recursive: true });
     fs.writeFileSync(path.join(ROOT, 'marketing', 'tiles', SPEC.name + '.txt'), [...asked].sort().join('\n') + '\n');
     console.log(asked.size, 'tiles listed');
-  } else {
+  } else if (PHASE === 'frames') {
     console.log('tiles asked', asked.size, 'missing', [...asked].filter(k => !fs.existsSync(path.join(TILES, k + '.jpg'))).length);
   }
 }
@@ -194,7 +223,7 @@ const CSS = `
   svg { display: block; width: 100%; height: auto; margin-top: 4px; }
   .lbl { font-family: 'IBM Plex Sans', sans-serif; font-size: 10px; fill: #444; }
   .steep { font-family: 'Barlow Condensed', sans-serif; font-size: 17px; font-weight: 700; fill: #111; }
-  .cta { position: absolute; left: 0; right: 0; bottom: 520px; text-align: center; font-size: 30px; font-weight: 700; text-shadow: 0 3px 12px rgba(0,0,0,0.8); }
+  .kicker.cta1 { color: #ffd257; font-size: 30px; text-transform: none; }
   .credit { position: absolute; left: 0; right: 0; bottom: 258px; text-align: center; font-family: 'IBM Plex Sans', sans-serif; font-size: 10px; opacity: 0.8; text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
 `;
 const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
@@ -214,7 +243,7 @@ function cardScript() {
     const { sm, st } = best;
     const total = sm[sm.length - 1].dist, eles = sm.map(p => p.ele);
     const lo = Math.min(...eles), hi = Math.max(...eles);
-    const VW = 500, VH = 150, pl = 4, pr = 4, pt = 26, pb = 16;
+    const VW = 500, VH = 112, pl = 4, pr = 4, pt = 24, pb = 15;
     const x = d => pl + d / total * (VW - pl - pr), y = e => pt + (1 - (e - lo) / (hi - lo || 1)) * (VH - pt - pb);
     const col = { novice: 'hsl(125 82% 30%)', easy: 'hsl(208 88% 41%)', intermediate: 'hsl(359 78% 49%)', advanced: 'hsl(0 0% 12%)' };
     let s = '';
@@ -251,10 +280,11 @@ async function overlays(browser) {
   for (const r of runs) {
     const g = runGeom(r);
     for (const hook of r.rank === runs.length && SPEC.hook ? [false, true] : [false]) {
-      const head = hook ? `<div class="hooktop">${esc(SPEC.hook)}</div>` : `<div class="kicker">${esc(SPEC.title)}</div>`;
+      // The call to comment over the last run (mid-screen it hid the runs).
+      const kicker = r.rank === 1 && SPEC.cta ? `<div class="kicker cta1">${esc(SPEC.cta)}</div>` : `<div class="kicker">${esc(SPEC.title)}</div>`;
+      const head = hook ? `<div class="hooktop">${esc(SPEC.hook)}</div>` : kicker;
       const html = `<!doctype html><meta charset="utf-8"><style>${fonts}${CSS}</style><script>(${cardScript})()</script><script src="/profile.js"></script>
         <div id="o"><div class="top">${head}<div class="rank"><div class="num">${r.rank}</div><div class="name"><div class="run">${esc(r.run)}</div><div class="resort">${esc(r.resort)}</div></div></div></div>
-        ${SPEC.cta ? `<div class="cta">${esc(SPEC.cta)}</div>` : ''}
         <div class="card"><div class="row"><div class="big" id="big"></div><div class="site">skiinfoapp.com</div></div><div id="chart"></div></div>${credit}</div>`;
       await page.route(BASE + '/__top', rt => rt.fulfill({ body: html, contentType: 'text/html' }));
       await page.goto(BASE + '/__top');
@@ -280,7 +310,7 @@ async function overlays(browser) {
   if (!fs.existsSync(path.join(WORK, 'fake.jpg'))) execFileSync(ff, ['-y', '-loglevel', 'error', '-f', 'lavfi', '-i', 'color=c=0x6f7560:s=256x256', '-frames:v', '1', path.join(WORK, 'fake.jpg')]);
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium',
     args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
-  if (PHASE === 'list' || PHASE === 'frames') await draw3d(browser);
+  if (['list', 'check', 'frames'].includes(PHASE)) await draw3d(browser);
   if (PHASE === 'video' || PHASE === 'overlays') await overlays(browser);
   await browser.close();
   if (PHASE !== 'video') return;

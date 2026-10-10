@@ -318,7 +318,10 @@ async function overlays(browser) {
   const segs = [];
   for (const r of runs) {
     const T = secondsOf(r), dir = path.join(WORK, String(r.rank));
-    const inputs = ['-framerate', String(FPS), '-i', path.join(dir, '%04d.jpg')];
+    // The frames drawn always fill the segment (a line re-recorded a little
+    // longer just slows the orbit slightly instead of drawing it all again).
+    const nFrames = fs.readdirSync(dir).filter(f => f.endsWith('.jpg')).length;
+    const inputs = ['-framerate', (nFrames / T).toFixed(4), '-i', path.join(dir, '%04d.jpg')];
     const chain = ['[0]minterpolate=fps=30:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1,scale=1080:1920:flags=lanczos[m]'];
     let v = '[m]', k = 1;
     const over = (file, enable) => { inputs.push('-loop', '1', '-i', path.join(WORK, file)); chain.push(`${v}[${k}]overlay${enable ? `=enable='${enable}'` : ''}[o${k}]`); v = `[o${k}]`; k++; };

@@ -62,7 +62,7 @@ function runGeom(r) {
   let len = 0, vert = 0;
   raw.runs.forEach(x => { if (x.name === r.run && (!x.uses || x.uses.split(',').includes('downhill'))) { len += x.length_m || 0; vert += x.vertical_m || 0; } });
   return {
-    avg: len ? vert / len * 100 : null, parts, bearing: (Math.atan2(y, x) / rad + 360) % 360,
+    avg: len ? vert / len * 100 : null, len, vert, parts, bearing: (Math.atan2(y, x) / rad + 360) % 360,
     bbox: [[Math.min(...pts.map(p => p[0])), Math.min(...pts.map(p => p[1]))], [Math.max(...pts.map(p => p[0])), Math.max(...pts.map(p => p[1]))]],
   };
 }
@@ -203,11 +203,13 @@ const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 // one quad per stretch in its slope colour, and the steepest 50 m marked).
 function cardScript() {
   window.T = s => s;
-  window.drawCard = function (parts, avg) {
+  window.drawCard = function (parts, avg, label) {
     let best = null;
     buildElevationProfiles(parts).forEach(p => {
       const sm = smoothProfile(p, SLOPE_WINDOW_M), st = findSteepestSection(sm, STEEPEST_M);
-      if (st && (!best || Math.abs(st.pitchPct) > Math.abs(best.st.pitchPct))) best = { sm, st };
+      // The steepest part, or the longest when the card is about length.
+      const key = label ? sm[sm.length - 1].dist : Math.abs(st ? st.pitchPct : 0);
+      if (st && (!best || key > best.key)) best = { sm, st, key };
     });
     const { sm, st } = best;
     const total = sm[sm.length - 1].dist, eles = sm.map(p => p.ele);
@@ -234,7 +236,7 @@ function cardScript() {
     s += `<text class="lbl" x="${VW - pr}" y="${VH - 3}" text-anchor="end">${Math.round(sm[sm.length - 1].ele)} m · ${total >= 1000 ? (total / 1000).toFixed(1).replace('.', ',') + ' km' : Math.round(total / 10) * 10 + ' m'}</text>`;
     document.getElementById('chart').innerHTML = `<svg viewBox="0 0 ${VW} ${VH}">${s}</svg>`;
     const pct = Math.round(Math.abs(st.pitchPct));
-    document.getElementById('big').innerHTML = avg != null
+    document.getElementById('big').innerHTML = label ? `${label.big} <small>${label.small}</small>` : avg != null
       ? `${pitchDeg(avg)}° de media <small>${Math.round(avg)}&#8202;% · máx. ${pitchDeg(st.pitchPct)}°</small>`
       : `${pitchDeg(st.pitchPct)}° <small>máx. ${pct}&#8202;% de pendiente</small>`;
     return { pct, deg: pitchDeg(st.pitchPct), avg: avg != null ? `${Math.round(avg)} % (${pitchDeg(avg)}°) de media, ` : '' };
@@ -257,7 +259,11 @@ async function overlays(browser) {
       await page.route(BASE + '/__top', rt => rt.fulfill({ body: html, contentType: 'text/html' }));
       await page.goto(BASE + '/__top');
       await page.unroute(BASE + '/__top');
-      const v = await page.evaluate(([parts, avg]) => window.drawCard(parts, avg), [g.parts, SPEC.metric === 'avg' ? g.avg : null]);
+      // "len": the longest runs, "6,2 km" and its vertical.
+    const num = (x, d) => x.toLocaleString('es-ES', { minimumFractionDigits: d, maximumFractionDigits: d });
+    const label = SPEC.metric === 'len' ? { big: `${num(g.len / 1000, 1)} km`, small: `${num(Math.round(g.vert), 0)} m de desnivel` } : null;
+    const v = await page.evaluate(([parts, avg, label]) => window.drawCard(parts, avg, label), [g.parts, SPEC.metric === 'avg' ? g.avg : null, label]);
+    if (label) v.avg = `${label.big}, ${label.small}, `;
       await page.evaluate(() => Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 5000))]));
       await page.waitForTimeout(150);
       const file = path.join(WORK, `ov${r.rank}${hook ? 'h' : ''}.png`);

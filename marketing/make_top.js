@@ -304,7 +304,8 @@ function cardScript() {
     const tx = Math.min(VW - 60, Math.max(60, (x1 + x2) / 2));
     s += `<text class="steep" x="${tx}" y="${Math.max(16, yt - 4)}" text-anchor="middle">▼ ${Math.round(Math.abs(st.pitchPct))}&#8202;% · 50 m</text>`;
     s += `<text class="lbl" x="${pl}" y="${VH - 3}">${Math.round(sm[0].ele)} m</text>`;
-    s += `<text class="lbl" x="${VW - pr}" y="${VH - 3}" text-anchor="end">${Math.round(sm[sm.length - 1].ele)} m · ${total >= 1000 ? (total / 1000).toFixed(1).replace('.', ',') + ' km' : Math.round(total / 10) * 10 + ' m'}</text>`;
+    // (no length when the card gives the run's: this chart is one of its parts)
+    s += `<text class="lbl" x="${VW - pr}" y="${VH - 3}" text-anchor="end">${Math.round(sm[sm.length - 1].ele)} m${label ? '' : ' · ' + (total >= 1000 ? (total / 1000).toFixed(1).replace('.', ',') + ' km' : Math.round(total / 10) * 10 + ' m')}</text>`;
     document.getElementById('chart').innerHTML = `<svg viewBox="0 0 ${VW} ${VH}">${s}</svg>`;
     const pct = Math.round(Math.abs(st.pitchPct));
     document.getElementById('big').innerHTML = label ? `${label.big} <small>${label.small}</small>` : avg != null

@@ -4,7 +4,7 @@
   "title": "Las 5 pistas más empinadas de España",
   "cta": "¿Cuál has bajado? Comenta 👇",
   "metric": "avg",
-  "voice": "es_ES-davefx-medium",
+  "voice": "edge-es-ES-AlvaroNeural",
   "intro": "Las cinco pistas más empinadas de España.",
   "runs": [
     { "station": "52c9c35a9f63939f43b957b39196aa77ec0013c7", "resort": "Boí Taüll", "run": "Vista Cerví",

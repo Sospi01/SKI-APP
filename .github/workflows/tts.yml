@@ -53,7 +53,7 @@ jobs:
               if voice.startswith("edge-"):
                   for key, text in lines:
                       subprocess.run(["edge-tts", "--voice", voice[5:], "--rate=+8%", "--text", text, "--write-media", "/tmp/e.mp3"], check=True)
-                      subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", "/tmp/e.mp3", "-ar", "44100", "-ac", "1", f"{out}/{key}.wav"], check=True)
+                      subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", "/tmp/e.mp3", "-af", "silenceremove=start_periods=1:start_threshold=-45dB,areverse,silenceremove=start_periods=1:start_threshold=-45dB,areverse", "-ar", "44100", "-ac", "1", f"{out}/{key}.wav"], check=True)
               elif voice.startswith("kokoro-"):
                   import numpy as np, soundfile as sf
                   from kokoro import KPipeline
